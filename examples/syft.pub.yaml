@@ -1,0 +1,11 @@
+rules:
+- pattern: my_data.txt
+  access:
+    admin:
+    - liamtrask@gmail.com
+    write:
+    - andrew@openmined.org
+    - bennett@openmined.org
+    - madhava@openmined.org
+    read:
+    - '*'
