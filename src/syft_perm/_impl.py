@@ -222,7 +222,7 @@ class SyftFile:
                             if limits:
                                 # Check file size limit
                                 max_size = limits.get("max_file_size")
-                                if max_size and self._size > max_size:
+                                if max_size is not None and self._size > max_size:
                                     continue  # Skip this rule due to size limit
                                 
                                 # Check if directories are allowed
@@ -585,6 +585,13 @@ class SyftFolder:
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
                                 access = rule.get("access", {})
+                                # Check file limits if present
+                                limits = rule.get("limits", {})
+                                if limits:
+                                    # Check if directories are allowed
+                                    if not limits.get("allow_dirs", True):
+                                        continue  # Skip this rule for directories
+                                
                                 # Terminal rules override everything
                                 result = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
                                 _permission_cache.set(cache_key, result)
@@ -601,6 +608,13 @@ class SyftFolder:
                         rel_path = str(self._path.relative_to(parent_dir))
                         if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
                             access = rule.get("access", {})
+                            # Check file limits if present
+                            limits = rule.get("limits", {})
+                            if limits:
+                                # Check if directories are allowed
+                                if not limits.get("allow_dirs", True):
+                                    continue  # Skip this rule for directories
+                            
                             # Merge permissions (inheritance)
                             for perm in ["read", "create", "write", "admin"]:
                                 users = access.get(perm, [])
