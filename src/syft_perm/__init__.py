@@ -6,7 +6,7 @@ from typing import Union, Optional
 from ._impl import SyftFile, SyftFolder
 from ._utils import SYFTBOX_AVAILABLE
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 __all__ = [
     "open",
