@@ -137,7 +137,7 @@ def is_datasite_email(email: str) -> bool:
 
 def read_syftpub_yaml(path: Path, pattern: str) -> Optional[Dict[str, List[str]]]:
     """Read permissions from syft.pub.yaml for a specific pattern"""
-    syftpub_path = path.parent / "syft.pub.yaml"
+    syftpub_path = path / "syft.pub.yaml"
     if not syftpub_path.exists():
         return None
     

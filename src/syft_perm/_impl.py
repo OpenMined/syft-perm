@@ -239,24 +239,38 @@ class SyftFile:
                 f"Use force=True to override this check."
             )
             
-        perms = read_syftpub_yaml(self._path.parent, self._name) or {}
-        users = set(perms.get(permission, []))
+        # Read all existing permissions for this file
+        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
+        
+        # Update the specific permission
+        users = set(access_dict.get(permission, []))
         users.add(user)
-        perms[permission] = format_users(list(users))  # Use format_users for consistent handling
-        update_syftpub_yaml(self._path.parent, self._name, perms)
+        access_dict[permission] = format_users(list(users))
+        
+        # Make sure all permission types are present (even if empty)
+        for perm in ["read", "write", "admin"]:
+            if perm not in access_dict:
+                access_dict[perm] = []
+                
+        update_syftpub_yaml(self._path.parent, self._name, access_dict)
     
     def _revoke_access(self, user: str, permission: Literal["read", "write", "admin"]) -> None:
         """Internal method to revoke permission from a user."""
-        perms = read_syftpub_yaml(self._path.parent, self._name) or {}
-        users = set(perms.get(permission, []))
-        # Handle revoking from public access
-        if "*" in users or "public" in users:
-            users = set()  # Reset to empty if revoking from public
-        users.discard(user)
-        users.discard("*")  # Also remove "*" if present
-        users.discard("public")  # Also remove "public" if present
-        perms[permission] = format_users(list(users))
-        update_syftpub_yaml(self._path.parent, self._name, perms)
+        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
+        users = set(access_dict.get(permission, []))
+        # Handle revoking from public access  
+        if user in ["*", "public"]:
+            users = set()  # Clear all if revoking public
+        else:
+            users.discard(user)
+        access_dict[permission] = format_users(list(users))
+        
+        # Make sure all permission types are present
+        for perm in ["read", "write", "admin"]:
+            if perm not in access_dict:
+                access_dict[perm] = []
+                
+        update_syftpub_yaml(self._path.parent, self._name, access_dict)
     
     def _check_permission(self, user: str, permission: Literal["read", "write", "admin"]) -> bool:
         """Internal method to check if a user has a specific permission, including inherited."""
@@ -530,24 +544,38 @@ class SyftFolder:
                 f"Use force=True to override this check."
             )
             
-        perms = read_syftpub_yaml(self._path.parent, self._name) or {}
-        users = set(perms.get(permission, []))
+        # Read all existing permissions for this file
+        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
+        
+        # Update the specific permission
+        users = set(access_dict.get(permission, []))
         users.add(user)
-        perms[permission] = format_users(list(users))  # Use format_users for consistent handling
-        update_syftpub_yaml(self._path.parent, self._name, perms)
+        access_dict[permission] = format_users(list(users))
+        
+        # Make sure all permission types are present (even if empty)
+        for perm in ["read", "write", "admin"]:
+            if perm not in access_dict:
+                access_dict[perm] = []
+                
+        update_syftpub_yaml(self._path.parent, self._name, access_dict)
     
     def _revoke_access(self, user: str, permission: Literal["read", "write", "admin"]) -> None:
         """Internal method to revoke permission from a user."""
-        perms = read_syftpub_yaml(self._path.parent, self._name) or {}
-        users = set(perms.get(permission, []))
-        # Handle revoking from public access
-        if "*" in users or "public" in users:
-            users = set()  # Reset to empty if revoking from public
-        users.discard(user)
-        users.discard("*")  # Also remove "*" if present
-        users.discard("public")  # Also remove "public" if present
-        perms[permission] = format_users(list(users))
-        update_syftpub_yaml(self._path.parent, self._name, perms)
+        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
+        users = set(access_dict.get(permission, []))
+        # Handle revoking from public access  
+        if user in ["*", "public"]:
+            users = set()  # Clear all if revoking public
+        else:
+            users.discard(user)
+        access_dict[permission] = format_users(list(users))
+        
+        # Make sure all permission types are present
+        for perm in ["read", "write", "admin"]:
+            if perm not in access_dict:
+                access_dict[perm] = []
+                
+        update_syftpub_yaml(self._path.parent, self._name, access_dict)
     
     def _check_permission(self, user: str, permission: Literal["read", "write", "admin"]) -> bool:
         """Internal method to check if a user has a specific permission, including inherited."""
