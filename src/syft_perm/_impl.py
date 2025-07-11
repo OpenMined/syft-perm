@@ -124,6 +124,12 @@ def _glob_match(pattern: str, path: str) -> bool:
     
     # For non-** patterns, use standard fnmatch
     from fnmatch import fnmatch
+    
+    # Special handling for * patterns that shouldn't match across directories
+    if "*" in pattern and "/" not in pattern and "/" in path:
+        # Pattern like "*.txt" shouldn't match "subdir/file.txt"
+        return False
+    
     return fnmatch(path, pattern)
 
 def _confirm_action(message: str, force: bool = False) -> bool:
