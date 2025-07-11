@@ -45,10 +45,12 @@ def format_users(users: List[str]) -> List[str]:
 
 def create_access_dict(
     read_users: List[str],
+    create_users: Optional[List[str]] = None,
     write_users: Optional[List[str]] = None,
     admin_users: Optional[List[str]] = None
 ) -> Dict[str, List[str]]:
     """Create a standardized access dictionary from user lists"""
+    create_users = create_users or []
     write_users = write_users or []
     admin_users = admin_users or write_users
     
@@ -58,6 +60,8 @@ def create_access_dict(
         access_dict["admin"] = format_users(admin_users)
     if write_users:
         access_dict["write"] = format_users(write_users)
+    if create_users:
+        access_dict["create"] = format_users(create_users)
     if read_users:
         access_dict["read"] = format_users(read_users)
     return access_dict
@@ -89,7 +93,7 @@ def update_syftpub_yaml(
     # Update rules
     # Ensure permissions are in correct order by creating new ordered dict
     ordered_access = {}
-    for perm in ["admin", "write", "read"]:
+    for perm in ["admin", "write", "create", "read"]:
         if perm in access_dict:
             ordered_access[perm] = access_dict[perm]
             

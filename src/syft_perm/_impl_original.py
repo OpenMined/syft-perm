@@ -1,10 +1,8 @@
-"""Internal implementation of SyftFile and SyftFolder classes with ACL compatibility."""
+"""Internal implementation of SyftFile and SyftFolder classes."""
 
 from pathlib import Path
-from typing import Optional, List, Dict, Union, Iterator, Literal, Any
+from typing import Optional, List, Dict, Union, Iterator, Literal
 import shutil
-import time
-from collections import OrderedDict
 
 from ._utils import (
     resolve_path,
@@ -17,49 +15,9 @@ from ._utils import (
 import yaml
 from pathlib import PurePath
 
-# Cache implementation for permission lookups
-class PermissionCache:
-    """Simple LRU cache for permission lookups to match old ACL performance."""
-    
-    def __init__(self, max_size: int = 10000):
-        self.cache: OrderedDict[str, Dict[str, List[str]]] = OrderedDict()
-        self.max_size = max_size
-    
-    def get(self, path: str) -> Optional[Dict[str, List[str]]]:
-        """Get permissions from cache if available."""
-        if path in self.cache:
-            # Move to end (LRU)
-            self.cache.move_to_end(path)
-            return self.cache[path]
-        return None
-    
-    def set(self, path: str, permissions: Dict[str, List[str]]) -> None:
-        """Set permissions in cache."""
-        if path in self.cache:
-            self.cache.move_to_end(path)
-        else:
-            if len(self.cache) >= self.max_size:
-                # Remove oldest entry
-                self.cache.popitem(last=False)
-        self.cache[path] = permissions
-    
-    def invalidate(self, path_prefix: str) -> None:
-        """Invalidate all cache entries starting with path_prefix."""
-        keys_to_remove = [k for k in self.cache if k.startswith(path_prefix)]
-        for key in keys_to_remove:
-            del self.cache[key]
-    
-    def clear(self) -> None:
-        """Clear all cache entries."""
-        self.cache.clear()
-
-# Global cache instance
-_permission_cache = PermissionCache()
-
 def _glob_match(pattern: str, path: str) -> bool:
     """
     Match a path against a glob pattern, supporting ** for recursive matching.
-    This implementation aims to match the doublestar library behavior from Go.
     
     Args:
         pattern: Glob pattern (supports *, ?, ** for recursive)
@@ -109,21 +67,17 @@ def _glob_match(pattern: str, path: str) -> bool:
                 # Pattern ends with **, matches everything under prefix
                 return True
         
-        # Multiple ** patterns - more complex handling
-        elif len(parts) > 2:
-            # For now, fall back to simpler logic
-            # This could be enhanced to handle more complex patterns
-            from fnmatch import fnmatch
-            # Replace ** with * for simple matching
-            simple_pattern = pattern.replace("**", "*")
-            return fnmatch(path, simple_pattern)
-        
         # Single "**" matches everything
         elif pattern == "**":
             return True
     
     # For non-** patterns, use standard fnmatch
     from fnmatch import fnmatch
+    # Make sure * doesn't match directory separators
+    if "*" in pattern and "/" not in pattern:
+        # Pattern like "*.txt" should only match files in current directory
+        if "/" in path:
+            return False
     return fnmatch(path, pattern)
 
 def _confirm_action(message: str, force: bool = False) -> bool:
@@ -153,10 +107,6 @@ class SyftFile:
             
         # Ensure parent directory exists
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # File metadata for limit checks
-        self._is_symlink = self._path.is_symlink() if self._path.exists() else False
-        self._size = self._path.stat().st_size if self._path.exists() and not self._is_symlink else 0
     
     @property
     def _name(self) -> str:
@@ -165,14 +115,8 @@ class SyftFile:
 
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this file, including inherited permissions."""
-        # Check cache first
-        cache_key = str(self._path)
-        cached = _permission_cache.get(cache_key)
-        if cached is not None:
-            return cached
-        
         # Start with empty permissions
-        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
+        effective_perms = {"read": [], "write": [], "admin": []}
         
         # Walk up the directory tree collecting permissions
         current_path = self._path
@@ -196,11 +140,8 @@ class SyftFile:
                             if _glob_match(pattern, rel_path):
                                 access = rule.get("access", {})
                                 # Terminal rules override everything
-                                result = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
-                                _permission_cache.set(cache_key, result)
-                                return result
+                                return {perm: format_users(access.get(perm, [])) for perm in ["read", "write", "admin"]}
                         # If no match in terminal, stop inheritance with empty permissions
-                        _permission_cache.set(cache_key, effective_perms)
                         return effective_perms
                     
                     # Process rules for non-terminal nodes
@@ -211,24 +152,8 @@ class SyftFile:
                         rel_path = str(self._path.relative_to(parent_dir))
                         if _glob_match(pattern, rel_path):
                             access = rule.get("access", {})
-                            # Check file limits if present
-                            limits = rule.get("limits", {})
-                            if limits:
-                                # Check file size limit
-                                max_size = limits.get("max_file_size")
-                                if max_size and self._size > max_size:
-                                    continue  # Skip this rule due to size limit
-                                
-                                # Check if directories are allowed
-                                if not limits.get("allow_dirs", True) and self._path.is_dir():
-                                    continue  # Skip this rule for directories
-                                
-                                # Check if symlinks are allowed
-                                if not limits.get("allow_symlinks", True) and self._is_symlink:
-                                    continue  # Skip this rule for symlinks
-                            
                             # Merge permissions (inheritance)
-                            for perm in ["read", "create", "write", "admin"]:
+                            for perm in ["read", "write", "admin"]:
                                 users = access.get(perm, [])
                                 if users and not effective_perms[perm]:
                                     # Only inherit if we don't have more specific permissions
@@ -238,8 +163,7 @@ class SyftFile:
             
             current_path = parent_dir
         
-        # Cache and return the effective permissions
-        _permission_cache.set(cache_key, effective_perms)
+        # Return the effective permissions
         return effective_perms
 
     def _get_permission_table(self) -> List[List[str]]:
@@ -259,7 +183,6 @@ class SyftFile:
             rows.append([
                 "public",
                 "✓" if "*" in perms.get("read", []) else "",
-                "✓" if "*" in perms.get("create", []) else "",
                 "✓" if "*" in perms.get("write", []) else "",
                 "✓" if "*" in perms.get("admin", []) else ""
             ])
@@ -270,7 +193,6 @@ class SyftFile:
             row = [
                 user,
                 "✓" if user in perms.get("read", []) else "",
-                "✓" if user in perms.get("create", []) else "",
                 "✓" if user in perms.get("write", []) else "",
                 "✓" if user in perms.get("admin", []) else ""
             ]
@@ -288,17 +210,17 @@ class SyftFile:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Write", "Admin"],
                 tablefmt="simple"
             )
             return f"SyftFile('{self._path}')\n\n{table}"
         except ImportError:
             # Fallback to simple table format if tabulate not available
             result = [f"SyftFile('{self._path}')\n"]
-            result.append("User               Read  Create  Write  Admin")
-            result.append("-" * 50)
+            result.append("User               Read  Write  Admin")
+            result.append("-" * 40)
             for row in rows:
-                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5}")
+                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<5} {row[3]:<5}")
             return "\n".join(result)
 
     def _repr_html_(self) -> str:
@@ -311,7 +233,7 @@ class SyftFile:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Write", "Admin"],
                 tablefmt="html"
             )
             return f"<p><b>SyftFile('{self._path}')</b></p>\n{table}"
@@ -319,19 +241,15 @@ class SyftFile:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFile('{self._path}')</b></p>"]
             result.append("<table>")
-            result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th></tr>")
+            result.append("<tr><th>User</th><th>Read</th><th>Write</th><th>Admin</th></tr>")
             for row in rows:
-                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td></tr>")
+                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td></tr>")
             result.append("</table>")
             return "\n".join(result)
 
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""
         self._grant_access(user, "read", force=force)
-    
-    def grant_create_access(self, user: str, *, force: bool = False) -> None:
-        """Grant create permission to a user."""
-        self._grant_access(user, "create", force=force)
     
     def grant_write_access(self, user: str, *, force: bool = False) -> None:
         """Grant write permission to a user."""
@@ -357,10 +275,6 @@ class SyftFile:
         """Revoke read permission from a user."""
         self._revoke_access(user, "read")
     
-    def revoke_create_access(self, user: str) -> None:
-        """Revoke create permission from a user."""
-        self._revoke_access(user, "create")
-    
     def revoke_write_access(self, user: str) -> None:
         """Revoke write permission from a user."""
         self._revoke_access(user, "write")
@@ -373,10 +287,6 @@ class SyftFile:
         """Check if a user has read permission."""
         return self._check_permission(user, "read")
     
-    def has_create_access(self, user: str) -> bool:
-        """Check if a user has create permission."""
-        return self._check_permission(user, "create")
-    
     def has_write_access(self, user: str) -> bool:
         """Check if a user has write permission."""
         return self._check_permission(user, "write")
@@ -385,7 +295,7 @@ class SyftFile:
         """Check if a user has admin permission."""
         return self._check_permission(user, "admin")
 
-    def _grant_access(self, user: str, permission: Literal["read", "create", "write", "admin"], *, force: bool = False) -> None:
+    def _grant_access(self, user: str, permission: Literal["read", "write", "admin"], *, force: bool = False) -> None:
         """Internal method to grant permission to a user."""
         # Validate that the email belongs to a datasite
         if not is_datasite_email(user) and not force:
@@ -403,16 +313,13 @@ class SyftFile:
         access_dict[permission] = format_users(list(users))
         
         # Make sure all permission types are present (even if empty)
-        for perm in ["read", "create", "write", "admin"]:
+        for perm in ["read", "write", "admin"]:
             if perm not in access_dict:
                 access_dict[perm] = []
                 
         update_syftpub_yaml(self._path.parent, self._name, access_dict)
-        
-        # Invalidate cache for this path and its parents
-        _permission_cache.invalidate(str(self._path))
     
-    def _revoke_access(self, user: str, permission: Literal["read", "create", "write", "admin"]) -> None:
+    def _revoke_access(self, user: str, permission: Literal["read", "write", "admin"]) -> None:
         """Internal method to revoke permission from a user."""
         access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
         users = set(access_dict.get(permission, []))
@@ -424,16 +331,13 @@ class SyftFile:
         access_dict[permission] = format_users(list(users))
         
         # Make sure all permission types are present
-        for perm in ["read", "create", "write", "admin"]:
+        for perm in ["read", "write", "admin"]:
             if perm not in access_dict:
                 access_dict[perm] = []
                 
         update_syftpub_yaml(self._path.parent, self._name, access_dict)
-        
-        # Invalidate cache for this path and its parents
-        _permission_cache.invalidate(str(self._path))
     
-    def _check_permission(self, user: str, permission: Literal["read", "create", "write", "admin"]) -> bool:
+    def _check_permission(self, user: str, permission: Literal["read", "write", "admin"]) -> bool:
         """Internal method to check if a user has a specific permission, including inherited."""
         # Get all permissions including inherited ones
         all_perms = self._get_all_permissions()
@@ -450,41 +354,8 @@ class SyftFile:
         except (ValueError, IndexError):
             pass
         
-        # Also check simple prefix matching (like old ACL)
-        path_str = str(self._path)
-        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
-            return True
-        
         # Check regular permissions
         return "*" in users or user in users
-    
-    def set_file_limits(self, max_size: Optional[int] = None, 
-                       allow_dirs: bool = True, 
-                       allow_symlinks: bool = True) -> None:
-        """
-        Set file limits for this file's permissions (compatible with old ACL).
-        
-        Args:
-            max_size: Maximum file size in bytes (None for no limit)
-            allow_dirs: Whether to allow directories
-            allow_symlinks: Whether to allow symlinks
-        """
-        # Read current permissions
-        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
-        
-        # Add limits to the rule
-        if "limits" not in access_dict:
-            access_dict["limits"] = {}
-        
-        if max_size is not None:
-            access_dict["limits"]["max_file_size"] = max_size
-        access_dict["limits"]["allow_dirs"] = allow_dirs
-        access_dict["limits"]["allow_symlinks"] = allow_symlinks
-        
-        update_syftpub_yaml(self._path.parent, self._name, access_dict)
-        
-        # Invalidate cache
-        _permission_cache.invalidate(str(self._path))
 
     def move_file_and_its_permissions(self, new_path: Union[str, Path]) -> 'SyftFile':
         """
@@ -549,14 +420,8 @@ class SyftFolder:
 
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this folder, including inherited permissions."""
-        # Check cache first
-        cache_key = str(self._path)
-        cached = _permission_cache.get(cache_key)
-        if cached is not None:
-            return cached
-        
         # Start with empty permissions
-        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
+        effective_perms = {"read": [], "write": [], "admin": []}
         
         # Walk up the directory tree collecting permissions
         current_path = self._path
@@ -580,11 +445,8 @@ class SyftFolder:
                             if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
                                 access = rule.get("access", {})
                                 # Terminal rules override everything
-                                result = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
-                                _permission_cache.set(cache_key, result)
-                                return result
+                                return {perm: format_users(access.get(perm, [])) for perm in ["read", "write", "admin"]}
                         # If no match in terminal, stop inheritance with empty permissions
-                        _permission_cache.set(cache_key, effective_perms)
                         return effective_perms
                     
                     # Process rules for non-terminal nodes
@@ -596,7 +458,7 @@ class SyftFolder:
                         if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
                             access = rule.get("access", {})
                             # Merge permissions (inheritance)
-                            for perm in ["read", "create", "write", "admin"]:
+                            for perm in ["read", "write", "admin"]:
                                 users = access.get(perm, [])
                                 if users and not effective_perms[perm]:
                                     # Only inherit if we don't have more specific permissions
@@ -606,8 +468,7 @@ class SyftFolder:
             
             current_path = parent_dir
         
-        # Cache and return the effective permissions
-        _permission_cache.set(cache_key, effective_perms)
+        # Return the effective permissions
         return effective_perms
 
     def _get_permission_table(self) -> List[List[str]]:
@@ -627,7 +488,6 @@ class SyftFolder:
             rows.append([
                 "public",
                 "✓" if "*" in perms.get("read", []) else "",
-                "✓" if "*" in perms.get("create", []) else "",
                 "✓" if "*" in perms.get("write", []) else "",
                 "✓" if "*" in perms.get("admin", []) else ""
             ])
@@ -638,7 +498,6 @@ class SyftFolder:
             row = [
                 user,
                 "✓" if user in perms.get("read", []) else "",
-                "✓" if user in perms.get("create", []) else "",
                 "✓" if user in perms.get("write", []) else "",
                 "✓" if user in perms.get("admin", []) else ""
             ]
@@ -656,17 +515,17 @@ class SyftFolder:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Write", "Admin"],
                 tablefmt="simple"
             )
             return f"SyftFolder('{self._path}')\n\n{table}"
         except ImportError:
             # Fallback to simple table format if tabulate not available
             result = [f"SyftFolder('{self._path}')\n"]
-            result.append("User               Read  Create  Write  Admin")
-            result.append("-" * 50)
+            result.append("User               Read  Write  Admin")
+            result.append("-" * 40)
             for row in rows:
-                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5}")
+                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<5} {row[3]:<5}")
             return "\n".join(result)
 
     def _repr_html_(self) -> str:
@@ -679,7 +538,7 @@ class SyftFolder:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Write", "Admin"],
                 tablefmt="html"
             )
             return f"<p><b>SyftFolder('{self._path}')</b></p>\n{table}"
@@ -687,19 +546,15 @@ class SyftFolder:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFolder('{self._path}')</b></p>"]
             result.append("<table>")
-            result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th></tr>")
+            result.append("<tr><th>User</th><th>Read</th><th>Write</th><th>Admin</th></tr>")
             for row in rows:
-                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td></tr>")
+                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td></tr>")
             result.append("</table>")
             return "\n".join(result)
     
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""
         self._grant_access(user, "read", force=force)
-    
-    def grant_create_access(self, user: str, *, force: bool = False) -> None:
-        """Grant create permission to a user."""
-        self._grant_access(user, "create", force=force)
     
     def grant_write_access(self, user: str, *, force: bool = False) -> None:
         """Grant write permission to a user."""
@@ -725,10 +580,6 @@ class SyftFolder:
         """Revoke read permission from a user."""
         self._revoke_access(user, "read")
     
-    def revoke_create_access(self, user: str) -> None:
-        """Revoke create permission from a user."""
-        self._revoke_access(user, "create")
-    
     def revoke_write_access(self, user: str) -> None:
         """Revoke write permission from a user."""
         self._revoke_access(user, "write")
@@ -741,10 +592,6 @@ class SyftFolder:
         """Check if a user has read permission."""
         return self._check_permission(user, "read")
     
-    def has_create_access(self, user: str) -> bool:
-        """Check if a user has create permission."""
-        return self._check_permission(user, "create")
-    
     def has_write_access(self, user: str) -> bool:
         """Check if a user has write permission."""
         return self._check_permission(user, "write")
@@ -753,7 +600,7 @@ class SyftFolder:
         """Check if a user has admin permission."""
         return self._check_permission(user, "admin")
 
-    def _grant_access(self, user: str, permission: Literal["read", "create", "write", "admin"], *, force: bool = False) -> None:
+    def _grant_access(self, user: str, permission: Literal["read", "write", "admin"], *, force: bool = False) -> None:
         """Internal method to grant permission to a user."""
         # Validate that the email belongs to a datasite
         if not is_datasite_email(user) and not force:
@@ -771,16 +618,13 @@ class SyftFolder:
         access_dict[permission] = format_users(list(users))
         
         # Make sure all permission types are present (even if empty)
-        for perm in ["read", "create", "write", "admin"]:
+        for perm in ["read", "write", "admin"]:
             if perm not in access_dict:
                 access_dict[perm] = []
                 
         update_syftpub_yaml(self._path.parent, self._name, access_dict)
-        
-        # Invalidate cache for this path and its children
-        _permission_cache.invalidate(str(self._path))
     
-    def _revoke_access(self, user: str, permission: Literal["read", "create", "write", "admin"]) -> None:
+    def _revoke_access(self, user: str, permission: Literal["read", "write", "admin"]) -> None:
         """Internal method to revoke permission from a user."""
         access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
         users = set(access_dict.get(permission, []))
@@ -792,16 +636,13 @@ class SyftFolder:
         access_dict[permission] = format_users(list(users))
         
         # Make sure all permission types are present
-        for perm in ["read", "create", "write", "admin"]:
+        for perm in ["read", "write", "admin"]:
             if perm not in access_dict:
                 access_dict[perm] = []
                 
         update_syftpub_yaml(self._path.parent, self._name, access_dict)
-        
-        # Invalidate cache for this path and its children
-        _permission_cache.invalidate(str(self._path))
     
-    def _check_permission(self, user: str, permission: Literal["read", "create", "write", "admin"]) -> bool:
+    def _check_permission(self, user: str, permission: Literal["read", "write", "admin"]) -> bool:
         """Internal method to check if a user has a specific permission, including inherited."""
         # Get all permissions including inherited ones
         all_perms = self._get_all_permissions()
@@ -817,11 +658,6 @@ class SyftFolder:
                     return True  # Owner has all permissions
         except (ValueError, IndexError):
             pass
-        
-        # Also check simple prefix matching (like old ACL)
-        path_str = str(self._path)
-        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
-            return True
         
         # Check regular permissions
         return "*" in users or user in users
@@ -902,18 +738,4 @@ class SyftFolder:
                     for user in users:
                         folder_obj._grant_access(user, permission)
         
-        return new_folder
-
-# Utility function to clear the permission cache
-def clear_permission_cache() -> None:
-    """Clear the global permission cache."""
-    _permission_cache.clear()
-
-# Utility function to get cache statistics
-def get_cache_stats() -> Dict[str, Any]:
-    """Get statistics about the permission cache."""
-    return {
-        "size": len(_permission_cache.cache),
-        "max_size": _permission_cache.max_size,
-        "entries": list(_permission_cache.cache.keys())
-    }
+        return new_folder 
