@@ -217,7 +217,7 @@ class SyftFile:
             return f"SyftFile('{self._path}') - No permissions set"
 
         try:
-            from tabulate import tabulate  # type: ignore[import-untyped]
+            from tabulate import tabulate
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="simple")
             return f"SyftFile('{self._path}')\n\n{table}"
@@ -237,7 +237,7 @@ class SyftFile:
             return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>"
 
         try:
-            from tabulate import tabulate  # type: ignore[import-untyped]
+            from tabulate import tabulate
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="html")
             return f"<p><b>SyftFile('{self._path}')</b></p>\n{table}"
@@ -531,7 +531,7 @@ class SyftFolder:
             return f"SyftFolder('{self._path}') - No permissions set"
 
         try:
-            from tabulate import tabulate  # type: ignore[import-untyped]
+            from tabulate import tabulate
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="simple")
             return f"SyftFolder('{self._path}')\n\n{table}"
@@ -551,7 +551,7 @@ class SyftFolder:
             return f"<p><b>SyftFolder('{self._path}')</b> - No permissions set</p>"
 
         try:
-            from tabulate import tabulate  # type: ignore[import-untyped]
+            from tabulate import tabulate
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="html")
             return f"<p><b>SyftFolder('{self._path}')</b></p>\n{table}"

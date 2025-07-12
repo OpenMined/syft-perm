@@ -17,7 +17,8 @@
       "Bash(ls:*)",
       "Bash(find:*)",
       "Bash(uv sync:*)",
-      "Bash(python -m mypy:*)"
+      "Bash(python -m mypy:*)",
+      "Bash(uv add:*)"
     ],
     "deny": []
   }

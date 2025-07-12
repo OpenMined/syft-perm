@@ -17,14 +17,19 @@ except ImportError:
     _SERVER_AVAILABLE = False
 
     # Create dummy classes for type hints
-    class FastAPI:
+    class _FastAPI:
         pass
 
-    class HTTPException:
+    class _HTTPException:
         pass
 
-    class BaseModel:
+    class _BaseModel:
         pass
+
+    # Use dummy classes when dependencies not available
+    FastAPI = _FastAPI
+    HTTPException = _HTTPException
+    BaseModel = _BaseModel
 
 
 from . import open as syft_open
