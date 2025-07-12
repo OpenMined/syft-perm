@@ -1,12 +1,12 @@
 """Test permission resolution order within same directory (pattern specificity)."""
 
-import unittest
-import tempfile
 import shutil
-from pathlib import Path
-import yaml
-
 import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

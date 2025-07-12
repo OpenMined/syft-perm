@@ -1,19 +1,19 @@
 """Internal implementation of SyftFile and SyftFolder classes."""
 
-from pathlib import Path
-from typing import Optional, List, Dict, Union, Iterator, Literal
 import shutil
+from pathlib import Path, PurePath
+from typing import Dict, Iterator, List, Literal, Optional, Union
+
+import yaml
 
 from ._utils import (
-    resolve_path,
     create_access_dict,
-    update_syftpub_yaml,
-    read_syftpub_yaml,
     format_users,
     is_datasite_email,
+    read_syftpub_yaml,
+    resolve_path,
+    update_syftpub_yaml,
 )
-import yaml
-from pathlib import PurePath
 
 
 def _glob_match(pattern: str, path: str) -> bool:

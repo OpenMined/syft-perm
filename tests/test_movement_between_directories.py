@@ -1,13 +1,13 @@
 """Test movement between multi-file directories based on old syftbox behavior."""
 
-import unittest
-import tempfile
-import shutil
 import os
-from pathlib import Path
-import yaml
-
+import shutil
 import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

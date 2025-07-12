@@ -2,18 +2,18 @@
 
 import os
 import shutil
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
-import yaml
-import time
 
-import sys
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import syft_perm
-from syft_perm._impl import _permission_cache, get_cache_stats, clear_permission_cache
+from syft_perm._impl import _permission_cache, clear_permission_cache, get_cache_stats
 
 
 class TestBatchOperationsSiblings(unittest.TestCase):

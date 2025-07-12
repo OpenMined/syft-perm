@@ -3,7 +3,8 @@
 from pathlib import Path as _Path
 from typing import Union as _Union
 
-from ._impl import SyftFile as _SyftFile, SyftFolder as _SyftFolder
+from ._impl import SyftFile as _SyftFile
+from ._impl import SyftFolder as _SyftFolder
 
 __version__ = "0.3.1"
 

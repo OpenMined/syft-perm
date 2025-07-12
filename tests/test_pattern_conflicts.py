@@ -1,11 +1,10 @@
 """Test pattern conflicts in the same directory with proper specificity resolution."""
 
-import unittest
-import tempfile
 import shutil
-from pathlib import Path
-
 import sys
+import tempfile
+import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

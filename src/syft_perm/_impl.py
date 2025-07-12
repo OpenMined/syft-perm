@@ -1,24 +1,24 @@
 """Internal implementation of SyftFile and SyftFolder classes with ACL compatibility."""
 
-from pathlib import Path
-from typing import Optional, List, Dict, Union, Iterator, Literal, Any
 import shutil
 import time
 from collections import OrderedDict
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path, PurePath
+from typing import Any, Dict, Iterator, List, Literal, Optional, Union
+
+import yaml
 
 from ._utils import (
-    resolve_path,
     create_access_dict,
-    update_syftpub_yaml,
-    read_syftpub_yaml,
-    read_syftpub_yaml_full,
     format_users,
     is_datasite_email,
+    read_syftpub_yaml,
+    read_syftpub_yaml_full,
+    resolve_path,
+    update_syftpub_yaml,
 )
-import yaml
-from pathlib import PurePath
-from enum import Enum
-from dataclasses import dataclass
 
 
 # Permission reason tracking
@@ -836,7 +836,7 @@ class SyftFile:
     def _ensure_server_and_get_editor_url(self) -> str:
         """Ensure the permission editor server is running and return the editor URL."""
         try:
-            from .server import get_server_url, start_server, get_editor_url
+            from .server import get_editor_url, get_server_url, start_server
 
             # Check if server is already running
             server_url = get_server_url()
@@ -1813,7 +1813,7 @@ class SyftFolder:
     def _ensure_server_and_get_editor_url(self) -> str:
         """Ensure the permission editor server is running and return the editor URL."""
         try:
-            from .server import get_server_url, start_server, get_editor_url
+            from .server import get_editor_url, get_server_url, start_server
 
             # Check if server is already running
             server_url = get_server_url()

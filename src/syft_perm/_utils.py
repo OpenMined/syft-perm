@@ -1,11 +1,13 @@
 """Utility functions for syft_perm."""
 
 import os
-import yaml
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union, Literal
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from ._syftbox import client as _syftbox_client, SYFTBOX_AVAILABLE, SyftBoxURL
+import yaml
+
+from ._syftbox import SYFTBOX_AVAILABLE, SyftBoxURL
+from ._syftbox import client as _syftbox_client
 
 __all__ = [
     "resolve_path",

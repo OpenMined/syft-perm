@@ -1,18 +1,18 @@
 """Comprehensive test verifying all four permission levels with all features."""
 
-import unittest
-import tempfile
 import shutil
-from pathlib import Path
-import yaml
-import time
-
 import sys
+import tempfile
+import time
+import unittest
+from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import syft_perm
-from syft_perm._impl import get_cache_stats, clear_permission_cache
+from syft_perm._impl import clear_permission_cache, get_cache_stats
 
 
 class TestComprehensivePermissionVerification(unittest.TestCase):

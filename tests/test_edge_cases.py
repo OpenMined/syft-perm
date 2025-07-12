@@ -1,13 +1,13 @@
 """Test edge cases and error conditions for permission system."""
 
-import unittest
-import tempfile
-import shutil
-from pathlib import Path
-import yaml
 import json
-
+import shutil
 import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
