@@ -181,8 +181,8 @@ class TestHierarchyInheritance(unittest.TestCase):
         # Open the file
         syft_file = syft_perm.open(child_file)
         
-        # Alice should have all permissions through admin
-        self.assertTrue(syft_file.has_admin_access("alice@example.com"))
+        # Alice should have write/create/read only (nearest-node: child rule, not admin)
+        self.assertFalse(syft_file.has_admin_access("alice@example.com"))  # Child rule doesn't grant admin
         self.assertTrue(syft_file.has_write_access("alice@example.com"))
         self.assertTrue(syft_file.has_create_access("alice@example.com"))
         self.assertTrue(syft_file.has_read_access("alice@example.com"))
@@ -199,30 +199,27 @@ class TestHierarchyInheritance(unittest.TestCase):
         
         self.assertIsNotNone(alice_row)
         
-        # Check that all permission columns have checkmarks
+        # Check that write/create/read have checkmarks, but NOT admin
         self.assertEqual(alice_row[1], "✓")  # Read
         self.assertEqual(alice_row[2], "✓")  # Create
         self.assertEqual(alice_row[3], "✓")  # Write
-        self.assertEqual(alice_row[4], "✓")  # Admin
+        self.assertEqual(alice_row[4], "")   # Admin (not granted by child rule)
         
-        # Check the reason - should show [Admin] as the highest level
+        # Check the reason - should show [Write] as the highest level
         reason_text = alice_row[5]
-        self.assertIn("[Admin]", reason_text)
+        self.assertIn("[Write]", reason_text)
         
-        # Should NOT show redundant lower-level reasons
-        self.assertNotIn("[Write] Explicitly granted write", reason_text)
-        self.assertNotIn("[Create] Included via", reason_text)
-        self.assertNotIn("[Read] Included via", reason_text)
+        # Should NOT show admin reason since child rule doesn't grant admin
+        self.assertNotIn("[Admin]", reason_text)
         
-        # The admin reason should mention it's from parent
-        self.assertIn("Explicitly granted admin", reason_text)
-        self.assertIn("parent", reason_text.lower())
+        # The write reason should mention it's explicitly granted
+        self.assertIn("Explicitly granted write", reason_text)
         
         # Test the explain_permissions method
         explanation = syft_file.explain_permissions("alice@example.com")
         
-        # Should show GRANTED for all levels
-        self.assertIn("ADMIN: ✓ GRANTED", explanation)
+        # Should show GRANTED for write/create/read, DENIED for admin
+        self.assertIn("ADMIN: ✗ DENIED", explanation)
         self.assertIn("WRITE: ✓ GRANTED", explanation)
         self.assertIn("CREATE: ✓ GRANTED", explanation)
         self.assertIn("READ: ✓ GRANTED", explanation)
@@ -366,18 +363,18 @@ class TestHierarchyInheritance(unittest.TestCase):
         # Open the child file
         syft_file = syft_perm.open(child_file)
         
-        # Alice should have write/create/read from parent
+        # Alice should have write/create/read from parent (nearest-node rule)
         self.assertTrue(syft_file.has_write_access("alice@example.com"))
         self.assertTrue(syft_file.has_create_access("alice@example.com"))
         self.assertTrue(syft_file.has_read_access("alice@example.com"))
         
-        # Bob should only have read from grandparent's public read
-        self.assertTrue(syft_file.has_read_access("bob@example.com"))
+        # Bob should have NO access (nearest-node: parent rule doesn't grant to bob)
+        self.assertFalse(syft_file.has_read_access("bob@example.com"))
         self.assertFalse(syft_file.has_create_access("bob@example.com"))
         self.assertFalse(syft_file.has_write_access("bob@example.com"))
         
-        # Random user should also have read from grandparent's public read
-        self.assertTrue(syft_file.has_read_access("random@test.com"))
+        # Random user should also have NO access (nearest-node: parent rule only grants to alice)
+        self.assertFalse(syft_file.has_read_access("random@test.com"))
         self.assertFalse(syft_file.has_write_access("random@test.com"))
     
     def test_grandparent_create_parent_write_child_read(self):
@@ -450,32 +447,35 @@ class TestHierarchyInheritance(unittest.TestCase):
         self.assertFalse(gp_syft.has_read_access("bob@example.com"))
         self.assertFalse(gp_syft.has_read_access("alice@example.com"))
         
-        # Test parent level - bob has write, charlie has create (inherited)
+        # Test parent level - bob has write/create/read, charlie and alice have NO access (nearest-node)
         p_syft = syft_perm.open(parent_file)
         self.assertTrue(p_syft.has_write_access("bob@example.com"))
         self.assertTrue(p_syft.has_create_access("bob@example.com"))  # Via hierarchy
         self.assertTrue(p_syft.has_read_access("bob@example.com"))    # Via hierarchy
         
-        self.assertTrue(p_syft.has_create_access("charlie@example.com"))  # Inherited
-        self.assertTrue(p_syft.has_read_access("charlie@example.com"))    # Via hierarchy
-        self.assertFalse(p_syft.has_write_access("charlie@example.com"))  # Not inherited
+        # Charlie has NO access (nearest-node: parent rule doesn't grant to charlie)
+        self.assertFalse(p_syft.has_create_access("charlie@example.com"))
+        self.assertFalse(p_syft.has_read_access("charlie@example.com"))
+        self.assertFalse(p_syft.has_write_access("charlie@example.com"))
         
         # Alice still has no permissions at parent level
         self.assertFalse(p_syft.has_read_access("alice@example.com"))
         
-        # Test child level - alice has read, bob has write (inherited), charlie has create (inherited)
+        # Test child level - alice has read only, bob and charlie have NO access (nearest-node: child rule)
         c_syft = syft_perm.open(child_file)
         self.assertTrue(c_syft.has_read_access("alice@example.com"))
         self.assertFalse(c_syft.has_create_access("alice@example.com"))
         self.assertFalse(c_syft.has_write_access("alice@example.com"))
         
-        self.assertTrue(c_syft.has_write_access("bob@example.com"))     # Inherited
-        self.assertTrue(c_syft.has_create_access("bob@example.com"))    # Via hierarchy
-        self.assertTrue(c_syft.has_read_access("bob@example.com"))      # Via hierarchy
+        # Bob has NO access (nearest-node: child rule doesn't grant to bob)
+        self.assertFalse(c_syft.has_write_access("bob@example.com"))
+        self.assertFalse(c_syft.has_create_access("bob@example.com"))
+        self.assertFalse(c_syft.has_read_access("bob@example.com"))
         
-        self.assertTrue(c_syft.has_create_access("charlie@example.com")) # Inherited
-        self.assertTrue(c_syft.has_read_access("charlie@example.com"))   # Via hierarchy
-        self.assertFalse(c_syft.has_write_access("charlie@example.com")) # Not inherited
+        # Charlie has NO access (nearest-node: child rule doesn't grant to charlie)
+        self.assertFalse(c_syft.has_create_access("charlie@example.com"))
+        self.assertFalse(c_syft.has_read_access("charlie@example.com"))
+        self.assertFalse(c_syft.has_write_access("charlie@example.com"))
     
     def test_grandparent_admin_parent_write_child_read_override(self):
         """Test grandparent admin, parent write, child read → child has only read."""
@@ -676,25 +676,29 @@ class TestHierarchyInheritance(unittest.TestCase):
         self.assertTrue(root_syft.has_read_access("bob@example.com"))
         self.assertFalse(root_syft.has_write_access("alice@example.com"))
         
-        # Test docs level - alice has write, everyone has read
+        # Test docs level - alice has write/read, bob has NO access (nearest-node: only docs rule applies)
         docs_syft = syft_perm.open(docs_txt)
         self.assertTrue(docs_syft.has_write_access("alice@example.com"))
-        self.assertTrue(docs_syft.has_read_access("bob@example.com"))  # Public read inherited
+        self.assertTrue(docs_syft.has_read_access("alice@example.com"))  # Via hierarchy
+        self.assertFalse(docs_syft.has_read_access("bob@example.com"))   # No access from docs rule
         
-        # Test api/v1.txt - alice has write (inherited), everyone has read
+        # Test api/v1.txt - alice has write/read (from nearest node: docs), bob has NO access
         api_syft = syft_perm.open(api_txt)
-        self.assertTrue(api_syft.has_write_access("alice@example.com"))  # From parent
-        self.assertTrue(api_syft.has_read_access("bob@example.com"))     # Public read
+        self.assertTrue(api_syft.has_write_access("alice@example.com"))  # From nearest node (docs)
+        self.assertTrue(api_syft.has_read_access("alice@example.com"))   # Via hierarchy
+        self.assertFalse(api_syft.has_read_access("bob@example.com"))    # No access from docs rule
         self.assertFalse(api_syft.has_admin_access("bob@example.com"))   # Pattern doesn't match
         
-        # Test api/v2/spec.txt - bob has admin, alice has write, everyone has read
+        # Test api/v2/spec.txt - bob has admin/write/read, alice and charlie have NO access (child rule only)
         v2_syft = syft_perm.open(v2_txt)
         self.assertTrue(v2_syft.has_admin_access("bob@example.com"))     # From child rule
-        self.assertTrue(v2_syft.has_write_access("alice@example.com"))   # From parent
-        self.assertTrue(v2_syft.has_read_access("charlie@example.com"))  # Public from grandparent
+        self.assertTrue(v2_syft.has_write_access("bob@example.com"))     # Via hierarchy
+        self.assertTrue(v2_syft.has_read_access("bob@example.com"))      # Via hierarchy
+        self.assertFalse(v2_syft.has_write_access("alice@example.com"))  # Child rule doesn't grant to alice
+        self.assertFalse(v2_syft.has_read_access("charlie@example.com")) # Child rule doesn't grant public access
     
     def test_three_levels_different_users_accumulate(self):
-        """Test all three levels have different users → child accumulates all (unless overridden)."""
+        """Test all three levels have different users → child uses nearest-node (child rule only)."""
         # Create grandparent with charlie having read
         grandparent_dir = Path(self.test_dir) / "accumulate"
         grandparent_dir.mkdir(parents=True)
@@ -750,19 +754,19 @@ class TestHierarchyInheritance(unittest.TestCase):
         # Open the child file
         syft_file = syft_perm.open(child_file)
         
-        # All three users should have their respective permissions
+        # Only alice should have permissions (nearest-node: child rule only)
         # Alice has write (and thus create/read via hierarchy)
         self.assertTrue(syft_file.has_write_access("alice@example.com"))
         self.assertTrue(syft_file.has_create_access("alice@example.com"))
         self.assertTrue(syft_file.has_read_access("alice@example.com"))
         
-        # Bob has create (and thus read via hierarchy) from parent
-        self.assertTrue(syft_file.has_create_access("bob@example.com"))
-        self.assertTrue(syft_file.has_read_access("bob@example.com"))
+        # Bob has NO access (nearest-node: child rule doesn't grant to bob)
+        self.assertFalse(syft_file.has_create_access("bob@example.com"))
+        self.assertFalse(syft_file.has_read_access("bob@example.com"))
         self.assertFalse(syft_file.has_write_access("bob@example.com"))
         
-        # Charlie has only read from grandparent
-        self.assertTrue(syft_file.has_read_access("charlie@example.com"))
+        # Charlie has NO access (nearest-node: child rule doesn't grant to charlie)
+        self.assertFalse(syft_file.has_read_access("charlie@example.com"))
         self.assertFalse(syft_file.has_create_access("charlie@example.com"))
         self.assertFalse(syft_file.has_write_access("charlie@example.com"))
         

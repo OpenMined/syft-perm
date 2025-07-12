@@ -403,14 +403,14 @@ rules:
         test_file = test_dir / "test.txt"
         test_file.write_text("test")
         
-        # Check permissions accumulate correctly
+        # Check permissions - only first matching rule applies (old syftbox behavior)
         syft_file = syft_perm.open(test_file)
         perms = syft_file._get_all_permissions()
         
-        # First rule wins for each permission type
+        # Only first rule (*.txt with read: alice@example.com) should apply
         self.assertIn("alice@example.com", perms.get("read", []))
-        self.assertIn("alice@example.com", perms.get("create", []))
-        self.assertIn("bob@example.com", perms.get("write", []))
+        self.assertNotIn("alice@example.com", perms.get("create", []))  # Not from first rule
+        self.assertNotIn("bob@example.com", perms.get("write", []))     # Not from first rule
     
     def test_folder_create_permissions(self):
         """Test create permissions on folders."""

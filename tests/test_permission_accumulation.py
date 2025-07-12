@@ -505,10 +505,10 @@ class TestPermissionAccumulation(unittest.TestCase):
         # Open the file
         syft_file = syft_perm.open(doc_file)
         
-        # Alice should have write (highest accumulated permission)
-        self.assertTrue(syft_file.has_write_access("alice@example.com"))
-        self.assertTrue(syft_file.has_create_access("alice@example.com"))  # Via hierarchy
-        self.assertTrue(syft_file.has_read_access("alice@example.com"))    # Via hierarchy
+        # Alice should have NO access (nearest-node: child rule doesn't grant to alice)
+        self.assertFalse(syft_file.has_write_access("alice@example.com"))
+        self.assertFalse(syft_file.has_create_access("alice@example.com"))
+        self.assertFalse(syft_file.has_read_access("alice@example.com"))
         
         # Bob should NOT have create - child rule overrides parent rule
         # According to old syftbox behavior: nearest node with matching rule wins
@@ -524,13 +524,13 @@ class TestPermissionAccumulation(unittest.TestCase):
         
         # Test permission reasoning
         has_write, write_reasons = syft_file._check_permission_with_reasons("alice@example.com", "write")
-        self.assertTrue(has_write)
-        self.assertTrue(any("Explicitly granted write" in r for r in write_reasons))
+        self.assertFalse(has_write)
+        self.assertTrue(any("No permission found" in r for r in write_reasons))
         
         has_create_bob, create_reasons_bob = syft_file._check_permission_with_reasons("bob@example.com", "create")
         self.assertFalse(has_create_bob)
-        # Bob has no permission because child rule overrides parent rule
-        self.assertTrue(any("No permission found" in r for r in create_reasons_bob))
+        # Bob has no permission because child rule matches but doesn't grant create to bob
+        self.assertTrue(any("Pattern '*.doc' matched" in r for r in create_reasons_bob))
         
         has_create_charlie, create_reasons_charlie = syft_file._check_permission_with_reasons("charlie@example.com", "create")
         self.assertTrue(has_create_charlie)

@@ -149,8 +149,8 @@ class TestParentChildInheritance(unittest.TestCase):
         # Open the file
         syft_file = syft_perm.open(child_file)
         
-        # Alice should have read from parent
-        self.assertTrue(syft_file.has_read_access("alice@example.com"))
+        # Alice should have NO access (nearest-node: child rule doesn't grant to alice)
+        self.assertFalse(syft_file.has_read_access("alice@example.com"))
         self.assertFalse(syft_file.has_write_access("alice@example.com"))
         
         # Bob should have write (and thus create+read) from child
@@ -161,10 +161,10 @@ class TestParentChildInheritance(unittest.TestCase):
         # Charlie should have nothing
         self.assertFalse(syft_file.has_read_access("charlie@example.com"))
         
-        # Check the permission table shows both users
+        # Check the permission table shows only bob (nearest-node: child rule only)
         table_rows = syft_file._get_permission_table()
         users_in_table = [row[0] for row in table_rows]
-        self.assertIn("alice@example.com", users_in_table)
+        self.assertNotIn("alice@example.com", users_in_table)
         self.assertIn("bob@example.com", users_in_table)
     
     def test_parent_read_child_write_combined(self):

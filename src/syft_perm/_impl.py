@@ -167,7 +167,9 @@ def _match_doublestar(pattern: str, path: str) -> bool:
     # Multiple ** patterns - handle recursively
     # Pattern like "a/**/b/**/c"
     first_part = parts[0].rstrip("/")
-    rest_pattern = "**".join(parts[1:])
+    # Clean up the remaining parts and rejoin properly
+    remaining_parts = [part.strip("/") for part in parts[1:] if part.strip("/")]
+    rest_pattern = "**".join(remaining_parts)
     
     if first_part:
         if not path.startswith(first_part):
@@ -827,13 +829,13 @@ class SyftFile:
             return False
     
     def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
-        """Get all permissions including inherited ones with source tracking."""
+        """Get all permissions using old syftbox nearest-node algorithm with source tracking."""
         # Start with empty permissions and sources
         effective_perms = {"read": [], "create": [], "write": [], "admin": []}
         source_info = {"read": [], "create": [], "write": [], "admin": []}
         terminal_path = None
         
-        # Walk up the directory tree collecting permissions
+        # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
         while current_path.parent != current_path:  # Stop at root
             parent_dir = current_path.parent
@@ -847,19 +849,20 @@ class SyftFile:
                     # Check if this is a terminal node
                     if content.get("terminal", False):
                         terminal_path = syftpub_path
-                        # Terminal nodes stop inheritance
+                        # Terminal nodes stop inheritance and their rules take precedence
                         rules = content.get("rules", [])
-                        for rule in rules:
+                        sorted_rules = _sort_rules_by_specificity(rules)
+                        for rule in sorted_rules:
                             pattern = rule.get("pattern", "")
                             # Check if pattern matches our file path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path):
                                 access = rule.get("access", {})
-                                # Terminal rules override everything
+                                # Terminal rules override everything - return immediately
                                 for perm in ["read", "create", "write", "admin"]:
                                     users = format_users(access.get(perm, []))
+                                    effective_perms[perm] = users
                                     if users:
-                                        effective_perms[perm] = users
                                         source_info[perm] = [{
                                             "path": syftpub_path,
                                             "pattern": pattern,
@@ -867,12 +870,14 @@ class SyftFile:
                                             "inherited": False
                                         }]
                                 return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
-                        # If no match in terminal, stop inheritance
+                        # If no match in terminal, stop inheritance with empty permissions
                         return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
                     
-                    # Process rules for non-terminal nodes
+                    # Process rules for non-terminal nodes (sort by specificity first)
                     rules = content.get("rules", [])
-                    for rule in rules:
+                    sorted_rules = _sort_rules_by_specificity(rules)
+                    found_matching_rule = False
+                    for rule in sorted_rules:
                         pattern = rule.get("pattern", "")
                         # Check if pattern matches our file path relative to this directory
                         rel_path = str(self._path.relative_to(parent_dir))
@@ -894,18 +899,25 @@ class SyftFile:
                                 if not limits.get("allow_symlinks", True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
                             
-                            # Merge permissions (inheritance)
+                            # Found a matching rule - this becomes our nearest node
+                            # Use this node's permissions (not accumulate)
                             for perm in ["read", "create", "write", "admin"]:
-                                users = access.get(perm, [])
-                                if users and not effective_perms[perm]:
-                                    # Only inherit if we don't have more specific permissions
-                                    effective_perms[perm] = format_users(users)
-                                    source_info[perm].append({
+                                users = format_users(access.get(perm, []))
+                                effective_perms[perm] = users
+                                if users:
+                                    source_info[perm] = [{
                                         "path": syftpub_path,
                                         "pattern": pattern,
                                         "terminal": False,
                                         "inherited": parent_dir != self._path.parent
-                                    })
+                                    }]
+                            found_matching_rule = True
+                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                    
+                    # If we found a matching rule, this is our nearest node - stop searching
+                    if found_matching_rule:
+                        break
+                        
                 except Exception:
                     pass
             
@@ -1650,13 +1662,13 @@ class SyftFolder:
         return has_permission, reasons
 
     def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
-        """Get all permissions including inherited ones with source tracking."""
+        """Get all permissions using old syftbox nearest-node algorithm with source tracking."""
         # Start with empty permissions and sources
         effective_perms = {"read": [], "create": [], "write": [], "admin": []}
         source_info = {"read": [], "create": [], "write": [], "admin": []}
         terminal_path = None
         
-        # Walk up the directory tree collecting permissions
+        # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
         while current_path.parent != current_path:  # Stop at root
             parent_dir = current_path.parent
@@ -1670,19 +1682,20 @@ class SyftFolder:
                     # Check if this is a terminal node
                     if content.get("terminal", False):
                         terminal_path = syftpub_path
-                        # Terminal nodes stop inheritance
+                        # Terminal nodes stop inheritance and their rules take precedence
                         rules = content.get("rules", [])
-                        for rule in rules:
+                        sorted_rules = _sort_rules_by_specificity(rules)
+                        for rule in sorted_rules:
                             pattern = rule.get("pattern", "")
                             # Check if pattern matches our folder path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
                                 access = rule.get("access", {})
-                                # Terminal rules override everything
+                                # Terminal rules override everything - return immediately
                                 for perm in ["read", "create", "write", "admin"]:
                                     users = format_users(access.get(perm, []))
+                                    effective_perms[perm] = users
                                     if users:
-                                        effective_perms[perm] = users
                                         source_info[perm] = [{
                                             "path": syftpub_path,
                                             "pattern": pattern,
@@ -1690,12 +1703,14 @@ class SyftFolder:
                                             "inherited": False
                                         }]
                                 return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
-                        # If no match in terminal, stop inheritance
+                        # If no match in terminal, stop inheritance with empty permissions
                         return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
                     
-                    # Process rules for non-terminal nodes
+                    # Process rules for non-terminal nodes (sort by specificity first)
                     rules = content.get("rules", [])
-                    for rule in rules:
+                    sorted_rules = _sort_rules_by_specificity(rules)
+                    found_matching_rule = False
+                    for rule in sorted_rules:
                         pattern = rule.get("pattern", "")
                         # Check if pattern matches our folder path relative to this directory
                         rel_path = str(self._path.relative_to(parent_dir))
@@ -1708,18 +1723,25 @@ class SyftFolder:
                                 if not limits.get("allow_dirs", True):
                                     continue  # Skip this rule for directories
                             
-                            # Merge permissions (inheritance)
+                            # Found a matching rule - this becomes our nearest node
+                            # Use this node's permissions (not accumulate)
                             for perm in ["read", "create", "write", "admin"]:
-                                users = access.get(perm, [])
-                                if users and not effective_perms[perm]:
-                                    # Only inherit if we don't have more specific permissions
-                                    effective_perms[perm] = format_users(users)
-                                    source_info[perm].append({
+                                users = format_users(access.get(perm, []))
+                                effective_perms[perm] = users
+                                if users:
+                                    source_info[perm] = [{
                                         "path": syftpub_path,
                                         "pattern": pattern,
                                         "terminal": False,
                                         "inherited": parent_dir != self._path.parent
-                                    })
+                                    }]
+                            found_matching_rule = True
+                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                    
+                    # If we found a matching rule, this is our nearest node - stop searching
+                    if found_matching_rule:
+                        break
+                        
                 except Exception:
                     pass
             
