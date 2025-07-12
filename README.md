@@ -22,10 +22,10 @@ pip install syft-perm
 ## Quick Start
 
 ```python
-import syft_perm
+import syft_perm as sp
 
 # Open a file or folder
-file = syft_perm.open("my_data.txt")
+file = sp.open("my_data.txt")
 
 # Grant permissions (higher levels include lower ones)
 file.grant_read_access("reviewer@external.org")
@@ -33,7 +33,7 @@ file.grant_write_access("colleague@company.com")  # Gets read + write
 file.grant_admin_access("boss@company.com")       # Gets everything
 
 # Use patterns for multiple files
-project = syft_perm.open("my_project/")
+project = sp.open("my_project/")
 project.grant_write_access("*.py", "dev@company.com")
 project.grant_read_access("docs/**/*.md", "*")  # Public docs
 
@@ -46,6 +46,7 @@ if file.has_write_access("colleague@company.com"):
 
 # Display beautiful permission tables in Jupyter notebooks
 file._repr_html_()  # Shows permissions table with compliance info
+```
 
 ## Permission Hierarchy
 
@@ -85,7 +86,7 @@ For non-technical users, SyftPerm includes a web interface:
 
 ```python
 # Get editor URL for any file or folder
-url = syft_perm.get_editor_url("my_project/")
+url = sp.get_editor_url("my_project/")
 print(f"Edit permissions at: {url}")
 ```
 
