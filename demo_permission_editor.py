@@ -48,9 +48,13 @@ You can use the web interface to manage who can read, create, write, or admin th
     print(f"📁 Demo files created in: {demo_dir.absolute()}")
     print(f"📄 Demo file: {demo_file.absolute()}")
     
-    # Import syft_perm (this auto-starts the server)
-    print("\n🔧 Starting permission editor server...")
+    # Import syft_perm (server starts on-demand when _repr_html_ is called)
+    print("\n📦 Importing syft_perm...")
     import syft_perm
+    
+    print("🎨 Triggering _repr_html_ to start server...")
+    demo_syft_file = syft_perm.open(demo_file)
+    html_output = demo_syft_file._repr_html_()  # This starts the server!
     
     # Get editor URLs
     file_editor = syft_perm.get_editor_url(demo_file)
@@ -74,7 +78,6 @@ You can use the web interface to manage who can read, create, write, or admin th
     print(f"   • * (for public access)")
     
     print(f"\n🔍 Current permissions:")
-    demo_syft_file = syft_perm.open(demo_file)
     perms = demo_syft_file._get_all_permissions()
     for perm_type, users in perms.items():
         if users:

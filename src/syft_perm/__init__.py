@@ -5,7 +5,7 @@ from typing import Union as _Union
 
 from ._impl import SyftFile as _SyftFile, SyftFolder as _SyftFolder
 
-__version__ = "0.2.31"
+__version__ = "0.2.32"
 
 __all__ = [
     "open",
@@ -64,17 +64,4 @@ def start_permission_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     return start_server(port, host)
 
 
-# Auto-start the permission server when the library is imported
-try:
-    from .server import start_server as _start_server
-    _server_url = _start_server()
-    print(f"🚀 SyftPerm permission editor started at: {_server_url}")
-    print(f"   Use syft_perm.get_editor_url('/path/to/file') to get the editor URL for any file")
-except ImportError:
-    # FastAPI not available, skip auto-start
-    print("⚠️  FastAPI not available. Install with: pip install 'syft-perm[server]' for permission editor")
-except Exception as e:
-    # Server failed to start, continue silently
-    print(f"⚠️  Permission editor server failed to start: {e}")
-    print("   You can try manually with: syft_perm.start_permission_server()")
-    pass 
+# Server will auto-start when _repr_html_ is called in Jupyter notebooks 

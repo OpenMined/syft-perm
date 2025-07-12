@@ -790,8 +790,33 @@ class SyftFile:
                 result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5} {row[5] if len(row) > 5 else ''}")
             return "\n".join(result)
 
+    def _ensure_server_and_get_editor_url(self) -> str:
+        """Ensure the permission editor server is running and return the editor URL."""
+        try:
+            from .server import get_server_url, start_server, get_editor_url
+            
+            # Check if server is already running
+            server_url = get_server_url()
+            if not server_url:
+                # Start the server
+                server_url = start_server()
+                print(f"🚀 SyftPerm permission editor started at: {server_url}")
+            
+            # Return the editor URL for this file
+            return get_editor_url(str(self._path))
+            
+        except ImportError:
+            # FastAPI not available
+            return "Install 'syft-perm[server]' for permission editor"
+        except Exception as e:
+            # Server failed to start
+            return f"Permission editor unavailable: {e}"
+
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter notebooks."""
+        # Auto-start permission editor server for Jupyter notebook integration
+        editor_url = self._ensure_server_and_get_editor_url()
+        
         rows = self._get_permission_table()
         
         # Create compliance table showing current state vs limits
@@ -847,8 +872,11 @@ class SyftFile:
 <tr><td style="padding: 5px;"><b>Overall</b></td><td style="padding: 5px;" colspan="2"><b>File access compliance</b></td><td style="padding: 5px;"><b>{overall_status}</b></td></tr>
 </table>\n'''
         
+        # Add editor link
+        editor_link = f'<p style="margin: 10px 0;"><a href="{editor_url}" target="_blank" style="background: #1976d2; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px;">🖊️ Edit Permissions</a></p>\n'
+        
         if not rows:
-            return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n{compliance_html}"
+            return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n{editor_link}{compliance_html}"
             
         try:
             from tabulate import tabulate
@@ -857,10 +885,11 @@ class SyftFile:
                 headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="html"
             )
-            return f"<p><b>SyftFile('{self._path}')</b></p>\n{compliance_html}{table}"
+            return f"<p><b>SyftFile('{self._path}')</b></p>\n{editor_link}{compliance_html}{table}"
         except ImportError:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFile('{self._path}')</b></p>"]
+            result.append(editor_link.strip())
             result.append(compliance_html.strip())
             result.append("<table>")
             result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>")
@@ -1670,8 +1699,33 @@ class SyftFolder:
                 result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5} {row[5] if len(row) > 5 else ''}")
             return "\n".join(result)
 
+    def _ensure_server_and_get_editor_url(self) -> str:
+        """Ensure the permission editor server is running and return the editor URL."""
+        try:
+            from .server import get_server_url, start_server, get_editor_url
+            
+            # Check if server is already running
+            server_url = get_server_url()
+            if not server_url:
+                # Start the server
+                server_url = start_server()
+                print(f"🚀 SyftPerm permission editor started at: {server_url}")
+            
+            # Return the editor URL for this folder
+            return get_editor_url(str(self._path))
+            
+        except ImportError:
+            # FastAPI not available
+            return "Install 'syft-perm[server]' for permission editor"
+        except Exception as e:
+            # Server failed to start
+            return f"Permission editor unavailable: {e}"
+
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter notebooks."""
+        # Auto-start permission editor server for Jupyter notebook integration
+        editor_url = self._ensure_server_and_get_editor_url()
+        
         rows = self._get_permission_table()
         limits = self.get_file_limits()
         
@@ -1762,8 +1816,11 @@ class SyftFolder:
 <tr><td style="padding: 5px;"><b>Overall</b></td><td style="padding: 5px;" colspan="2"><b>Folder access compliance</b></td><td style="padding: 5px;"><b>{overall_status}</b></td></tr>
 </table>\n'''
         
+        # Add editor link
+        editor_link = f'<p style="margin: 10px 0;"><a href="{editor_url}" target="_blank" style="background: #1976d2; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px;">🖊️ Edit Permissions</a></p>'
+        
         # Build the HTML output
-        result = [f"<p><b>SyftFolder('{self._path}')</b></p>", compliance_html.strip()]
+        result = [f"<p><b>SyftFolder('{self._path}')</b></p>", editor_link, compliance_html.strip()]
         
         # File limits are now shown in the compliance table above
         
