@@ -1427,7 +1427,7 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
         explanation = f"Permission analysis for {user} on {self._path}:\n\n"
 
         for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(user, perm)
+            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
             status = "✓ GRANTED" if has_perm else "✗ DENIED"
             explanation += f"{perm.upper()}: {status}\n"
             for reason in reasons:
@@ -2459,7 +2459,7 @@ class SyftFolder:
         explanation = f"Permission analysis for {user} on {self._path}:\n\n"
 
         for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(user, perm)
+            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
             status = "✓ GRANTED" if has_perm else "✗ DENIED"
             explanation += f"{perm.upper()}: {status}\n"
             for reason in reasons:
