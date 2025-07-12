@@ -69,10 +69,11 @@ def create_access_dict(
 def update_syftpub_yaml(
     target_path: Path,
     pattern: str,
-    access_dict: Dict[str, List[str]]
+    access_dict: Dict[str, List[str]],
+    limits_dict: Optional[Dict[str, Any]] = None
 ) -> None:
-    """Update syft.pub.yaml with new permission rules"""
-    if not access_dict:
+    """Update syft.pub.yaml with new permission rules and optional limits"""
+    if not access_dict and not limits_dict:
         return
         
     syftpub_path = target_path / "syft.pub.yaml"
@@ -90,19 +91,32 @@ def update_syftpub_yaml(
     if not isinstance(existing_content.get("rules"), list):
         existing_content["rules"] = []
     
-    # Update rules
-    # Ensure permissions are in correct order by creating new ordered dict
-    ordered_access = {}
-    for perm in ["admin", "write", "create", "read"]:
-        if perm in access_dict:
-            ordered_access[perm] = access_dict[perm]
-            
-    new_rule = {"pattern": pattern, "access": ordered_access}
-    existing_content["rules"] = [
-        rule for rule in existing_content["rules"]
-        if rule.get("pattern") != pattern
-    ]
-    existing_content["rules"].append(new_rule)
+    # Find existing rule for this pattern
+    existing_rule = None
+    for rule in existing_content["rules"]:
+        if rule.get("pattern") == pattern:
+            existing_rule = rule
+            break
+    
+    # Create new rule or update existing
+    if existing_rule is None:
+        new_rule = {"pattern": pattern}
+        existing_content["rules"].append(new_rule)
+    else:
+        new_rule = existing_rule
+    
+    # Update access permissions if provided
+    if access_dict:
+        # Ensure permissions are in correct order by creating new ordered dict
+        ordered_access = {}
+        for perm in ["admin", "write", "create", "read"]:
+            if perm in access_dict:
+                ordered_access[perm] = access_dict[perm]
+        new_rule["access"] = ordered_access
+    
+    # Update limits if provided
+    if limits_dict:
+        new_rule["limits"] = limits_dict
     
     # Write back
     with open(syftpub_path, 'w') as f:
@@ -151,6 +165,25 @@ def read_syftpub_yaml(path: Path, pattern: str) -> Optional[Dict[str, List[str]]
         for rule in content.get("rules", []):
             if rule.get("pattern") == pattern:
                 return rule.get("access")
+    except Exception:
+        pass
+    return None
+
+def read_syftpub_yaml_full(path: Path, pattern: str) -> Optional[Dict[str, Any]]:
+    """Read full rule (access and limits) from syft.pub.yaml for a specific pattern"""
+    syftpub_path = path / "syft.pub.yaml"
+    if not syftpub_path.exists():
+        return None
+    
+    try:
+        with open(syftpub_path, 'r') as f:
+            content = yaml.safe_load(f) or {"rules": []}
+        for rule in content.get("rules", []):
+            if rule.get("pattern") == pattern:
+                return {
+                    "access": rule.get("access", {}),
+                    "limits": rule.get("limits", {})
+                }
     except Exception:
         pass
     return None 

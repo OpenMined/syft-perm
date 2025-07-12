@@ -189,8 +189,11 @@ class TestOwnerBypass(unittest.TestCase):
             # - "/alice/documents/file.txt"
             # Not: "/tmp/something/alice/documents/file.txt"
             
-            # So this test documents the current limitation
-            self.assertFalse(syft_file.has_read_access("alice"))  # Current implementation won't match
+            # With the improved implementation, alice is now correctly detected as owner
+            self.assertTrue(syft_file.has_read_access("alice"))  # Alice is owner and gets all permissions
+            self.assertTrue(syft_file.has_create_access("alice"))
+            self.assertTrue(syft_file.has_write_access("alice"))
+            self.assertTrue(syft_file.has_admin_access("alice"))
             
             # Bob should have only read (follows normal rules)
             self.assertTrue(syft_file.has_read_access("bob@example.com"))
@@ -229,9 +232,11 @@ class TestOwnerBypass(unittest.TestCase):
         # Open the file
         syft_file = syft_perm.open(charlie_file)
         
-        # The current implementation won't match because the path is like:
-        # /tmp/xxx/charlie/workspace/code.py (doesn't start with "/charlie/")
-        self.assertFalse(syft_file.has_read_access("charlie"))  # Current implementation limitation
+        # With the improved implementation, charlie is correctly detected as owner
+        self.assertTrue(syft_file.has_read_access("charlie"))  # Charlie is owner and gets all permissions
+        self.assertTrue(syft_file.has_create_access("charlie"))
+        self.assertTrue(syft_file.has_write_access("charlie"))
+        self.assertTrue(syft_file.has_admin_access("charlie"))
         
         # Alice should have only read (follows terminal rules)
         self.assertTrue(syft_file.has_read_access("alice@example.com"))

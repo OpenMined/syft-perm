@@ -11,6 +11,7 @@ from ._utils import (
     create_access_dict,
     update_syftpub_yaml,
     read_syftpub_yaml,
+    read_syftpub_yaml_full,
     format_users,
     is_datasite_email,
 )
@@ -145,56 +146,92 @@ def _doublestar_match(pattern: str, path: str) -> bool:
     return _match_simple_glob(pattern, path)
 
 def _match_doublestar(pattern: str, path: str) -> bool:
-    """Handle patterns containing ** (doublestar) recursion."""
-    # Split pattern by **
-    parts = pattern.split("**")
+    """
+    Handle patterns containing ** (doublestar) recursion.
     
-    if len(parts) == 1:
-        # No ** in pattern, shouldn't happen but handle gracefully
+    This implements the doublestar algorithm similar to the Go library used in old syftbox.
+    Key behavior: ** matches zero or more path segments (directories).
+    """
+    # Handle the simplest cases first
+    if pattern == "**":
+        return True
+    if not pattern:
+        return not path
+    if not path:
+        return pattern == "**" or pattern == ""
+    
+    # Find the first ** in the pattern
+    double_star_idx = pattern.find("**")
+    if double_star_idx == -1:
+        # No ** in pattern, use simple glob matching
         return _match_simple_glob(pattern, path)
     
-    if len(parts) == 2:
-        # Pattern like "prefix**/suffix" or "**/suffix" or "prefix/**"
-        prefix, suffix = parts
-        prefix = prefix.rstrip("/")
-        suffix = suffix.lstrip("/")
-        
-        # Check prefix
-        if prefix:
-            if not path.startswith(prefix):
-                return False
-            # Remove prefix from path
-            remaining = path[len(prefix):].lstrip("/")
-        else:
-            remaining = path
-        
-        # Check suffix
-        if suffix:
-            # Find if suffix matches any segment of remaining path
-            return _match_suffix_recursive(suffix, remaining)
-        else:
-            # Pattern ends with **, matches everything after prefix
-            return True
+    # Split into prefix (before **), and suffix (after **)
+    prefix = pattern[:double_star_idx].rstrip("/")
+    suffix = pattern[double_star_idx + 2:].lstrip("/")
     
-    # Multiple ** patterns - handle recursively
-    # Pattern like "a/**/b/**/c"
-    first_part = parts[0].rstrip("/")
-    # Clean up the remaining parts and rejoin properly
-    remaining_parts = [part.strip("/") for part in parts[1:] if part.strip("/")]
-    rest_pattern = "**".join(remaining_parts)
-    
-    if first_part:
-        if not path.startswith(first_part):
+    # Match the prefix
+    if prefix:
+        # For doublestar patterns, prefix should match as a path component
+        # Either exact match or path should start with prefix + "/"
+        prefix_matches = False
+        remaining = ""
+        
+        if path == prefix:
+            # Exact match
+            prefix_matches = True
+            remaining = ""
+        elif path.startswith(prefix + "/"):
+            # Path starts with prefix followed by separator
+            prefix_matches = True
+            remaining = path[len(prefix) + 1:]
+        elif _match_simple_glob(prefix, path):
+            # Glob pattern match
+            prefix_matches = True
+            remaining = ""
+        else:
+            # Try to find prefix match at segment boundaries
+            path_segments = path.split("/")
+            for i in range(len(path_segments)):
+                segment_prefix = "/".join(path_segments[:i+1])
+                if _match_simple_glob(prefix, segment_prefix):
+                    prefix_matches = True
+                    remaining = "/".join(path_segments[i+1:])
+                    break
+        
+        if not prefix_matches:
+            # Prefix doesn't match anywhere, try the pattern at later positions
+            path_segments = path.split("/")
+            for i in range(1, len(path_segments) + 1):
+                remaining_path = "/".join(path_segments[i:])
+                if _match_doublestar(pattern, remaining_path):
+                    return True
             return False
-        remaining = path[len(first_part):].lstrip("/")
     else:
+        # No prefix, ** can match from the beginning
         remaining = path
     
-    # Try matching rest of pattern at every possible position
-    path_segments = remaining.split("/") if remaining else [""]
-    for i in range(len(path_segments)):
-        test_path = "/".join(path_segments[i:])
-        if _match_doublestar(rest_pattern, test_path):
+    # Match the suffix
+    if not suffix:
+        # Pattern ends with **, matches everything remaining
+        return True
+    
+    # Try matching suffix at every possible position in remaining path
+    if not remaining:
+        # No remaining path, but we have a suffix to match
+        return suffix == ""
+    
+    # Split remaining path into segments and try matching suffix at each position
+    remaining_segments = remaining.split("/")
+    
+    # Try exact match first
+    if _match_doublestar(suffix, remaining):
+        return True
+    
+    # Try matching suffix starting from each segment position
+    for i in range(len(remaining_segments)):
+        candidate = "/".join(remaining_segments[i:])
+        if _match_doublestar(suffix, candidate):
             return True
     
     return False
@@ -420,9 +457,13 @@ def _is_owner(path: str, user: str) -> bool:
             normalized_path = _acl_norm_path(datasites_relative)
             return normalized_path.startswith(user)
     
-    # If not under datasites, treat as already relative and normalize
+    # If not under datasites, check if any path component matches the user
+    # This handles both relative paths and test scenarios
     normalized_path = _acl_norm_path(path_str)
-    return normalized_path.startswith(user)
+    path_parts = normalized_path.split("/")
+    
+    # Check if any path component is the user (for owner detection)
+    return user in path_parts
 
 def _confirm_action(message: str, force: bool = False) -> bool:
     """
@@ -729,8 +770,36 @@ class SyftFile:
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter notebooks."""
         rows = self._get_permission_table()
+        
+        # Get file limits information
+        limits = self.get_file_limits()
+        limits_html = ""
+        if limits["has_limits"]:
+            limits_parts = []
+            if limits["max_file_size"] is not None:
+                size_mb = limits["max_file_size"] / (1024 * 1024)
+                if size_mb >= 1:
+                    limits_parts.append(f"Max size: {size_mb:.1f}MB")
+                else:
+                    size_kb = limits["max_file_size"] / 1024
+                    if size_kb >= 1:
+                        limits_parts.append(f"Max size: {size_kb:.1f}KB")
+                    else:
+                        limits_parts.append(f"Max size: {limits['max_file_size']}B")
+            
+            restrictions = []
+            if not limits["allow_dirs"]:
+                restrictions.append("No directories")
+            if not limits["allow_symlinks"]:
+                restrictions.append("No symlinks")
+            if restrictions:
+                limits_parts.append(f"Restrictions: {', '.join(restrictions)}")
+            
+            if limits_parts:
+                limits_html = f"<p><i>File Limits: {' | '.join(limits_parts)}</i></p>\n"
+        
         if not rows:
-            return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>"
+            return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n{limits_html}"
             
         try:
             from tabulate import tabulate
@@ -739,10 +808,12 @@ class SyftFile:
                 headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="html"
             )
-            return f"<p><b>SyftFile('{self._path}')</b></p>\n{table}"
+            return f"<p><b>SyftFile('{self._path}')</b></p>\n{limits_html}{table}"
         except ImportError:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFile('{self._path}')</b></p>"]
+            if limits_html:
+                result.append(limits_html.strip())
             result.append("<table>")
             result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>")
             for row in rows:
@@ -1134,32 +1205,70 @@ class SyftFile:
         return explanation
     
     def set_file_limits(self, max_size: Optional[int] = None, 
-                       allow_dirs: bool = True, 
-                       allow_symlinks: bool = True) -> None:
+                       allow_dirs: Optional[bool] = None, 
+                       allow_symlinks: Optional[bool] = None) -> None:
         """
         Set file limits for this file's permissions (compatible with old ACL).
         
         Args:
-            max_size: Maximum file size in bytes (None for no limit)
-            allow_dirs: Whether to allow directories
-            allow_symlinks: Whether to allow symlinks
+            max_size: Maximum file size in bytes (None to keep current, pass explicitly to change)
+            allow_dirs: Whether to allow directories (None to keep current)
+            allow_symlinks: Whether to allow symlinks (None to keep current)
         """
-        # Read current permissions
-        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
+        # Read current rule to get existing limits
+        rule_data = read_syftpub_yaml_full(self._path.parent, self._name)
+        existing_limits = rule_data.get("limits", {}) if rule_data else {}
+        access_dict = rule_data.get("access", {}) if rule_data else {}
         
-        # Add limits to the rule
-        if "limits" not in access_dict:
-            access_dict["limits"] = {}
+        # Create limits dictionary by merging with existing values
+        limits_dict = existing_limits.copy()
         
         if max_size is not None:
-            access_dict["limits"]["max_file_size"] = max_size
-        access_dict["limits"]["allow_dirs"] = allow_dirs
-        access_dict["limits"]["allow_symlinks"] = allow_symlinks
+            limits_dict["max_file_size"] = max_size
+        if allow_dirs is not None:
+            limits_dict["allow_dirs"] = allow_dirs
+        if allow_symlinks is not None:
+            limits_dict["allow_symlinks"] = allow_symlinks
         
-        update_syftpub_yaml(self._path.parent, self._name, access_dict)
+        # Set defaults for new limits
+        if "allow_dirs" not in limits_dict:
+            limits_dict["allow_dirs"] = True
+        if "allow_symlinks" not in limits_dict:
+            limits_dict["allow_symlinks"] = True
+        
+        # Update with both access and limits
+        update_syftpub_yaml(self._path.parent, self._name, access_dict, limits_dict)
         
         # Invalidate cache
         _permission_cache.invalidate(str(self._path))
+
+    def get_file_limits(self) -> Dict[str, Any]:
+        """
+        Get file limits for this file's permissions.
+        
+        Returns:
+            Dict containing:
+                - max_file_size: Maximum file size in bytes (None if no limit)
+                - allow_dirs: Whether directories are allowed (bool)
+                - allow_symlinks: Whether symlinks are allowed (bool)
+                - has_limits: Whether any limits are set (bool)
+        """
+        # Read current rule to get limits
+        rule_data = read_syftpub_yaml_full(self._path.parent, self._name)
+        limits = rule_data.get("limits", {}) if rule_data else {}
+        
+        # Get limits with defaults
+        max_file_size = limits.get("max_file_size")
+        allow_dirs = limits.get("allow_dirs", True)
+        allow_symlinks = limits.get("allow_symlinks", True)
+        has_limits = bool(limits)
+        
+        return {
+            "max_file_size": max_file_size,
+            "allow_dirs": allow_dirs,
+            "allow_symlinks": allow_symlinks,
+            "has_limits": has_limits
+        }
 
     def move_file_and_its_permissions(self, new_path: Union[str, Path]) -> 'SyftFile':
         """
@@ -1470,8 +1579,24 @@ class SyftFolder:
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter notebooks."""
         rows = self._get_permission_table()
+        limits = self.get_file_limits()
+        
+        # Build the HTML output
+        result = [f"<p><b>SyftFolder('{self._path}')</b></p>"]
+        
+        # Add file limits section if any limits are set
+        if limits["has_limits"]:
+            result.append("<p><b>File Limits:</b></p>")
+            result.append("<ul>")
+            if limits["max_file_size"] is not None:
+                result.append(f"<li>Max file size: {limits['max_file_size']:,} bytes</li>")
+            result.append(f"<li>Allow directories: {'Yes' if limits['allow_dirs'] else 'No'}</li>")
+            result.append(f"<li>Allow symlinks: {'Yes' if limits['allow_symlinks'] else 'No'}</li>")
+            result.append("</ul>")
+        
         if not rows:
-            return f"<p><b>SyftFolder('{self._path}')</b> - No permissions set</p>"
+            result.append("<p>No permissions set</p>")
+            return "\n".join(result)
             
         try:
             from tabulate import tabulate
@@ -1480,10 +1605,10 @@ class SyftFolder:
                 headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="html"
             )
-            return f"<p><b>SyftFolder('{self._path}')</b></p>\n{table}"
+            result.append(table)
+            return "\n".join(result)
         except ImportError:
             # Fallback to simple HTML table if tabulate not available
-            result = [f"<p><b>SyftFolder('{self._path}')</b></p>"]
             result.append("<table>")
             result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>")
             for row in rows:
@@ -1838,6 +1963,72 @@ class SyftFolder:
             explanation += "\n"
         
         return explanation
+
+    def set_file_limits(self, max_size: Optional[int] = None, 
+                       allow_dirs: Optional[bool] = None, 
+                       allow_symlinks: Optional[bool] = None) -> None:
+        """
+        Set file limits for this folder's permissions.
+        
+        Args:
+            max_size: Maximum file size in bytes (None to keep current, pass explicitly to change)
+            allow_dirs: Whether to allow directories (None to keep current)
+            allow_symlinks: Whether to allow symlinks (None to keep current)
+        """
+        # Read current rule to get existing limits
+        rule_data = read_syftpub_yaml_full(self._path.parent, self._name)
+        existing_limits = rule_data.get("limits", {}) if rule_data else {}
+        access_dict = rule_data.get("access", {}) if rule_data else {}
+        
+        # Create limits dictionary by merging with existing values
+        limits_dict = existing_limits.copy()
+        
+        if max_size is not None:
+            limits_dict["max_file_size"] = max_size
+        if allow_dirs is not None:
+            limits_dict["allow_dirs"] = allow_dirs
+        if allow_symlinks is not None:
+            limits_dict["allow_symlinks"] = allow_symlinks
+        
+        # Set defaults for new limits
+        if "allow_dirs" not in limits_dict:
+            limits_dict["allow_dirs"] = True
+        if "allow_symlinks" not in limits_dict:
+            limits_dict["allow_symlinks"] = True
+        
+        # Update with both access and limits
+        update_syftpub_yaml(self._path.parent, self._name, access_dict, limits_dict)
+        
+        # Invalidate cache
+        _permission_cache.invalidate(str(self._path))
+
+    def get_file_limits(self) -> Dict[str, Any]:
+        """
+        Get file limits for this folder's permissions.
+        
+        Returns:
+            Dict containing:
+                - max_file_size: Maximum file size in bytes (None if no limit)
+                - allow_dirs: Whether directories are allowed (bool)
+                - allow_symlinks: Whether symlinks are allowed (bool)
+                - has_limits: Whether any limits are set (bool)
+        """
+        # Read current rule to get limits
+        rule_data = read_syftpub_yaml_full(self._path.parent, self._name)
+        limits = rule_data.get("limits", {}) if rule_data else {}
+        
+        # Get limits with defaults
+        max_file_size = limits.get("max_file_size")
+        allow_dirs = limits.get("allow_dirs", True)
+        allow_symlinks = limits.get("allow_symlinks", True)
+        has_limits = bool(limits)
+        
+        return {
+            "max_file_size": max_file_size,
+            "allow_dirs": allow_dirs,
+            "allow_symlinks": allow_symlinks,
+            "has_limits": has_limits
+        }
 
     def move_folder_and_permissions(self, new_path: Union[str, Path], *, force: bool = False) -> 'SyftFolder':
         """

@@ -441,6 +441,108 @@ rules:
         
         # Others should not
         self.assertNotIn("bob@example.com", perms.get("create", []))
+    
+    def test_create_permission_with_size_limits(self):
+        """Test create permission with size limits (new files must be under limit)."""
+        # Create test directory
+        test_dir = Path(self.test_dir) / "uploads"
+        test_dir.mkdir()
+        
+        # Create syft.pub.yaml with create permission and size limits
+        yaml_file = test_dir / "syft.pub.yaml"
+        yaml_content = """rules:
+- pattern: "*.txt"
+  access:
+    create:
+    - alice@example.com
+    read:
+    - alice@example.com
+  limits:
+    max_file_size: 1024  # 1KB limit
+- pattern: "*.log" 
+  access:
+    create:
+    - bob@example.com
+    read:
+    - bob@example.com
+  limits:
+    max_file_size: 1048576  # 1MB limit
+- pattern: "*.tmp"
+  access:
+    create:
+    - charlie@example.com
+    read:
+    - charlie@example.com
+  # No size limit
+"""
+        yaml_file.write_text(yaml_content)
+        
+        # Test 1: Small file under the limit - should have permissions
+        small_txt = test_dir / "small.txt"
+        small_txt.write_text("x" * 500)  # 500 bytes < 1KB limit
+        
+        syft_small = syft_perm.open(small_txt)
+        self.assertTrue(syft_small.has_create_access("alice@example.com"))
+        self.assertTrue(syft_small.has_read_access("alice@example.com"))
+        
+        # Test 2: Large file over the limit - should NOT have permissions
+        # In current syft-perm implementation, size limits are checked during
+        # permission resolution, so exceeding the limit blocks access
+        large_txt = test_dir / "large.txt"
+        large_txt.write_text("x" * 2000)  # 2KB > 1KB limit
+        
+        syft_large = syft_perm.open(large_txt)
+        self.assertFalse(syft_large.has_create_access("alice@example.com"))
+        self.assertFalse(syft_large.has_read_access("alice@example.com"))
+        
+        # Test 3: File with larger limit
+        medium_log = test_dir / "app.log"
+        medium_log.write_text("x" * 500000)  # 500KB < 1MB limit
+        
+        syft_log = syft_perm.open(medium_log)
+        self.assertTrue(syft_log.has_create_access("bob@example.com"))
+        self.assertTrue(syft_log.has_read_access("bob@example.com"))
+        
+        # Test 4: File with no size limit
+        any_size_tmp = test_dir / "cache.tmp"
+        any_size_tmp.write_text("x" * 2000000)  # 2MB - no limit
+        
+        syft_tmp = syft_perm.open(any_size_tmp)
+        self.assertTrue(syft_tmp.has_create_access("charlie@example.com"))
+        self.assertTrue(syft_tmp.has_read_access("charlie@example.com"))
+        
+        # Test 5: Create permission hierarchy with size limits
+        # Admin/write users should also be subject to size limits
+        yaml_content_admin = """rules:
+- pattern: "*.data"
+  access:
+    admin:
+    - admin@example.com
+  limits:
+    max_file_size: 1024  # 1KB limit for admin too
+"""
+        yaml_file.write_text(yaml_content_admin)
+        
+        # Even admin is subject to size limits
+        large_data = test_dir / "large.data"
+        large_data.write_text("x" * 2000)  # 2KB > 1KB limit
+        
+        syft_data = syft_perm.open(large_data)
+        # In syft-perm, size limits block permission resolution
+        self.assertFalse(syft_data.has_admin_access("admin@example.com"))
+        self.assertFalse(syft_data.has_write_access("admin@example.com"))
+        self.assertFalse(syft_data.has_create_access("admin@example.com"))
+        self.assertFalse(syft_data.has_read_access("admin@example.com"))
+        
+        # Small file should work for admin
+        small_data = test_dir / "small.data" 
+        small_data.write_text("x" * 500)  # 500 bytes < 1KB limit
+        
+        syft_small_data = syft_perm.open(small_data)
+        self.assertTrue(syft_small_data.has_admin_access("admin@example.com"))
+        self.assertTrue(syft_small_data.has_write_access("admin@example.com"))  # Via hierarchy
+        self.assertTrue(syft_small_data.has_create_access("admin@example.com"))  # Via hierarchy
+        self.assertTrue(syft_small_data.has_read_access("admin@example.com"))  # Via hierarchy
 
 
 if __name__ == "__main__":
