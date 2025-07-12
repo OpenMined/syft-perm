@@ -852,10 +852,18 @@ class SyftFile:
     def _ensure_server_and_get_editor_url(self) -> str:
         """Ensure the permission editor server is running and return the editor URL."""
         try:
+            from ._auto_recovery import ensure_server_running
             from .server import get_editor_url, get_server_url, start_server
 
             # Check if server is already running
             server_url = get_server_url()
+            if server_url:
+                # Verify it's actually responding
+                success, error = ensure_server_running(server_url)
+                if not success:
+                    print(f"Server health check failed: {error}")
+                    server_url = None
+
             if not server_url:
                 # Start the server
                 server_url = start_server()
@@ -1882,10 +1890,18 @@ class SyftFolder:
     def _ensure_server_and_get_editor_url(self) -> str:
         """Ensure the permission editor server is running and return the editor URL."""
         try:
+            from ._auto_recovery import ensure_server_running
             from .server import get_editor_url, get_server_url, start_server
 
             # Check if server is already running
             server_url = get_server_url()
+            if server_url:
+                # Verify it's actually responding
+                success, error = ensure_server_running(server_url)
+                if not success:
+                    print(f"Server health check failed: {error}")
+                    server_url = None
+
             if not server_url:
                 # Start the server
                 server_url = start_server()

@@ -765,7 +765,14 @@ def start_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     global _server_port
 
     if _server_thread and _server_thread.is_alive():
-        return f"http://{host}:{_server_port}"
+        server_url = f"http://{host}:{_server_port}"
+        # Check if server is actually responding
+        from ._auto_recovery import ensure_server_running
+
+        success, error = ensure_server_running(server_url)
+        if success:
+            return server_url
+        # If not successful, continue to start a new server
 
     _server_port = port
 
