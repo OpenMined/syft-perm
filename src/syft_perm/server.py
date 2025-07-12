@@ -19,6 +19,7 @@ from ._utils import get_syftbox_datasites
 
 class PermissionUpdate(BaseModel):
     """Model for permission update requests."""
+
     path: str
     user: str
     permission: str  # read, create, write, admin
@@ -27,6 +28,7 @@ class PermissionUpdate(BaseModel):
 
 class PermissionResponse(BaseModel):
     """Model for permission response."""
+
     path: str
     permissions: Dict[str, List[str]]
     compliance: Dict[str, Any]
@@ -36,7 +38,7 @@ class PermissionResponse(BaseModel):
 app = FastAPI(
     title="SyftPerm Permission Editor",
     description="Google Drive-style permission editor for SyftBox",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Add CORS middleware
@@ -63,44 +65,40 @@ async def get_permissions(path: str):
         file_path = Path(path)
         if not file_path.exists():
             raise HTTPException(status_code=404, detail=f"Path not found: {path}")
-        
+
         # Open with syft-perm
         syft_obj = syft_open(file_path)
-        
+
         # Get current permissions
         permissions = syft_obj._get_all_permissions()
-        
+
         # Get compliance information
-        if hasattr(syft_obj, 'get_file_limits'):
+        if hasattr(syft_obj, "get_file_limits"):
             limits = syft_obj.get_file_limits()
             compliance = {
                 "has_limits": limits["has_limits"],
                 "max_file_size": limits["max_file_size"],
                 "allow_dirs": limits["allow_dirs"],
-                "allow_symlinks": limits["allow_symlinks"]
+                "allow_symlinks": limits["allow_symlinks"],
             }
-            
+
             # Add compliance status for files
-            if hasattr(syft_obj, '_size'):
+            if hasattr(syft_obj, "_size"):
                 file_size = syft_obj._size
                 compliance["current_size"] = file_size
                 compliance["size_compliant"] = (
-                    limits["max_file_size"] is None or 
-                    file_size <= limits["max_file_size"]
+                    limits["max_file_size"] is None or file_size <= limits["max_file_size"]
                 )
         else:
             compliance = {"has_limits": False}
-        
+
         # Get available datasites
         datasites = get_syftbox_datasites()
-        
+
         return PermissionResponse(
-            path=str(file_path),
-            permissions=permissions,
-            compliance=compliance,
-            datasites=datasites
+            path=str(file_path), permissions=permissions, compliance=compliance, datasites=datasites
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -113,10 +111,10 @@ async def update_permission(update: PermissionUpdate):
         file_path = Path(update.path)
         if not file_path.exists():
             raise HTTPException(status_code=404, detail=f"Path not found: {update.path}")
-        
+
         # Open with syft-perm
         syft_obj = syft_open(file_path)
-        
+
         # Apply the permission change
         if update.action == "grant":
             if update.permission == "read":
@@ -128,8 +126,10 @@ async def update_permission(update: PermissionUpdate):
             elif update.permission == "admin":
                 syft_obj.grant_admin_access(update.user)
             else:
-                raise HTTPException(status_code=400, detail=f"Invalid permission: {update.permission}")
-        
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid permission: {update.permission}"
+                )
+
         elif update.action == "revoke":
             if update.permission == "read":
                 syft_obj.revoke_read_access(update.user)
@@ -140,15 +140,17 @@ async def update_permission(update: PermissionUpdate):
             elif update.permission == "admin":
                 syft_obj.revoke_admin_access(update.user)
             else:
-                raise HTTPException(status_code=400, detail=f"Invalid permission: {update.permission}")
-        
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid permission: {update.permission}"
+                )
+
         else:
             raise HTTPException(status_code=400, detail=f"Invalid action: {update.action}")
-        
+
         # Return updated permissions
         updated_permissions = syft_obj._get_all_permissions()
         return {"success": True, "permissions": updated_permissions}
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -731,28 +733,28 @@ _server_port = 8765
 def start_server(port: int = 8765, host: str = "127.0.0.1"):
     """Start the FastAPI server in a background thread."""
     global _server_thread, _server_port
-    
+
     if _server_thread and _server_thread.is_alive():
         return f"http://{host}:{_server_port}"
-    
+
     _server_port = port
-    
+
     def run_server():
         uvicorn.run(app, host=host, port=port, log_level="warning")
-    
+
     _server_thread = threading.Thread(target=run_server, daemon=True)
     _server_thread.start()
-    
+
     # Give the server a moment to start
     time.sleep(1)
-    
+
     return f"http://{host}:{port}"
 
 
 def get_server_url() -> Optional[str]:
     """Get the URL of the running server, if any."""
     global _server_thread, _server_port
-    
+
     if _server_thread and _server_thread.is_alive():
         return f"http://127.0.0.1:{_server_port}"
     return None
@@ -763,5 +765,5 @@ def get_editor_url(path: str) -> str:
     server_url = get_server_url()
     if not server_url:
         server_url = start_server()
-    
+
     return f"{server_url}/editor/{path}"
