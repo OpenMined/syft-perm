@@ -652,13 +652,29 @@ class SyftFile:
             if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                # Remove duplicates while preserving order
-                seen = set()
+                # Smart deduplication: consolidate pattern matches across permission levels
                 unique_reasons = []
+                seen_patterns = set()
+                seen_other = set()
+                
                 for reason in permission_reasons:
-                    if reason not in seen:
-                        seen.add(reason)
-                        unique_reasons.append(reason)
+                    # Extract pattern from reason if it contains "Pattern"
+                    if "Pattern '" in reason and "matched" in reason:
+                        # Extract just the pattern part
+                        pattern_start = reason.find("Pattern '") + 9
+                        pattern_end = reason.find("' matched", pattern_start)
+                        if pattern_end > pattern_start:
+                            pattern = reason[pattern_start:pattern_end]
+                            if pattern not in seen_patterns:
+                                seen_patterns.add(pattern)
+                                # Add pattern match without permission level prefix
+                                unique_reasons.append(f"Pattern '{pattern}' matched")
+                    else:
+                        # For non-pattern reasons, keep the permission-level prefix
+                        if reason not in seen_other:
+                            seen_other.add(reason)
+                            unique_reasons.append(reason)
+                
                 reason_text = "; ".join(unique_reasons)
             
             rows.append([
@@ -714,13 +730,29 @@ class SyftFile:
             if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                # Remove duplicates while preserving order
-                seen = set()
+                # Smart deduplication: consolidate pattern matches across permission levels
                 unique_reasons = []
+                seen_patterns = set()
+                seen_other = set()
+                
                 for reason in permission_reasons:
-                    if reason not in seen:
-                        seen.add(reason)
-                        unique_reasons.append(reason)
+                    # Extract pattern from reason if it contains "Pattern"
+                    if "Pattern '" in reason and "matched" in reason:
+                        # Extract just the pattern part
+                        pattern_start = reason.find("Pattern '") + 9
+                        pattern_end = reason.find("' matched", pattern_start)
+                        if pattern_end > pattern_start:
+                            pattern = reason[pattern_start:pattern_end]
+                            if pattern not in seen_patterns:
+                                seen_patterns.add(pattern)
+                                # Add pattern match without permission level prefix
+                                unique_reasons.append(f"Pattern '{pattern}' matched")
+                    else:
+                        # For non-pattern reasons, keep the permission-level prefix
+                        if reason not in seen_other:
+                            seen_other.add(reason)
+                            unique_reasons.append(reason)
+                
                 reason_text = "; ".join(unique_reasons)
             
             row = [
@@ -1161,15 +1193,15 @@ class SyftFile:
                     src = sources["read"][0]
                     reasons.append(f"Explicitly granted read in {src['path'].parent}")
         
-        # Add pattern info if available (shows which rule was applied, explaining grant or denial)
-        for perm_type in ["admin", "write", "create", "read"]:
-            if sources.get(perm_type):
-                for src in sources[perm_type]:
-                    if src["pattern"]:
-                        # Show the pattern that was matched (explains grant or nearest-node override)
-                        if f"Pattern '{src['pattern']}' matched" not in reasons:
-                            reasons.append(f"Pattern '{src['pattern']}' matched")
-                        break
+        # Add pattern info only for the specific permission being checked
+        # (not for inherited permissions - that would be confusing)
+        if sources.get(permission):
+            for src in sources[permission]:
+                if src["pattern"]:
+                    # Show the pattern that was matched for this specific permission
+                    if f"Pattern '{src['pattern']}' matched" not in reasons:
+                        reasons.append(f"Pattern '{src['pattern']}' matched")
+                    break
         
         # Check for public access
         if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):
@@ -1461,13 +1493,29 @@ class SyftFolder:
             if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                # Remove duplicates while preserving order
-                seen = set()
+                # Smart deduplication: consolidate pattern matches across permission levels
                 unique_reasons = []
+                seen_patterns = set()
+                seen_other = set()
+                
                 for reason in permission_reasons:
-                    if reason not in seen:
-                        seen.add(reason)
-                        unique_reasons.append(reason)
+                    # Extract pattern from reason if it contains "Pattern"
+                    if "Pattern '" in reason and "matched" in reason:
+                        # Extract just the pattern part
+                        pattern_start = reason.find("Pattern '") + 9
+                        pattern_end = reason.find("' matched", pattern_start)
+                        if pattern_end > pattern_start:
+                            pattern = reason[pattern_start:pattern_end]
+                            if pattern not in seen_patterns:
+                                seen_patterns.add(pattern)
+                                # Add pattern match without permission level prefix
+                                unique_reasons.append(f"Pattern '{pattern}' matched")
+                    else:
+                        # For non-pattern reasons, keep the permission-level prefix
+                        if reason not in seen_other:
+                            seen_other.add(reason)
+                            unique_reasons.append(reason)
+                
                 reason_text = "; ".join(unique_reasons)
             
             rows.append([
@@ -1523,13 +1571,29 @@ class SyftFolder:
             if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                # Remove duplicates while preserving order
-                seen = set()
+                # Smart deduplication: consolidate pattern matches across permission levels
                 unique_reasons = []
+                seen_patterns = set()
+                seen_other = set()
+                
                 for reason in permission_reasons:
-                    if reason not in seen:
-                        seen.add(reason)
-                        unique_reasons.append(reason)
+                    # Extract pattern from reason if it contains "Pattern"
+                    if "Pattern '" in reason and "matched" in reason:
+                        # Extract just the pattern part
+                        pattern_start = reason.find("Pattern '") + 9
+                        pattern_end = reason.find("' matched", pattern_start)
+                        if pattern_end > pattern_start:
+                            pattern = reason[pattern_start:pattern_end]
+                            if pattern not in seen_patterns:
+                                seen_patterns.add(pattern)
+                                # Add pattern match without permission level prefix
+                                unique_reasons.append(f"Pattern '{pattern}' matched")
+                    else:
+                        # For non-pattern reasons, keep the permission-level prefix
+                        if reason not in seen_other:
+                            seen_other.add(reason)
+                            unique_reasons.append(reason)
+                
                 reason_text = "; ".join(unique_reasons)
             
             row = [
@@ -1839,15 +1903,15 @@ class SyftFolder:
                     src = sources["read"][0]
                     reasons.append(f"Explicitly granted read in {src['path'].parent}")
         
-        # Add pattern info if available (shows which rule was applied, explaining grant or denial)
-        for perm_type in ["admin", "write", "create", "read"]:
-            if sources.get(perm_type):
-                for src in sources[perm_type]:
-                    if src["pattern"]:
-                        # Show the pattern that was matched (explains grant or nearest-node override)
-                        if f"Pattern '{src['pattern']}' matched" not in reasons:
-                            reasons.append(f"Pattern '{src['pattern']}' matched")
-                        break
+        # Add pattern info only for the specific permission being checked
+        # (not for inherited permissions - that would be confusing)
+        if sources.get(permission):
+            for src in sources[permission]:
+                if src["pattern"]:
+                    # Show the pattern that was matched for this specific permission
+                    if f"Pattern '{src['pattern']}' matched" not in reasons:
+                        reasons.append(f"Pattern '{src['pattern']}' matched")
+                    break
         
         # Check for public access
         if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):
