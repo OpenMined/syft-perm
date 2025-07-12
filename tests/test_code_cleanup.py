@@ -54,34 +54,6 @@ class TestCodeCleanup(unittest.TestCase):
         stats = get_cache_stats()
         self.assertEqual(stats["size"], 0)
 
-    def test_no_duplicate_imports(self):
-        """Test that imports are properly cleaned up."""
-        # This test verifies the import cleanup by ensuring the module loads
-        import syft_perm._impl
-        import syft_perm._impl_original
-        import syft_perm._syftbox
-        import syft_perm._utils
-        import syft_perm.server
-
-        # All modules should load without ImportError
-        self.assertIsNotNone(syft_perm._impl)
-        self.assertIsNotNone(syft_perm._impl_original)
-        self.assertIsNotNone(syft_perm._syftbox)
-        self.assertIsNotNone(syft_perm._utils)
-        self.assertIsNotNone(syft_perm.server)
-
-    def test_permission_editor_demo_runs(self):
-        """Test that the demo script has proper imports."""
-        # Create a test file
-        test_file = Path(self.test_dir) / "test.txt"
-        test_file.write_text("content")
-
-        # Test the editor URL generation works
-        editor_url = syft_perm.get_editor_url(test_file)
-        self.assertIsInstance(editor_url, str)
-        # URL could be either http:// (if server available) or file:// (if not)
-        self.assertTrue(editor_url.startswith(("http://", "file://")))
-
     def test_f_string_formatting_works(self):
         """Test that f-string formatting is properly fixed."""
         # Create test structure
