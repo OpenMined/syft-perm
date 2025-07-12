@@ -138,13 +138,14 @@ user 9012 0.0 0.1 python syft-perm uvicorn
         """Test ensure_server_running when not in SyftBox."""
         with patch("syft_perm._auto_recovery._check_server_health") as mock_check:
             with patch("syft_perm._auto_recovery._is_running_in_syftbox") as mock_in_syftbox:
-                mock_check.return_value = False
-                mock_in_syftbox.return_value = False
+                with patch("syft_perm._auto_recovery._kill_syft_perm_processes"):
+                    mock_check.return_value = False
+                    mock_in_syftbox.return_value = False
 
-                success, error = ensure_server_running("http://localhost:8765")
+                    success, error = ensure_server_running("http://localhost:8765")
 
-                assert success is False
-                assert error == "Server not responding"
+                    assert success is False
+                    assert error == "Auto-recovery failed - server still not responding"
 
     @patch("time.sleep")  # Mock sleep to speed up tests
     def test_ensure_server_running_auto_recovery_success(self, mock_sleep):

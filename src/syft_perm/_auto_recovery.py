@@ -119,26 +119,24 @@ def ensure_server_running(server_url: str) -> Tuple[bool, Optional[str]]:
     if _check_server_health(server_url):
         return True, None
 
-    # If not running in SyftBox, don't do auto-recovery
-    if not _is_running_in_syftbox():
-        return False, "Server not responding"
-
     print("Server not responding. Attempting auto-recovery...")
 
     # Kill existing processes
     _kill_syft_perm_processes()
     time.sleep(1)
 
-    # Remove from apps directory
-    _remove_syft_perm_from_apps()
-    time.sleep(1)
+    # If running in SyftBox, also remove and reinstall
+    if _is_running_in_syftbox():
+        # Remove from apps directory
+        _remove_syft_perm_from_apps()
+        time.sleep(1)
 
-    # Reinstall
-    if not _reinstall_syft_perm():
-        return False, "Failed to reinstall syft-perm"
+        # Reinstall
+        if not _reinstall_syft_perm():
+            return False, "Failed to reinstall syft-perm"
 
-    # Wait a bit for the new instance to start
-    time.sleep(3)
+        # Wait a bit for the new instance to start
+        time.sleep(3)
 
     # Check again
     if _check_server_health(server_url):

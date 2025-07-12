@@ -879,10 +879,130 @@ class SyftFile:
             # Server failed to start
             return f"Permission editor unavailable: {e}"
 
+    def _get_loading_html(self) -> str:
+        """Get static HTML to show while server is starting."""
+        import threading
+        import uuid
+
+        # Generate unique ID for this instance
+        instance_id = str(uuid.uuid4())
+
+        # Start server recovery in background
+        def start_server_background():
+            try:
+                self._ensure_server_and_get_editor_url()
+            except Exception:
+                pass  # Silently fail in background
+
+        thread = threading.Thread(target=start_server_background, daemon=True)
+        thread.start()
+
+        # Return static HTML with auto-refresh
+        return f"""
+        <div id="syft-perm-{instance_id}" style="padding: 20px; background: #f5f5f5; border-radius: 8px; font-family: sans-serif;">  # noqa: E501
+            <h3 style="margin-top: 0;">🔐 SyftPerm Permission Manager</h3>
+            <div style="background: white; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                <p style="margin: 0;"><strong>File:</strong> {self._path}</p>
+            </div>
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 4px; text-align: center;">  # noqa: E501
+                <div style="display: inline-block;">
+                    <div style="border: 3px solid #1976d2; border-radius: 50%; border-top-color: transparent;  # noqa: E501
+                                width: 30px; height: 30px; animation: spin-{instance_id} 1s linear infinite;  # noqa: E501
+                                margin: 0 auto 10px;"></div>
+                    <p style="color: #1976d2; margin: 0;">Starting permission editor server...</p>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 5px;">This may take a moment if auto-recovery is needed</p>  # noqa: E501
+                </div>
+            </div>
+            <style>
+                @keyframes spin-{instance_id} {{
+                    to {{ transform: rotate(360deg); }}
+                }}
+            </style>
+            <script>
+                (function() {{
+                    let attempts = 0;
+                    const maxAttempts = 30;
+                    const checkInterval = 2000;
+
+                    function checkServerAndReload() {{
+                        attempts++;
+
+                        // Try to fetch from the expected server
+                        fetch('http://127.0.0.1:8765/')
+                            .then(response => {{
+                                if (response.ok) {{
+                                    // Server is ready, reload the cell output
+                                    if (window.Jupyter && window.Jupyter.notebook) {{
+                                        // Find and re-execute this cell
+                                        const cells = window.Jupyter.notebook.get_cells();
+                                        for (let cell of cells) {{
+                                            if (cell.output_area && cell.output_area.element) {{
+                                                const output = cell.output_area.element[0];
+                                                if (output && output.innerHTML.includes('syft-perm-{instance_id}')) {{  # noqa: E501
+                                                    cell.execute();
+                                                    return;
+                                                }}
+                                            }}
+                                        }}
+                                    }}
+                                }}
+                            }})
+                            .catch(() => {{
+                                // Server not ready yet
+                                if (attempts < maxAttempts) {{
+                                    setTimeout(checkServerAndReload, checkInterval);
+                                }} else {{
+                                    // Update the UI to show failure
+                                    const elem = document.getElementById('syft-perm-{instance_id}');
+                                    if (elem) {{
+                                        elem.innerHTML = `
+                                            <h3 style="margin-top: 0;">🔐 SyftPerm Permission Manager</h3>  # noqa: E501
+                                            <div style="background: #ffebee; padding: 15px; border-radius: 4px; color: #c62828;">  # noqa: E501
+                                                <p style="margin: 0;"><strong>Error:</strong> Failed to start permission editor server</p>  # noqa: E501
+                                                <p style="margin: 5px 0 0 0; font-size: 0.9em;">Please check your installation and try again</p>  # noqa: E501
+                                            </div>
+                                        `;
+                                    }}
+                                }}
+                            }});
+                    }}
+
+                    // Start checking after a short delay
+                    setTimeout(checkServerAndReload, 1000);
+                }})();
+            </script>
+        </div>
+        """
+
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter notebooks."""
-        # Auto-start permission editor server for Jupyter notebook integration
-        editor_url = self._ensure_server_and_get_editor_url()
+        try:
+            # Quick check if server is already running
+            import requests
+
+            from .server import get_server_url
+
+            server_url = get_server_url()
+            if server_url:
+                try:
+                    # Quick health check with short timeout
+                    response = requests.get(f"{server_url}/", timeout=0.5)
+                    if response.status_code == 200:
+                        # Server is healthy, proceed normally
+                        editor_url = self._ensure_server_and_get_editor_url()
+                    else:
+                        # Server exists but not healthy, show loading
+                        return self._get_loading_html()
+                except Exception:
+                    # Can't connect, show loading
+                    return self._get_loading_html()
+            else:
+                # No server running, show loading
+                return self._get_loading_html()
+
+        except Exception:
+            # Any error, show loading
+            return self._get_loading_html()
 
         rows = self._get_permission_table()
 
@@ -1917,10 +2037,130 @@ class SyftFolder:
             # Server failed to start
             return f"Permission editor unavailable: {e}"
 
+    def _get_loading_html(self) -> str:
+        """Get static HTML to show while server is starting."""
+        import threading
+        import uuid
+
+        # Generate unique ID for this instance
+        instance_id = str(uuid.uuid4())
+
+        # Start server recovery in background
+        def start_server_background():
+            try:
+                self._ensure_server_and_get_editor_url()
+            except Exception:
+                pass  # Silently fail in background
+
+        thread = threading.Thread(target=start_server_background, daemon=True)
+        thread.start()
+
+        # Return static HTML with auto-refresh
+        return f"""
+        <div id="syft-perm-{instance_id}" style="padding: 20px; background: #f5f5f5; border-radius: 8px; font-family: sans-serif;">  # noqa: E501
+            <h3 style="margin-top: 0;">🔐 SyftPerm Permission Manager</h3>
+            <div style="background: white; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                <p style="margin: 0;"><strong>File:</strong> {self._path}</p>
+            </div>
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 4px; text-align: center;">  # noqa: E501
+                <div style="display: inline-block;">
+                    <div style="border: 3px solid #1976d2; border-radius: 50%; border-top-color: transparent;  # noqa: E501
+                                width: 30px; height: 30px; animation: spin-{instance_id} 1s linear infinite;  # noqa: E501
+                                margin: 0 auto 10px;"></div>
+                    <p style="color: #1976d2; margin: 0;">Starting permission editor server...</p>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 5px;">This may take a moment if auto-recovery is needed</p>  # noqa: E501
+                </div>
+            </div>
+            <style>
+                @keyframes spin-{instance_id} {{
+                    to {{ transform: rotate(360deg); }}
+                }}
+            </style>
+            <script>
+                (function() {{
+                    let attempts = 0;
+                    const maxAttempts = 30;
+                    const checkInterval = 2000;
+
+                    function checkServerAndReload() {{
+                        attempts++;
+
+                        // Try to fetch from the expected server
+                        fetch('http://127.0.0.1:8765/')
+                            .then(response => {{
+                                if (response.ok) {{
+                                    // Server is ready, reload the cell output
+                                    if (window.Jupyter && window.Jupyter.notebook) {{
+                                        // Find and re-execute this cell
+                                        const cells = window.Jupyter.notebook.get_cells();
+                                        for (let cell of cells) {{
+                                            if (cell.output_area && cell.output_area.element) {{
+                                                const output = cell.output_area.element[0];
+                                                if (output && output.innerHTML.includes('syft-perm-{instance_id}')) {{  # noqa: E501
+                                                    cell.execute();
+                                                    return;
+                                                }}
+                                            }}
+                                        }}
+                                    }}
+                                }}
+                            }})
+                            .catch(() => {{
+                                // Server not ready yet
+                                if (attempts < maxAttempts) {{
+                                    setTimeout(checkServerAndReload, checkInterval);
+                                }} else {{
+                                    // Update the UI to show failure
+                                    const elem = document.getElementById('syft-perm-{instance_id}');
+                                    if (elem) {{
+                                        elem.innerHTML = `
+                                            <h3 style="margin-top: 0;">🔐 SyftPerm Permission Manager</h3>  # noqa: E501
+                                            <div style="background: #ffebee; padding: 15px; border-radius: 4px; color: #c62828;">  # noqa: E501
+                                                <p style="margin: 0;"><strong>Error:</strong> Failed to start permission editor server</p>  # noqa: E501
+                                                <p style="margin: 5px 0 0 0; font-size: 0.9em;">Please check your installation and try again</p>  # noqa: E501
+                                            </div>
+                                        `;
+                                    }}
+                                }}
+                            }});
+                    }}
+
+                    // Start checking after a short delay
+                    setTimeout(checkServerAndReload, 1000);
+                }})();
+            </script>
+        </div>
+        """
+
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter notebooks."""
-        # Auto-start permission editor server for Jupyter notebook integration
-        editor_url = self._ensure_server_and_get_editor_url()
+        try:
+            # Quick check if server is already running
+            import requests
+
+            from .server import get_server_url
+
+            server_url = get_server_url()
+            if server_url:
+                try:
+                    # Quick health check with short timeout
+                    response = requests.get(f"{server_url}/", timeout=0.5)
+                    if response.status_code == 200:
+                        # Server is healthy, proceed normally
+                        editor_url = self._ensure_server_and_get_editor_url()
+                    else:
+                        # Server exists but not healthy, show loading
+                        return self._get_loading_html()
+                except Exception:
+                    # Can't connect, show loading
+                    return self._get_loading_html()
+            else:
+                # No server running, show loading
+                return self._get_loading_html()
+
+        except Exception:
+            # Any error, show loading
+            return self._get_loading_html()
 
         rows = self._get_permission_table()
         limits = self.get_file_limits()
