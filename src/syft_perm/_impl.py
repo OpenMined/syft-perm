@@ -1547,7 +1547,8 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
         # Apply permissions to new location
         for permission, users in perms.items():
             for user in users:
-                new_file._grant_access(user, permission)
+                if permission in ["read", "create", "write", "admin"]:
+                    new_file._grant_access(user, permission)  # type: ignore[arg-type]
 
         return new_file
 
@@ -2609,11 +2610,13 @@ class SyftFolder:
                 file_obj = SyftFile(new_item_path)
                 for permission, users in perms.items():
                     for user in users:
-                        file_obj._grant_access(user, permission)
+                        if permission in ["read", "create", "write", "admin"]:
+                            file_obj._grant_access(user, permission)  # type: ignore[arg-type]
             elif new_item_path.is_dir():
                 folder_obj = SyftFolder(new_item_path)
                 for permission, users in perms.items():
                     for user in users:
-                        folder_obj._grant_access(user, permission)
+                        if permission in ["read", "create", "write", "admin"]:
+                            folder_obj._grant_access(user, permission)  # type: ignore[arg-type]
 
         return new_folder
