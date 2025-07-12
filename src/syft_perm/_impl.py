@@ -1555,9 +1555,10 @@ class SyftFolder:
     """A folder wrapper that manages SyftBox permissions."""
 
     def __init__(self, path: Union[str, Path]):
-        self._path = resolve_path(path)
-        if self._path is None:
+        resolved_path = resolve_path(str(path))
+        if resolved_path is None:
             raise ValueError("Could not resolve path")
+        self._path: Path = resolved_path
 
         # Ensure folder exists
         self._path.mkdir(parents=True, exist_ok=True)
