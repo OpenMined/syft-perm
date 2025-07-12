@@ -122,9 +122,9 @@ class TestPublicRead(unittest.TestCase):
         self.assertFalse(syft_file.has_admin_access("bob@example.com"))
         self.assertFalse(syft_file.has_admin_access("charlie@example.com"))
         
-        # Check only bob has write
+        # Check write access (alice has it through admin hierarchy, bob has explicit write)
+        self.assertTrue(syft_file.has_write_access("alice@example.com"))  # Admin includes write
         self.assertTrue(syft_file.has_write_access("bob@example.com"))
-        self.assertFalse(syft_file.has_write_access("alice@example.com"))
         self.assertFalse(syft_file.has_write_access("charlie@example.com"))
     
     def test_star_read_inheritance(self):

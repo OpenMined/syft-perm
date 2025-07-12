@@ -52,8 +52,9 @@ class TestCreatePermissions(unittest.TestCase):
         perms = syft_file._get_all_permissions()
         self.assertIn("alice@example.com", perms.get("create", []))
         
-        # But not read/write/admin
-        self.assertFalse(syft_file.has_read_access("alice@example.com"))
+        # With hierarchy: create includes read, but not write/admin
+        self.assertTrue(syft_file.has_read_access("alice@example.com"))  # Create includes read
+        self.assertTrue(syft_file.has_create_access("alice@example.com"))
         self.assertFalse(syft_file.has_write_access("alice@example.com"))
         self.assertFalse(syft_file.has_admin_access("alice@example.com"))
         

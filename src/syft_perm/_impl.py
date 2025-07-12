@@ -443,7 +443,6 @@ class SyftFile:
         """Internal method to check if a user has a specific permission, including inherited."""
         # Get all permissions including inherited ones
         all_perms = self._get_all_permissions()
-        users = all_perms.get(permission, [])
         
         # Check if user is the owner (first part of path after datasites/)
         path_parts = self._path.parts
@@ -461,8 +460,34 @@ class SyftFile:
         if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
             return True
         
-        # Check regular permissions
-        return "*" in users or user in users
+        # Implement permission hierarchy: Admin > Write > Create > Read
+        # Check if user has admin permission
+        admin_users = all_perms.get("admin", [])
+        is_admin = "*" in admin_users or user in admin_users
+        
+        # Check if user has write permission (includes admin)
+        write_users = all_perms.get("write", [])
+        is_writer = is_admin or "*" in write_users or user in write_users
+        
+        # Check if user has create permission (includes write and admin)
+        create_users = all_perms.get("create", [])
+        is_creator = is_writer or "*" in create_users or user in create_users
+        
+        # Check if user has read permission (includes all higher permissions)
+        read_users = all_perms.get("read", [])
+        is_reader = is_creator or "*" in read_users or user in read_users
+        
+        # Return based on requested permission
+        if permission == "admin":
+            return is_admin
+        elif permission == "write":
+            return is_writer
+        elif permission == "create":
+            return is_creator
+        elif permission == "read":
+            return is_reader
+        else:
+            return False
     
     def set_file_limits(self, max_size: Optional[int] = None, 
                        allow_dirs: bool = True, 
@@ -825,7 +850,6 @@ class SyftFolder:
         """Internal method to check if a user has a specific permission, including inherited."""
         # Get all permissions including inherited ones
         all_perms = self._get_all_permissions()
-        users = all_perms.get(permission, [])
         
         # Check if user is the owner (first part of path after datasites/)
         path_parts = self._path.parts
@@ -843,8 +867,34 @@ class SyftFolder:
         if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
             return True
         
-        # Check regular permissions
-        return "*" in users or user in users
+        # Implement permission hierarchy: Admin > Write > Create > Read
+        # Check if user has admin permission
+        admin_users = all_perms.get("admin", [])
+        is_admin = "*" in admin_users or user in admin_users
+        
+        # Check if user has write permission (includes admin)
+        write_users = all_perms.get("write", [])
+        is_writer = is_admin or "*" in write_users or user in write_users
+        
+        # Check if user has create permission (includes write and admin)
+        create_users = all_perms.get("create", [])
+        is_creator = is_writer or "*" in create_users or user in create_users
+        
+        # Check if user has read permission (includes all higher permissions)
+        read_users = all_perms.get("read", [])
+        is_reader = is_creator or "*" in read_users or user in read_users
+        
+        # Return based on requested permission
+        if permission == "admin":
+            return is_admin
+        elif permission == "write":
+            return is_writer
+        elif permission == "create":
+            return is_creator
+        elif permission == "read":
+            return is_reader
+        else:
+            return False
 
     def move_folder_and_permissions(self, new_path: Union[str, Path], *, force: bool = False) -> 'SyftFolder':
         """
