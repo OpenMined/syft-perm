@@ -794,35 +794,61 @@ class SyftFile:
         """Return HTML representation for Jupyter notebooks."""
         rows = self._get_permission_table()
         
-        # Get file limits information
+        # Create compliance table showing current state vs limits
         limits = self.get_file_limits()
-        limits_html = ""
-        if limits["has_limits"]:
-            limits_parts = []
-            if limits["max_file_size"] is not None:
-                size_mb = limits["max_file_size"] / (1024 * 1024)
-                if size_mb >= 1:
-                    limits_parts.append(f"Max size: {size_mb:.1f}MB")
-                else:
-                    size_kb = limits["max_file_size"] / 1024
-                    if size_kb >= 1:
-                        limits_parts.append(f"Max size: {size_kb:.1f}KB")
-                    else:
-                        limits_parts.append(f"Max size: {limits['max_file_size']}B")
+        
+        # File size comparison
+        file_size = self._size
+        if file_size >= 1024 * 1024 * 1024:
+            size_display = f"{file_size / (1024 * 1024 * 1024):.2f} GB"
+        elif file_size >= 1024 * 1024:
+            size_display = f"{file_size / (1024 * 1024):.2f} MB"
+        elif file_size >= 1024:
+            size_display = f"{file_size / 1024:.2f} KB"
+        else:
+            size_display = f"{file_size} bytes"
+        
+        # Size limit comparison
+        if limits["max_file_size"] is not None:
+            if limits["max_file_size"] >= 1024 * 1024:
+                limit_display = f"{limits['max_file_size'] / (1024 * 1024):.2f} MB"
+            elif limits["max_file_size"] >= 1024:
+                limit_display = f"{limits['max_file_size'] / 1024:.2f} KB"
+            else:
+                limit_display = f"{limits['max_file_size']} bytes"
             
-            restrictions = []
-            if not limits["allow_dirs"]:
-                restrictions.append("No directories")
-            if not limits["allow_symlinks"]:
-                restrictions.append("No symlinks")
-            if restrictions:
-                limits_parts.append(f"Restrictions: {', '.join(restrictions)}")
-            
-            if limits_parts:
-                limits_html = f"<p><i>File Limits: {' | '.join(limits_parts)}</i></p>\n"
+            size_status = "✓ OK" if file_size <= limits["max_file_size"] else "✗ EXCEEDS"
+        else:
+            limit_display = "No limit"
+            size_status = "✓ OK"
+        
+        # Check if this file type is allowed by the limits
+        is_dir = self._path.is_dir()
+        is_symlink = self._is_symlink
+        
+        # For files: check if the file itself would be blocked
+        type_status = "✓ OK"
+        if is_dir and not limits["allow_dirs"]:
+            type_status = "✗ BLOCKED (directories not allowed)"
+        elif is_symlink and not limits["allow_symlinks"]:
+            type_status = "✗ BLOCKED (symlinks not allowed)"
+        
+        # Overall compliance
+        all_ok = size_status.startswith("✓") and type_status.startswith("✓")
+        overall_status = "✓ COMPLIANT" if all_ok else "✗ NON-COMPLIANT"
+        
+        # Build compliance table
+        file_type = "Directory" if is_dir else ("Symlink" if is_symlink else "Regular File")
+        compliance_html = f'''<p><b>File Compliance Check:</b></p>
+<table border="1" style="border-collapse: collapse; margin: 10px 0;">
+<tr><th style="padding: 5px;">Property</th><th style="padding: 5px;">Current</th><th style="padding: 5px;">Limit/Setting</th><th style="padding: 5px;">Status</th></tr>
+<tr><td style="padding: 5px;">File Size</td><td style="padding: 5px;">{size_display}</td><td style="padding: 5px;">{limit_display}</td><td style="padding: 5px;">{size_status}</td></tr>
+<tr><td style="padding: 5px;">File Type</td><td style="padding: 5px;">{file_type}</td><td style="padding: 5px;">Dirs: {'✓' if limits['allow_dirs'] else '✗'} | Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td><td style="padding: 5px;">{type_status}</td></tr>
+<tr><td style="padding: 5px;"><b>Overall</b></td><td style="padding: 5px;" colspan="2"><b>File access compliance</b></td><td style="padding: 5px;"><b>{overall_status}</b></td></tr>
+</table>\n'''
         
         if not rows:
-            return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n{limits_html}"
+            return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n{compliance_html}"
             
         try:
             from tabulate import tabulate
@@ -831,12 +857,11 @@ class SyftFile:
                 headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="html"
             )
-            return f"<p><b>SyftFile('{self._path}')</b></p>\n{limits_html}{table}"
+            return f"<p><b>SyftFile('{self._path}')</b></p>\n{compliance_html}{table}"
         except ImportError:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFile('{self._path}')</b></p>"]
-            if limits_html:
-                result.append(limits_html.strip())
+            result.append(compliance_html.strip())
             result.append("<table>")
             result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>")
             for row in rows:
@@ -1650,18 +1675,97 @@ class SyftFolder:
         rows = self._get_permission_table()
         limits = self.get_file_limits()
         
-        # Build the HTML output
-        result = [f"<p><b>SyftFolder('{self._path}')</b></p>"]
+        # Create compliance table for folder
+        limits = self.get_file_limits()
         
-        # Add file limits section if any limits are set
-        if limits["has_limits"]:
-            result.append("<p><b>File Limits:</b></p>")
-            result.append("<ul>")
-            if limits["max_file_size"] is not None:
-                result.append(f"<li>Max file size: {limits['max_file_size']:,} bytes</li>")
-            result.append(f"<li>Allow directories: {'Yes' if limits['allow_dirs'] else 'No'}</li>")
-            result.append(f"<li>Allow symlinks: {'Yes' if limits['allow_symlinks'] else 'No'}</li>")
-            result.append("</ul>")
+        # Analyze folder contents
+        total_files = 0
+        oversized_files = 0
+        largest_file_size = 0
+        largest_file_name = ""
+        subdirs = 0
+        symlinks = 0
+        
+        try:
+            for item in self._path.rglob('*'):
+                if item.is_file():
+                    total_files += 1
+                    file_size = item.stat().st_size
+                    if file_size > largest_file_size:
+                        largest_file_size = file_size
+                        largest_file_name = item.name
+                    if limits["max_file_size"] is not None:
+                        if file_size > limits["max_file_size"]:
+                            oversized_files += 1
+                elif item.is_dir() and item != self._path:
+                    subdirs += 1
+                elif item.is_symlink():
+                    symlinks += 1
+        except (OSError, PermissionError):
+            pass
+        
+        # Format largest file size
+        if largest_file_size >= 1024 * 1024:
+            largest_display = f"{largest_file_size / (1024 * 1024):.2f} MB ({largest_file_name})"
+        elif largest_file_size >= 1024:
+            largest_display = f"{largest_file_size / 1024:.2f} KB ({largest_file_name})"
+        else:
+            largest_display = f"{largest_file_size} bytes ({largest_file_name})" if largest_file_name else "No files"
+        
+        # Size limit comparison
+        if limits["max_file_size"] is not None:
+            if limits["max_file_size"] >= 1024 * 1024:
+                limit_display = f"{limits['max_file_size'] / (1024 * 1024):.2f} MB"
+            elif limits["max_file_size"] >= 1024:
+                limit_display = f"{limits['max_file_size'] / 1024:.2f} KB"
+            else:
+                limit_display = f"{limits['max_file_size']} bytes"
+            
+            if oversized_files > 0:
+                size_status = f"✗ {oversized_files}/{total_files} files exceed limit"
+            else:
+                size_status = f"✓ All {total_files} files within limit"
+        else:
+            limit_display = "No limit"
+            size_status = f"✓ All {total_files} files OK"
+        
+        # Directory policy status
+        if subdirs == 0:
+            dir_status = "✓ No subdirectories"
+        elif limits["allow_dirs"]:
+            dir_status = f"✓ {subdirs} subdirectories allowed"
+        else:
+            dir_status = f"✗ {subdirs} subdirectories would be blocked"
+        
+        # Symlink policy status
+        if symlinks == 0:
+            symlink_status = "✓ No symlinks"
+        elif limits["allow_symlinks"]:
+            symlink_status = f"✓ {symlinks} symlinks allowed"
+        else:
+            symlink_status = f"✗ {symlinks} symlinks would be blocked"
+        
+        # Overall compliance
+        size_ok = oversized_files == 0
+        dirs_ok = limits["allow_dirs"] or subdirs == 0
+        symlinks_ok = limits["allow_symlinks"] or symlinks == 0
+        all_ok = size_ok and dirs_ok and symlinks_ok
+        overall_status = "✓ COMPLIANT" if all_ok else "✗ NON-COMPLIANT"
+        
+        # Build compliance table
+        compliance_html = f'''<p><b>Folder Compliance Check:</b></p>
+<table border="1" style="border-collapse: collapse; margin: 10px 0;">
+<tr><th style="padding: 5px;">Property</th><th style="padding: 5px;">Current State</th><th style="padding: 5px;">Policy/Limit</th><th style="padding: 5px;">Status</th></tr>
+<tr><td style="padding: 5px;">Largest File</td><td style="padding: 5px;">{largest_display}</td><td style="padding: 5px;">{limit_display}</td><td style="padding: 5px;">{size_status}</td></tr>
+<tr><td style="padding: 5px;">Subdirectories</td><td style="padding: 5px;">{subdirs} subdirectories</td><td style="padding: 5px;">{'Allowed' if limits['allow_dirs'] else 'Blocked'}</td><td style="padding: 5px;">{dir_status}</td></tr>
+<tr><td style="padding: 5px;">Symlinks</td><td style="padding: 5px;">{symlinks} symlinks</td><td style="padding: 5px;">{'Allowed' if limits['allow_symlinks'] else 'Blocked'}</td><td style="padding: 5px;">{symlink_status}</td></tr>
+<tr><td style="padding: 5px;"><b>Overall</b></td><td style="padding: 5px;" colspan="2"><b>Folder access compliance</b></td><td style="padding: 5px;"><b>{overall_status}</b></td></tr>
+</table>\n'''
+        
+        # Build the HTML output
+        result = [f"<p><b>SyftFolder('{self._path}')</b></p>", compliance_html.strip()]
+        
+        # File limits are now shown in the compliance table above
         
         if not rows:
             result.append("<p>No permissions set</p>")
