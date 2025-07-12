@@ -79,6 +79,18 @@ class PermissionCache:
 # Global cache instance
 _permission_cache = PermissionCache()
 
+def get_cache_stats() -> Dict[str, Any]:
+    """Get cache statistics for testing and debugging."""
+    return {
+        "size": len(_permission_cache.cache),
+        "max_size": _permission_cache.max_size,
+        "keys": list(_permission_cache.cache.keys())
+    }
+
+def clear_permission_cache() -> None:
+    """Clear the permission cache for testing."""
+    _permission_cache.clear()
+
 def _acl_norm_path(path: str) -> str:
     """
     Normalize a file system path for use in ACL operations by:
@@ -209,7 +221,7 @@ def _match_suffix_recursive(suffix: str, path: str) -> bool:
     return False
 
 def _match_simple_glob(pattern: str, path: str) -> bool:
-    """Match simple glob patterns with * and ? but no **. Case-sensitive matching."""
+    """Match simple glob patterns with *, ?, [] but no **. Case-sensitive matching."""
     if not pattern and not path:
         return True
     if not pattern:
@@ -235,8 +247,23 @@ def _match_simple_glob(pattern: str, path: str) -> bool:
                 star_path_idx = path_idx
                 pattern_idx += 1
                 continue
-            elif pattern[pattern_idx] == "?" or pattern[pattern_idx] == path[path_idx]:
-                # ? matches any char, or exact char match (case-sensitive)
+            elif pattern[pattern_idx] == "?":
+                # ? matches any single char (case-sensitive)
+                pattern_idx += 1
+                path_idx += 1
+                continue
+            elif pattern[pattern_idx] == "[":
+                # Character class matching like [0-9], [abc], etc.
+                if _match_char_class(pattern, pattern_idx, path[path_idx]):
+                    # Find end of character class
+                    bracket_end = pattern.find("]", pattern_idx + 1)
+                    if bracket_end != -1:
+                        pattern_idx = bracket_end + 1
+                        path_idx += 1
+                        continue
+                # If no matching bracket or no match, fall through to backtrack
+            elif pattern[pattern_idx] == path[path_idx]:
+                # Exact char match (case-sensitive)
                 pattern_idx += 1
                 path_idx += 1
                 continue
@@ -257,6 +284,47 @@ def _match_simple_glob(pattern: str, path: str) -> bool:
         pattern_idx += 1
     
     return pattern_idx == len(pattern)
+
+def _match_char_class(pattern: str, start_idx: int, char: str) -> bool:
+    """Match a character against a character class like [0-9], [abc], [!xyz]."""
+    if start_idx >= len(pattern) or pattern[start_idx] != "[":
+        return False
+    
+    # Find the end of the character class
+    end_idx = pattern.find("]", start_idx + 1)
+    if end_idx == -1:
+        return False
+    
+    char_class = pattern[start_idx + 1:end_idx]
+    if not char_class:
+        return False
+    
+    # Handle negation [!...] or [^...]
+    negate = False
+    if char_class[0] in "!^":
+        negate = True
+        char_class = char_class[1:]
+    
+    # Check for range patterns like 0-9, a-z
+    i = 0
+    matched = False
+    while i < len(char_class):
+        if i + 2 < len(char_class) and char_class[i + 1] == "-":
+            # Range pattern like 0-9
+            start_char = char_class[i]
+            end_char = char_class[i + 2]
+            if start_char <= char <= end_char:
+                matched = True
+                break
+            i += 3
+        else:
+            # Single character
+            if char_class[i] == char:
+                matched = True
+                break
+            i += 1
+    
+    return matched if not negate else not matched
 
 def _glob_match(pattern: str, path: str) -> bool:
     """
@@ -429,11 +497,6 @@ class SyftFile:
                                 # Check file limits if present
                                 limits = rule.get("limits", {})
                                 if limits:
-                                    # Check file size limit
-                                    max_size = limits.get("max_file_size")
-                                    if max_size is not None and self._size > max_size:
-                                        continue  # Skip this rule due to size limit
-                                    
                                     # Check if directories are allowed
                                     if not limits.get("allow_dirs", True) and self._path.is_dir():
                                         continue  # Skip this rule for directories
@@ -441,8 +504,14 @@ class SyftFile:
                                     # Check if symlinks are allowed
                                     if not limits.get("allow_symlinks", True) and self._is_symlink:
                                         continue  # Skip this rule for symlinks
+                                    
+                                    # Check file size limits
+                                    max_file_size = limits.get("max_file_size")
+                                    if max_file_size is not None:
+                                        if self._size > max_file_size:
+                                            continue  # Skip this rule if file exceeds size limit
                                 
-                                # Terminal rules override everything - return immediately
+                                # Terminal rules: use first matching rule (most specific due to sorting)
                                 result = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
                                 _permission_cache.set(cache_key, result)
                                 return result
@@ -463,11 +532,6 @@ class SyftFile:
                             # Check file limits if present
                             limits = rule.get("limits", {})
                             if limits:
-                                # Check file size limit
-                                max_size = limits.get("max_file_size")
-                                if max_size is not None and self._size > max_size:
-                                    continue  # Skip this rule due to size limit
-                                
                                 # Check if directories are allowed
                                 if not limits.get("allow_dirs", True) and self._path.is_dir():
                                     continue  # Skip this rule for directories
@@ -475,12 +539,18 @@ class SyftFile:
                                 # Check if symlinks are allowed
                                 if not limits.get("allow_symlinks", True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
+                                
+                                # Check file size limits
+                                max_file_size = limits.get("max_file_size")
+                                if max_file_size is not None:
+                                    if self._size > max_file_size:
+                                        continue  # Skip this rule if file exceeds size limit
                             
-                            # Found a matching rule - this becomes our nearest node
-                            # Use this node's permissions (not accumulate)
+                            # Found a matching rule - use the first matching rule since they're sorted by specificity
+                            # This becomes our nearest node (old syftbox: most specific matching rule wins)
                             nearest_permissions = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
                             found_matching_rule = True
-                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                            break  # Use first matching rule (most specific due to sorting)
                     
                     # If we found a matching rule, this is our nearest node - stop searching
                     if found_matching_rule:
@@ -858,6 +928,24 @@ class SyftFile:
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path):
                                 access = rule.get("access", {})
+                                
+                                # Check file limits if present
+                                limits = rule.get("limits", {})
+                                if limits:
+                                    # Check if directories are allowed
+                                    if not limits.get("allow_dirs", True) and self._path.is_dir():
+                                        continue  # Skip this rule for directories
+                                    
+                                    # Check if symlinks are allowed
+                                    if not limits.get("allow_symlinks", True) and self._is_symlink:
+                                        continue  # Skip this rule for symlinks
+                                    
+                                    # Check file size limits
+                                    max_file_size = limits.get("max_file_size")
+                                    if max_file_size is not None:
+                                        if self._size > max_file_size:
+                                            continue  # Skip this rule if file exceeds size limit
+                                
                                 # Terminal rules override everything - return immediately
                                 for perm in ["read", "create", "write", "admin"]:
                                     users = format_users(access.get(perm, []))
@@ -883,14 +971,10 @@ class SyftFile:
                         rel_path = str(self._path.relative_to(parent_dir))
                         if _glob_match(pattern, rel_path):
                             access = rule.get("access", {})
+                            
                             # Check file limits if present
                             limits = rule.get("limits", {})
                             if limits:
-                                # Check file size limit
-                                max_size = limits.get("max_file_size")
-                                if max_size is not None and self._size > max_size:
-                                    continue  # Skip this rule due to size limit
-                                
                                 # Check if directories are allowed
                                 if not limits.get("allow_dirs", True) and self._path.is_dir():
                                     continue  # Skip this rule for directories
@@ -898,6 +982,12 @@ class SyftFile:
                                 # Check if symlinks are allowed
                                 if not limits.get("allow_symlinks", True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
+                                
+                                # Check file size limits
+                                max_file_size = limits.get("max_file_size")
+                                if max_file_size is not None:
+                                    if self._size > max_file_size:
+                                        continue  # Skip this rule if file exceeds size limit
                             
                             # Found a matching rule - this becomes our nearest node
                             # Use this node's permissions (not accumulate)
@@ -1708,15 +1798,9 @@ class SyftFolder:
                         rel_path = str(self._path.relative_to(parent_dir))
                         if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
                             access = rule.get("access", {})
-                            # Check file limits if present
-                            limits = rule.get("limits", {})
-                            if limits:
-                                # Check if directories are allowed
-                                if not limits.get("allow_dirs", True):
-                                    continue  # Skip this rule for directories
-                            
                             # Found a matching rule - this becomes our nearest node
                             # Use this node's permissions (not accumulate)
+                            # File limits are checked at write time, not permission resolution time
                             for perm in ["read", "create", "write", "admin"]:
                                 users = format_users(access.get(perm, []))
                                 effective_perms[perm] = users
