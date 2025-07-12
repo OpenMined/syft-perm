@@ -478,6 +478,83 @@ rules:
         self.assertTrue(syft_archive.has_read_access("bob@example.com"))
         self.assertFalse(syft_archive.has_write_access("bob@example.com"))
         self.assertFalse(syft_archive.has_read_access("alice@example.com"))
+    
+    def test_multiple_double_star_in_single_pattern(self):
+        """Test patterns with multiple ** segments (e.g., src/**/docs/**/test/*.py)."""
+        # Create complex nested structure matching the pattern
+        complex_paths = [
+            "src/main/docs/api/test/test_api.py",
+            "src/utils/docs/guide/test/test_guide.py", 
+            "src/core/internal/docs/security/test/test_auth.py",
+            "src/legacy/docs/test/basic.py",
+            "other/src/docs/test/not_matching.py",  # Doesn't start with src/
+            "src/no_docs/test/also_not_matching.py",  # Missing docs/
+            "src/tools/docs/no_test/not_matching.py",  # Missing test/
+            "src/web/docs/ui/test/final.js",  # Wrong extension
+        ]
+        
+        for path in complex_paths:
+            full_path = Path(self.test_dir) / path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(f"content of {path}")
+        
+        # Create syft.pub.yaml with multiple ** pattern
+        yaml_file = Path(self.test_dir) / "syft.pub.yaml"
+        yaml_content = """rules:
+- pattern: "src/**/docs/**/test/*.py"
+  access:
+    read:
+    - alice@example.com
+    write:
+    - alice@example.com
+- pattern: "src/**/test/*.py"
+  access:
+    read:
+    - bob@example.com
+"""
+        yaml_file.write_text(yaml_content)
+        
+        # Files that should match the complex pattern (alice access)
+        matching_files = [
+            "src/main/docs/api/test/test_api.py",
+            "src/utils/docs/guide/test/test_guide.py",
+            "src/core/internal/docs/security/test/test_auth.py",
+            "src/legacy/docs/test/basic.py"  # docs/**/test matches docs/test
+        ]
+        
+        for path in matching_files:
+            syft_file = syft_perm.open(Path(self.test_dir) / path)
+            self.assertTrue(syft_file.has_read_access("alice@example.com"),
+                          f"Alice should read {path} (matches src/**/docs/**/test/*.py)")
+            self.assertTrue(syft_file.has_write_access("alice@example.com"))
+            # Bob should not have access since alice's pattern matches first
+            self.assertFalse(syft_file.has_read_access("bob@example.com"))
+        
+        # Files that don't match the complex pattern but match simpler one (bob access)
+        simpler_matches = [
+            "src/no_docs/test/also_not_matching.py"  # This actually should match src/**/test/*.py
+        ]
+        
+        for path in simpler_matches:
+            syft_file = syft_perm.open(Path(self.test_dir) / path)
+            self.assertTrue(syft_file.has_read_access("bob@example.com"),
+                          f"Bob should read {path} (matches src/**/test/*.py)")
+            self.assertFalse(syft_file.has_write_access("bob@example.com"))
+            self.assertFalse(syft_file.has_read_access("alice@example.com"))
+        
+        # Files that don't match any pattern
+        non_matching = [
+            "other/src/docs/test/not_matching.py",  # Doesn't start with src/
+            "src/tools/docs/no_test/not_matching.py",  # Missing test/ 
+            "src/web/docs/ui/test/final.js"  # Wrong extension
+        ]
+        
+        for path in non_matching:
+            syft_file = syft_perm.open(Path(self.test_dir) / path)
+            self.assertFalse(syft_file.has_read_access("alice@example.com"),
+                           f"Alice should not read {path}")
+            self.assertFalse(syft_file.has_read_access("bob@example.com"),
+                           f"Bob should not read {path}")
 
 
 if __name__ == "__main__":

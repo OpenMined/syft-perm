@@ -7,5 +7,6 @@ rules:
     - andrew@openmined.org
     - bennett@openmined.org
     - madhava@openmined.org
+    create: []
     read:
     - '*'
