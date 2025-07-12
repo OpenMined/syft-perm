@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Installation - SyftPerm Documentation</title>
+    <meta name="description" content="Install SyftPerm and get started with SyftBox file permission management in Python.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">SyftPerm</a>
+                <nav class="nav">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="installation.html" class="nav-link active">Installation</a>
+                    <a href="quickstart.html" class="nav-link">Quick Start</a>
+                    <a href="tutorials/index.html" class="nav-link">Tutorials</a>
+                    <a href="api/index.html" class="nav-link">API Reference</a>
+                    <a href="https://github.com/OpenMined/syft-perm" class="nav-link">GitHub</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Page Header -->
+            <section class="page-header">
+                <h1 class="page-title">Installation</h1>
+                <p class="page-subtitle">
+                    Get SyftPerm installed and configured on your system in just a few steps.
+                </p>
+            </section>
+
+            <!-- Quick Install -->
+            <section style="margin-bottom: 3rem;">
+                <h2>Quick Install</h2>
+                <p>Install SyftPerm from PyPI with pip:</p>
+                
+                <div class="code-block">pip install syft-perm</div>
+                
+                <div class="alert alert-success">
+                    <strong>✅ That's it!</strong> SyftPerm is now ready to use. Jump to the <a href="quickstart.html">Quick Start guide</a> to begin.
+                </div>
+            </section>
+
+            <!-- Installation Options -->
+            <section style="margin-bottom: 3rem;">
+                <h2>Installation Options</h2>
+                
+                <div class="grid grid-2">
+                    <div class="card">
+                        <h3 class="card-title">🎯 Core Package</h3>
+                        <div class="card-content">
+                            <p>Basic SyftPerm functionality for file permission management:</p>
+                            <div class="code-block">pip install syft-perm</div>
+                            <p><strong>Includes:</strong></p>
+                            <ul style="margin-left: 1.5rem;">
+                                <li>Core permission management</li>
+                                <li>Pattern matching system</li>
+                                <li>YAML configuration</li>
+                                <li>Debugging tools</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">🚀 Full Package (Recommended)</h3>
+                        <div class="card-content">
+                            <p>Complete SyftPerm experience with all optional features:</p>
+                            <div class="code-block">pip install "syft-perm[server,display]"</div>
+                            <p><strong>Includes everything above plus:</strong></p>
+                            <ul style="margin-left: 1.5rem;">
+                                <li>Web-based permission editor</li>
+                                <li>Rich table display in Jupyter</li>
+                                <li>Interactive HTML representations</li>
+                                <li>FastAPI server for UI</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Individual Optional Dependencies -->
+            <section style="margin-bottom: 3rem;">
+                <h2>Optional Dependencies</h2>
+                <p>You can also install specific optional features individually:</p>
+
+                <div class="api-method">
+                    <div class="api-method-name">Server Features</div>
+                    <div class="code-block">pip install "syft-perm[server]"</div>
+                    <p>Adds the interactive web-based permission editor. Perfect for teams with non-technical members who need to manage permissions through a user-friendly interface.</p>
+                </div>
+
+                <div class="api-method">
+                    <div class="api-method-name">Display Features</div>
+                    <div class="code-block">pip install "syft-perm[display]"</div>
+                    <p>Enhanced table formatting for Jupyter notebooks and terminals. Makes permission tables much more readable during development and debugging.</p>
+                </div>
+
+                <div class="api-method">
+                    <div class="api-method-name">SyftBox Integration</div>
+                    <div class="code-block">pip install "syft-perm[syftbox]"</div>
+                    <p>Deep integration with SyftBox core libraries. Required only if you're extending SyftBox itself or building custom SyftBox applications.</p>
+                </div>
+            </section>
+
+            <!-- Requirements -->
+            <section style="margin-bottom: 3rem;">
+                <h2>System Requirements</h2>
+                
+                <div class="grid grid-2">
+                    <div class="card">
+                        <h3 class="card-title">📋 Minimum Requirements</h3>
+                        <div class="card-content">
+                            <ul style="margin-left: 1.5rem;">
+                                <li><strong>Python:</strong> 3.9 or higher</li>
+                                <li><strong>Operating System:</strong> Windows, macOS, or Linux</li>
+                                <li><strong>Memory:</strong> 50MB RAM</li>
+                                <li><strong>Disk:</strong> 10MB storage</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">🎯 Recommended Setup</h3>
+                        <div class="card-content">
+                            <ul style="margin-left: 1.5rem;">
+                                <li><strong>Python:</strong> 3.10+ for best performance</li>
+                                <li><strong>Package Manager:</strong> pip 21+ or uv</li>
+                                <li><strong>Environment:</strong> Virtual environment</li>
+                                <li><strong>Editor:</strong> Jupyter notebooks for tutorials</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Development Installation -->
+            <section style="margin-bottom: 3rem;">
+                <h2>Development Installation</h2>
+                <p>If you want to contribute to SyftPerm or work with the source code:</p>
+
+                <div class="code-block"># Clone the repository
+git clone https://github.com/OpenMined/syft-perm.git
+cd syft-perm
+
+# Install in development mode with all dependencies
+pip install -e ".[dev,server,display]"
+
+# Run tests to verify installation
+pytest</div>
+
+                <div class="alert alert-info">
+                    <strong>💡 For Contributors:</strong> We use <code class="code-inline">uv</code> for dependency management in development. Install it with <code class="code-inline">pip install uv</code> for the fastest development experience.
+                </div>
+            </section>
+
+            <!-- Verification -->
+            <section style="margin-bottom: 3rem;">
+                <h2>Verify Installation</h2>
+                <p>Confirm that SyftPerm is installed correctly:</p>
+
+                <div class="code-block">python -c "import syft_perm; print(f'SyftPerm {syft_perm.__version__} installed successfully!')"</div>
+
+                <p>You should see output like:</p>
+                <div class="code-block">SyftPerm 0.2.32 installed successfully!</div>
+
+                <p>Test basic functionality:</p>
+                <div class="code-block">import syft_perm
+import tempfile
+from pathlib import Path
+
+# Create a test file
+test_file = Path(tempfile.mktemp(suffix=".txt"))
+test_file.write_text("Hello SyftPerm!")
+
+# Open with SyftPerm
+syft_file = syft_perm.open(test_file)
+syft_file.grant_read_access("test@example.com")
+
+print("✅ SyftPerm is working correctly!")
+
+# Cleanup
+test_file.unlink()</div>
+            </section>
+
+            <!-- Troubleshooting -->
+            <section style="margin-bottom: 3rem;">
+                <h2>Troubleshooting</h2>
+
+                <div class="api-method">
+                    <div class="api-method-name">Python Version Error</div>
+                    <p><strong>Problem:</strong> <code class="code-inline">ERROR: Package requires Python >=3.9</code></p>
+                    <p><strong>Solution:</strong> Upgrade to Python 3.9 or higher. Check your version with <code class="code-inline">python --version</code>.</p>
+                </div>
+
+                <div class="api-method">
+                    <div class="api-method-name">Import Error</div>
+                    <p><strong>Problem:</strong> <code class="code-inline">ModuleNotFoundError: No module named 'syft_perm'</code></p>
+                    <p><strong>Solution:</strong> Ensure you're using the correct Python environment. If using virtual environments, activate it first.</p>
+                </div>
+
+                <div class="api-method">
+                    <div class="api-method-name">Permission Server Won't Start</div>
+                    <p><strong>Problem:</strong> Web editor fails to start with FastAPI errors</p>
+                    <p><strong>Solution:</strong> Install server dependencies: <code class="code-inline">pip install "syft-perm[server]"</code></p>
+                </div>
+
+                <div class="api-method">
+                    <div class="api-method-name">Table Display Issues</div>
+                    <p><strong>Problem:</strong> Permission tables show as raw text instead of formatted tables</p>
+                    <p><strong>Solution:</strong> Install display dependencies: <code class="code-inline">pip install "syft-perm[display]"</code></p>
+                </div>
+            </section>
+
+            <!-- Next Steps -->
+            <section>
+                <h2>Next Steps</h2>
+                <p>Now that SyftPerm is installed, here's what to do next:</p>
+
+                <div class="grid grid-2" style="margin-top: 2rem;">
+                    <div class="card">
+                        <h3 class="card-title">🚀 Quick Start Tutorial</h3>
+                        <div class="card-content">
+                            <p>Learn the essentials in 5 minutes with our hands-on quick start guide.</p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="quickstart.html" class="btn btn-primary">Start Learning</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">📚 Complete Tutorials</h3>
+                        <div class="card-content">
+                            <p>Master advanced features with our comprehensive tutorial series.</p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="tutorials/index.html" class="btn btn-secondary">View Tutorials</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="grid grid-3">
+                <div>
+                    <h4 style="margin-bottom: 1rem;">SyftPerm</h4>
+                    <p>File permission management for SyftBox made simple.</p>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1rem;">Documentation</h4>
+                    <ul style="list-style: none;">
+                        <li style="margin-bottom: 0.5rem;"><a href="installation.html">Installation</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="quickstart.html">Quick Start</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="tutorials/index.html">Tutorials</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="api/index.html">API Reference</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1rem;">Community</h4>
+                    <ul style="list-style: none;">
+                        <li style="margin-bottom: 0.5rem;"><a href="https://github.com/OpenMined/syft-perm">GitHub</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="https://openmined.org/">OpenMined</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="https://syftbox.net/">SyftBox</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #444;">
+                <p>&copy; 2024 OpenMined. Released under MIT License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
+</body>
+</html>
