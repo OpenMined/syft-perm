@@ -43,7 +43,9 @@ print(file.explain_permissions("colleague@company.com"))
 # Check access
 if file.has_write_access("colleague@company.com"):
     print("Colleague can modify this file")
-```
+
+# Display beautiful permission tables in Jupyter notebooks
+file._repr_html_()  # Shows permissions table with compliance info
 
 ## Permission Hierarchy
 
@@ -60,6 +62,22 @@ if file.has_write_access("colleague@company.com"):
 - **🐛 Built-in Debugging** - Trace exactly why permissions work or don't work
 - **📁 Folder-Level Efficiency** - Set permissions once on directories, files inherit automatically
 - **🎮 Interactive Web Editor** - Google Drive-style permission management interface
+
+## Beautiful Table Display
+
+SyftPerm provides rich table displays for Jupyter notebooks:
+
+```python
+# Display permissions table with compliance information
+file._repr_html_()  # Shows user permissions, file limits, and compliance status
+
+# The table includes:
+# • User permissions (Read/Create/Write/Admin)
+# • File size vs limits
+# • File type compliance (directories, symlinks)
+# • Overall compliance status
+# • Direct link to web editor
+```
 
 ## Web Editor
 
