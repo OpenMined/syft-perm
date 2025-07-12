@@ -71,22 +71,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const yamlBlocks = document.querySelectorAll('code.language-yaml');
     
     yamlBlocks.forEach(block => {
-        let html = block.innerHTML;
+        // Get the text content, not HTML
+        let text = block.textContent || '';
         
+        // Escape HTML special characters first
+        text = text.replace(/&/g, '&amp;')
+                   .replace(/</g, '&lt;')
+                   .replace(/>/g, '&gt;');
+        
+        // Now apply syntax highlighting
         // Comments
-        html = html.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
-        
-        // Keys (before colon)
-        html = html.replace(/^(\s*)([a-zA-Z_-]+):/gm, '$1<span class="keyword">$2</span>:');
+        text = text.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
         
         // Strings in quotes
-        html = html.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
-        html = html.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+        text = text.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+        
+        // Keys (before colon)
+        text = text.replace(/^(\s*)([a-zA-Z_-]+):/gm, '$1<span class="keyword">$2</span>:');
         
         // List items
-        html = html.replace(/^(\s*)-\s+/gm, '$1<span class="keyword">-</span> ');
+        text = text.replace(/^(\s*)-(\s+)/gm, '$1<span class="keyword">-</span>$2');
         
-        block.innerHTML = html;
+        // Set the HTML with syntax highlighting applied
+        block.innerHTML = text;
     });
     
     // ================================
