@@ -51,6 +51,8 @@ dev = [
     "isort",
     "flake8",
     "mypy",
+    "nbformat>=5.9.0",
+    "nbconvert>=7.16.0",
 ]
 
 [project.urls]
