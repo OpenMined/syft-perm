@@ -79,7 +79,8 @@ class TestCodeCleanup(unittest.TestCase):
         # Test the editor URL generation works
         editor_url = syft_perm.get_editor_url(test_file)
         self.assertIsInstance(editor_url, str)
-        self.assertIn("http://", editor_url)
+        # URL could be either http:// (if server available) or file:// (if not)
+        self.assertTrue(editor_url.startswith(("http://", "file://")))
 
     def test_f_string_formatting_works(self):
         """Test that f-string formatting is properly fixed."""
@@ -116,10 +117,10 @@ class TestCodeCleanup(unittest.TestCase):
 
         syft_file = syft_perm.open(test_file)
 
-        # Grant permissions
-        syft_file.grant_read_access("user1@example.com")
-        syft_file.grant_write_access("user2@example.com")
-        syft_file.grant_admin_access("admin@example.com")
+        # Grant permissions (using force=True for test emails)
+        syft_file.grant_read_access("user1@example.com", force=True)
+        syft_file.grant_write_access("user2@example.com", force=True)
+        syft_file.grant_admin_access("admin@example.com", force=True)
 
         # Check permissions
         self.assertTrue(syft_file.has_read_access("user1@example.com"))

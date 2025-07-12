@@ -5,11 +5,27 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import uvicorn
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+try:
+    import uvicorn
+    from fastapi import FastAPI, HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import HTMLResponse
+    from pydantic import BaseModel
+
+    _SERVER_AVAILABLE = True
+except ImportError:
+    _SERVER_AVAILABLE = False
+
+    # Create dummy classes for type hints
+    class FastAPI:
+        pass
+
+    class HTTPException:
+        pass
+
+    class BaseModel:
+        pass
+
 
 from . import open as syft_open
 from ._utils import get_syftbox_datasites
@@ -737,6 +753,11 @@ _server_port = 8765
 
 def start_server(port: int = 8765, host: str = "127.0.0.1"):
     """Start the FastAPI server in a background thread."""
+    if not _SERVER_AVAILABLE:
+        raise ImportError(
+            "Server dependencies not available. Install with: pip install 'syft-perm[server]'"
+        )
+
     global _server_thread
     global _server_port
 
@@ -769,6 +790,11 @@ def get_server_url() -> Optional[str]:
 
 def get_editor_url(path: str) -> str:
     """Get the URL for the permission editor for a specific path."""
+    if not _SERVER_AVAILABLE:
+        return (
+            f"file://{path}  # Server not available - install with: pip install 'syft-perm[server]'"
+        )
+
     server_url = get_server_url()
     if not server_url:
         server_url = start_server()
