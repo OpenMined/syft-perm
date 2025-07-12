@@ -1151,8 +1151,6 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
             return is_creator
         elif permission == "read":
             return is_reader
-        else:
-            return False
 
     def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
         """Get all permissions using old syftbox nearest-node algorithm with source tracking."""
@@ -2225,8 +2223,6 @@ class SyftFolder:
             return is_creator
         elif permission == "read":
             return is_reader
-        else:
-            return False
 
     def _check_permission_with_reasons(
         self, user: str, permission: Literal["read", "create", "write", "admin"]

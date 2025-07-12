@@ -9,8 +9,6 @@ from . import open as syft_open
 from ._utils import get_syftbox_datasites
 
 _SERVER_AVAILABLE = False
-CORSMiddleware = None
-uvicorn = None
 try:
     import uvicorn
     from fastapi import FastAPI as _FastAPI
@@ -57,14 +55,13 @@ if _SERVER_AVAILABLE:
     )
 
     # Add CORS middleware
-    if CORSMiddleware is not None:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/")
     async def root() -> Dict[str, str]:
@@ -774,8 +771,7 @@ def start_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     _server_port = port
 
     def run_server() -> None:
-        if _SERVER_AVAILABLE and uvicorn is not None:
-            uvicorn.run(app, host=host, port=port, log_level="warning")
+        uvicorn.run(app, host=host, port=port, log_level="warning")
 
     _server_thread = threading.Thread(target=run_server, daemon=True)
     _server_thread.start()
