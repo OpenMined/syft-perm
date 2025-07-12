@@ -26,13 +26,12 @@ except ImportError:
 FastAPI = _FastAPI
 HTTPException = _HTTPException
 HTMLResponse = _HTMLResponse
-BaseModel = _BaseModel
 
 
 # Only create the FastAPI app if server dependencies are available
 if _SERVER_AVAILABLE:
 
-    class PermissionUpdate(BaseModel):
+    class PermissionUpdate(_BaseModel):
         """Model for permission update requests."""
 
         path: str
@@ -40,7 +39,7 @@ if _SERVER_AVAILABLE:
         permission: str  # read, create, write, admin
         action: str  # grant, revoke
 
-    class PermissionResponse(BaseModel):
+    class PermissionResponse(_BaseModel):
         """Model for permission response."""
 
         path: str
