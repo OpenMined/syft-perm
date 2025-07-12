@@ -62,13 +62,13 @@ if _SERVER_AVAILABLE:
         allow_headers=["*"],
     )
 
-    @app.get("/")
+    @app.get("/")  # type: ignore[misc]
     async def root() -> Dict[str, str]:
         """Root endpoint with basic info."""
         return {"message": "SyftPerm Permission Editor", "docs": "/docs"}
 
 
-@app.get("/permissions/{path:path}", response_model=PermissionResponse)
+@app.get("/permissions/{path:path}", response_model=PermissionResponse)  # type: ignore[misc]
 async def get_permissions(path: str) -> PermissionResponse:
     """Get permissions for a file or folder."""
     try:
@@ -114,7 +114,7 @@ async def get_permissions(path: str) -> PermissionResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/permissions/update")
+@app.post("/permissions/update")  # type: ignore[misc]
 async def update_permission(update: PermissionUpdate) -> Dict[str, Any]:
     """Update permissions for a file or folder."""
     try:
@@ -166,7 +166,7 @@ async def update_permission(update: PermissionUpdate) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/datasites")
+@app.get("/datasites")  # type: ignore[misc]
 async def get_datasites() -> Dict[str, Any]:
     """Get list of available datasites for autocompletion."""
     try:
@@ -176,7 +176,7 @@ async def get_datasites() -> Dict[str, Any]:
         return {"datasites": [], "error": str(e)}
 
 
-@app.get("/editor/{path:path}", response_class=HTMLResponse)
+@app.get("/editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
 async def permission_editor(path: str) -> str:
     """Serve the Google Drive-style permission editor."""
     return get_editor_html(path)
