@@ -649,7 +649,7 @@ wheels = [
 
 [[package]]
 name = "syft-perm"
-version = "0.2.34"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
