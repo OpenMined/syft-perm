@@ -16,6 +16,29 @@ from ._utils import (
 )
 import yaml
 from pathlib import PurePath
+from enum import Enum
+from dataclasses import dataclass
+
+# Permission reason tracking
+class PermissionReason(Enum):
+    """Reasons why a permission was granted or denied."""
+    OWNER = "Owner of path"
+    EXPLICIT_GRANT = "Explicitly granted {permission}"
+    INHERITED = "Inherited from {path}"
+    HIERARCHY = "Included via {level} permission"
+    PUBLIC = "Public access (*)"
+    PATTERN_MATCH = "Pattern '{pattern}' matched"
+    TERMINAL_BLOCKED = "Blocked by terminal at {path}"
+    NO_PERMISSION = "No permission found"
+    FILE_LIMIT = "Blocked by {limit_type} limit"
+
+@dataclass
+class PermissionResult:
+    """Result of a permission check with reasons."""
+    has_permission: bool
+    reasons: List[str]
+    source_paths: List[Path] = None
+    patterns: List[str] = None
 
 # Cache implementation for permission lookups
 class PermissionCache:
@@ -249,7 +272,7 @@ class SyftFile:
         return effective_perms
 
     def _get_permission_table(self) -> List[List[str]]:
-        """Get permissions formatted as a table showing effective permissions with hierarchy."""
+        """Get permissions formatted as a table showing effective permissions with hierarchy and reasons."""
         perms = self._get_all_permissions()
         
         # Get all unique users
@@ -262,25 +285,59 @@ class SyftFile:
         
         # First add public if it exists
         if "*" in all_users:
-            # Use the actual permission checking methods for consistency
+            # Collect all reasons for public
+            all_reasons = set()
+            
+            # Check each permission level and collect reasons
+            read_has, read_reasons = self._check_permission_with_reasons("*", "read")
+            create_has, create_reasons = self._check_permission_with_reasons("*", "create")
+            write_has, write_reasons = self._check_permission_with_reasons("*", "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
+            
+            # Combine all unique reasons
+            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
+                all_reasons.update(reasons)
+            
+            # Format reasons for display - always show all reasons
+            reason_list = sorted(list(all_reasons))
+            reason_text = "; ".join(reason_list)
+            
             rows.append([
                 "public",
-                "✓" if self.has_read_access("*") else "",
-                "✓" if self.has_create_access("*") else "",
-                "✓" if self.has_write_access("*") else "",
-                "✓" if self.has_admin_access("*") else ""
+                "✓" if read_has else "",
+                "✓" if create_has else "",
+                "✓" if write_has else "",
+                "✓" if admin_has else "",
+                reason_text
             ])
             all_users.remove("*")  # Remove so we don't process it again
         
         # Then add all other users
         for user in sorted(all_users):
-            # Use the actual permission checking methods to ensure consistency
+            # Collect all reasons for this user
+            all_reasons = set()
+            
+            # Check each permission level and collect reasons
+            read_has, read_reasons = self._check_permission_with_reasons(user, "read")
+            create_has, create_reasons = self._check_permission_with_reasons(user, "create")
+            write_has, write_reasons = self._check_permission_with_reasons(user, "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
+            
+            # Combine all unique reasons
+            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
+                all_reasons.update(reasons)
+            
+            # Format reasons for display - always show all reasons
+            reason_list = sorted(list(all_reasons))
+            reason_text = "; ".join(reason_list)
+            
             row = [
                 user,
-                "✓" if self.has_read_access(user) else "",
-                "✓" if self.has_create_access(user) else "",
-                "✓" if self.has_write_access(user) else "",
-                "✓" if self.has_admin_access(user) else ""
+                "✓" if read_has else "",
+                "✓" if create_has else "",
+                "✓" if write_has else "",
+                "✓" if admin_has else "",
+                reason_text
             ]
             rows.append(row)
         
@@ -296,17 +353,17 @@ class SyftFile:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="simple"
             )
             return f"SyftFile('{self._path}')\n\n{table}"
         except ImportError:
             # Fallback to simple table format if tabulate not available
             result = [f"SyftFile('{self._path}')\n"]
-            result.append("User               Read  Create  Write  Admin")
-            result.append("-" * 50)
+            result.append("User               Read  Create  Write  Admin  Reason")
+            result.append("-" * 70)
             for row in rows:
-                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5}")
+                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5} {row[5] if len(row) > 5 else ''}")
             return "\n".join(result)
 
     def _repr_html_(self) -> str:
@@ -319,7 +376,7 @@ class SyftFile:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="html"
             )
             return f"<p><b>SyftFile('{self._path}')</b></p>\n{table}"
@@ -327,9 +384,9 @@ class SyftFile:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFile('{self._path}')</b></p>"]
             result.append("<table>")
-            result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th></tr>")
+            result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>")
             for row in rows:
-                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td></tr>")
+                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5] if len(row) > 5 else ''}</td></tr>")
             result.append("</table>")
             return "\n".join(result)
 
@@ -490,6 +547,228 @@ class SyftFile:
             return is_reader
         else:
             return False
+    
+    def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
+        """Get all permissions including inherited ones with source tracking."""
+        # Start with empty permissions and sources
+        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
+        source_info = {"read": [], "create": [], "write": [], "admin": []}
+        terminal_path = None
+        
+        # Walk up the directory tree collecting permissions
+        current_path = self._path
+        while current_path.parent != current_path:  # Stop at root
+            parent_dir = current_path.parent
+            syftpub_path = parent_dir / "syft.pub.yaml"
+            
+            if syftpub_path.exists():
+                try:
+                    with open(syftpub_path, 'r') as f:
+                        content = yaml.safe_load(f) or {"rules": []}
+                    
+                    # Check if this is a terminal node
+                    if content.get("terminal", False):
+                        terminal_path = syftpub_path
+                        # Terminal nodes stop inheritance
+                        rules = content.get("rules", [])
+                        for rule in rules:
+                            pattern = rule.get("pattern", "")
+                            # Check if pattern matches our file path relative to this directory
+                            rel_path = str(self._path.relative_to(parent_dir))
+                            if _glob_match(pattern, rel_path):
+                                access = rule.get("access", {})
+                                # Terminal rules override everything
+                                for perm in ["read", "create", "write", "admin"]:
+                                    users = format_users(access.get(perm, []))
+                                    if users:
+                                        effective_perms[perm] = users
+                                        source_info[perm] = [{
+                                            "path": syftpub_path,
+                                            "pattern": pattern,
+                                            "terminal": True,
+                                            "inherited": False
+                                        }]
+                                return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                        # If no match in terminal, stop inheritance
+                        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                    
+                    # Process rules for non-terminal nodes
+                    rules = content.get("rules", [])
+                    for rule in rules:
+                        pattern = rule.get("pattern", "")
+                        # Check if pattern matches our file path relative to this directory
+                        rel_path = str(self._path.relative_to(parent_dir))
+                        if _glob_match(pattern, rel_path):
+                            access = rule.get("access", {})
+                            # Check file limits if present
+                            limits = rule.get("limits", {})
+                            if limits:
+                                # Check file size limit
+                                max_size = limits.get("max_file_size")
+                                if max_size is not None and self._size > max_size:
+                                    continue  # Skip this rule due to size limit
+                                
+                                # Check if directories are allowed
+                                if not limits.get("allow_dirs", True) and self._path.is_dir():
+                                    continue  # Skip this rule for directories
+                                
+                                # Check if symlinks are allowed
+                                if not limits.get("allow_symlinks", True) and self._is_symlink:
+                                    continue  # Skip this rule for symlinks
+                            
+                            # Merge permissions (inheritance)
+                            for perm in ["read", "create", "write", "admin"]:
+                                users = access.get(perm, [])
+                                if users and not effective_perms[perm]:
+                                    # Only inherit if we don't have more specific permissions
+                                    effective_perms[perm] = format_users(users)
+                                    source_info[perm].append({
+                                        "path": syftpub_path,
+                                        "pattern": pattern,
+                                        "terminal": False,
+                                        "inherited": parent_dir != self._path.parent
+                                    })
+                except Exception:
+                    pass
+            
+            current_path = parent_dir
+        
+        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+    
+    def _check_permission_with_reasons(self, user: str, permission: Literal["read", "create", "write", "admin"]) -> tuple[bool, List[str]]:
+        """Check if a user has a specific permission and return reasons why."""
+        reasons = []
+        
+        # Check if user is the owner
+        path_parts = self._path.parts
+        try:
+            datasites_idx = path_parts.index("datasites")
+            if datasites_idx + 1 < len(path_parts):
+                owner = path_parts[datasites_idx + 1]
+                if owner == user:
+                    reasons.append("Owner of path")
+                    return True, reasons
+        except (ValueError, IndexError):
+            pass
+        
+        # Also check simple prefix matching (like old ACL)
+        path_str = str(self._path)
+        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
+            reasons.append("Owner of path (prefix match)")
+            return True, reasons
+        
+        # Get all permissions with source tracking
+        perm_data = self._get_all_permissions_with_sources()
+        all_perms = perm_data["permissions"]
+        sources = perm_data["sources"]
+        terminal = perm_data.get("terminal")
+        
+        # If blocked by terminal
+        if terminal and not any(all_perms.values()):
+            reasons.append(f"Blocked by terminal at {terminal.parent}")
+            return False, reasons
+        
+        # Check hierarchy and build reasons
+        admin_users = all_perms.get("admin", [])
+        write_users = all_perms.get("write", [])
+        create_users = all_perms.get("create", [])
+        read_users = all_perms.get("read", [])
+        
+        # Check if user has the permission through hierarchy
+        has_permission = False
+        
+        if permission == "admin":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Explicitly granted admin in {src['path'].parent}")
+        elif permission == "write":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Included via admin permission in {src['path'].parent}")
+            elif "*" in write_users or user in write_users:
+                has_permission = True
+                if sources.get("write"):
+                    src = sources["write"][0]
+                    reasons.append(f"Explicitly granted write in {src['path'].parent}")
+        elif permission == "create":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Included via admin permission in {src['path'].parent}")
+            elif "*" in write_users or user in write_users:
+                has_permission = True
+                if sources.get("write"):
+                    src = sources["write"][0]
+                    reasons.append(f"Included via write permission in {src['path'].parent}")
+            elif "*" in create_users or user in create_users:
+                has_permission = True
+                if sources.get("create"):
+                    src = sources["create"][0]
+                    reasons.append(f"Explicitly granted create in {src['path'].parent}")
+        elif permission == "read":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Included via admin permission in {src['path'].parent}")
+            elif "*" in write_users or user in write_users:
+                has_permission = True
+                if sources.get("write"):
+                    src = sources["write"][0]
+                    reasons.append(f"Included via write permission in {src['path'].parent}")
+            elif "*" in create_users or user in create_users:
+                has_permission = True
+                if sources.get("create"):
+                    src = sources["create"][0]
+                    reasons.append(f"Included via create permission in {src['path'].parent}")
+            elif "*" in read_users or user in read_users:
+                has_permission = True
+                if sources.get("read"):
+                    src = sources["read"][0]
+                    reasons.append(f"Explicitly granted read in {src['path'].parent}")
+        
+        # Add pattern info if available
+        for perm_type in ["admin", "write", "create", "read"]:
+            if sources.get(perm_type):
+                for src in sources[perm_type]:
+                    if src["pattern"] and src["pattern"] != self._name:
+                        # User has permission and pattern is not just the filename
+                        if (perm_type == permission or 
+                            (perm_type == "admin") or
+                            (perm_type == "write" and permission in ["create", "read"]) or
+                            (perm_type == "create" and permission == "read")):
+                            if f"Pattern '{src['pattern']}' matched" not in reasons:
+                                reasons.append(f"Pattern '{src['pattern']}' matched")
+                            break
+        
+        # Check for public access
+        if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):
+            if "Public access (*)" not in reasons:
+                reasons.append("Public access (*)")
+        
+        if not has_permission and not reasons:
+            reasons.append("No permission found")
+        
+        return has_permission, reasons
+    
+    def explain_permissions(self, user: str) -> str:
+        """Provide detailed explanation of why user has/lacks permissions."""
+        explanation = f"Permission analysis for {user} on {self._path}:\n\n"
+        
+        for perm in ["admin", "write", "create", "read"]:
+            has_perm, reasons = self._check_permission_with_reasons(user, perm)
+            status = "✓ GRANTED" if has_perm else "✗ DENIED"
+            explanation += f"{perm.upper()}: {status}\n"
+            for reason in reasons:
+                explanation += f"  • {reason}\n"
+            explanation += "\n"
+        
+        return explanation
     
     def set_file_limits(self, max_size: Optional[int] = None, 
                        allow_dirs: bool = True, 
@@ -658,7 +937,7 @@ class SyftFolder:
         return effective_perms
 
     def _get_permission_table(self) -> List[List[str]]:
-        """Get permissions formatted as a table showing effective permissions with hierarchy."""
+        """Get permissions formatted as a table showing effective permissions with hierarchy and reasons."""
         perms = self._get_all_permissions()
         
         # Get all unique users
@@ -671,25 +950,59 @@ class SyftFolder:
         
         # First add public if it exists
         if "*" in all_users:
-            # Use the actual permission checking methods for consistency
+            # Collect all reasons for public
+            all_reasons = set()
+            
+            # Check each permission level and collect reasons
+            read_has, read_reasons = self._check_permission_with_reasons("*", "read")
+            create_has, create_reasons = self._check_permission_with_reasons("*", "create")
+            write_has, write_reasons = self._check_permission_with_reasons("*", "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
+            
+            # Combine all unique reasons
+            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
+                all_reasons.update(reasons)
+            
+            # Format reasons for display - always show all reasons
+            reason_list = sorted(list(all_reasons))
+            reason_text = "; ".join(reason_list)
+            
             rows.append([
                 "public",
-                "✓" if self.has_read_access("*") else "",
-                "✓" if self.has_create_access("*") else "",
-                "✓" if self.has_write_access("*") else "",
-                "✓" if self.has_admin_access("*") else ""
+                "✓" if read_has else "",
+                "✓" if create_has else "",
+                "✓" if write_has else "",
+                "✓" if admin_has else "",
+                reason_text
             ])
             all_users.remove("*")  # Remove so we don't process it again
         
         # Then add all other users
         for user in sorted(all_users):
-            # Use the actual permission checking methods to ensure consistency
+            # Collect all reasons for this user
+            all_reasons = set()
+            
+            # Check each permission level and collect reasons
+            read_has, read_reasons = self._check_permission_with_reasons(user, "read")
+            create_has, create_reasons = self._check_permission_with_reasons(user, "create")
+            write_has, write_reasons = self._check_permission_with_reasons(user, "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
+            
+            # Combine all unique reasons
+            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
+                all_reasons.update(reasons)
+            
+            # Format reasons for display - always show all reasons
+            reason_list = sorted(list(all_reasons))
+            reason_text = "; ".join(reason_list)
+            
             row = [
                 user,
-                "✓" if self.has_read_access(user) else "",
-                "✓" if self.has_create_access(user) else "",
-                "✓" if self.has_write_access(user) else "",
-                "✓" if self.has_admin_access(user) else ""
+                "✓" if read_has else "",
+                "✓" if create_has else "",
+                "✓" if write_has else "",
+                "✓" if admin_has else "",
+                reason_text
             ]
             rows.append(row)
         
@@ -705,17 +1018,17 @@ class SyftFolder:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="simple"
             )
             return f"SyftFolder('{self._path}')\n\n{table}"
         except ImportError:
             # Fallback to simple table format if tabulate not available
             result = [f"SyftFolder('{self._path}')\n"]
-            result.append("User               Read  Create  Write  Admin")
-            result.append("-" * 50)
+            result.append("User               Read  Create  Write  Admin  Reason")
+            result.append("-" * 70)
             for row in rows:
-                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5}")
+                result.append(f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5} {row[5] if len(row) > 5 else ''}")
             return "\n".join(result)
 
     def _repr_html_(self) -> str:
@@ -728,7 +1041,7 @@ class SyftFolder:
             from tabulate import tabulate
             table = tabulate(
                 rows,
-                headers=["User", "Read", "Create", "Write", "Admin"],
+                headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="html"
             )
             return f"<p><b>SyftFolder('{self._path}')</b></p>\n{table}"
@@ -736,9 +1049,9 @@ class SyftFolder:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFolder('{self._path}')</b></p>"]
             result.append("<table>")
-            result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th></tr>")
+            result.append("<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>")
             for row in rows:
-                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td></tr>")
+                result.append(f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5] if len(row) > 5 else ''}</td></tr>")
             result.append("</table>")
             return "\n".join(result)
     
@@ -899,6 +1212,219 @@ class SyftFolder:
             return is_reader
         else:
             return False
+
+    def _check_permission_with_reasons(self, user: str, permission: Literal["read", "create", "write", "admin"]) -> tuple[bool, List[str]]:
+        """Check if a user has a specific permission and return reasons why."""
+        reasons = []
+        
+        # Check if user is the owner
+        path_parts = self._path.parts
+        try:
+            datasites_idx = path_parts.index("datasites")
+            if datasites_idx + 1 < len(path_parts):
+                owner = path_parts[datasites_idx + 1]
+                if owner == user:
+                    reasons.append("Owner of path")
+                    return True, reasons
+        except (ValueError, IndexError):
+            pass
+        
+        # Also check simple prefix matching (like old ACL)
+        path_str = str(self._path)
+        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
+            reasons.append("Owner of path (prefix match)")
+            return True, reasons
+        
+        # Get all permissions with source tracking
+        perm_data = self._get_all_permissions_with_sources()
+        all_perms = perm_data["permissions"]
+        sources = perm_data["sources"]
+        terminal = perm_data.get("terminal")
+        
+        # If blocked by terminal
+        if terminal and not any(all_perms.values()):
+            reasons.append(f"Blocked by terminal at {terminal.parent}")
+            return False, reasons
+        
+        # Check hierarchy and build reasons
+        admin_users = all_perms.get("admin", [])
+        write_users = all_perms.get("write", [])
+        create_users = all_perms.get("create", [])
+        read_users = all_perms.get("read", [])
+        
+        # Check if user has the permission through hierarchy
+        has_permission = False
+        
+        if permission == "admin":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Explicitly granted admin in {src['path'].parent}")
+        elif permission == "write":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Included via admin permission in {src['path'].parent}")
+            elif "*" in write_users or user in write_users:
+                has_permission = True
+                if sources.get("write"):
+                    src = sources["write"][0]
+                    reasons.append(f"Explicitly granted write in {src['path'].parent}")
+        elif permission == "create":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Included via admin permission in {src['path'].parent}")
+            elif "*" in write_users or user in write_users:
+                has_permission = True
+                if sources.get("write"):
+                    src = sources["write"][0]
+                    reasons.append(f"Included via write permission in {src['path'].parent}")
+            elif "*" in create_users or user in create_users:
+                has_permission = True
+                if sources.get("create"):
+                    src = sources["create"][0]
+                    reasons.append(f"Explicitly granted create in {src['path'].parent}")
+        elif permission == "read":
+            if "*" in admin_users or user in admin_users:
+                has_permission = True
+                if sources.get("admin"):
+                    src = sources["admin"][0]
+                    reasons.append(f"Included via admin permission in {src['path'].parent}")
+            elif "*" in write_users or user in write_users:
+                has_permission = True
+                if sources.get("write"):
+                    src = sources["write"][0]
+                    reasons.append(f"Included via write permission in {src['path'].parent}")
+            elif "*" in create_users or user in create_users:
+                has_permission = True
+                if sources.get("create"):
+                    src = sources["create"][0]
+                    reasons.append(f"Included via create permission in {src['path'].parent}")
+            elif "*" in read_users or user in read_users:
+                has_permission = True
+                if sources.get("read"):
+                    src = sources["read"][0]
+                    reasons.append(f"Explicitly granted read in {src['path'].parent}")
+        
+        # Add pattern info if available
+        for perm_type in ["admin", "write", "create", "read"]:
+            if sources.get(perm_type):
+                for src in sources[perm_type]:
+                    if src["pattern"] and src["pattern"] != self._name:
+                        # User has permission and pattern is not just the folder name
+                        if (perm_type == permission or 
+                            (perm_type == "admin") or
+                            (perm_type == "write" and permission in ["create", "read"]) or
+                            (perm_type == "create" and permission == "read")):
+                            if f"Pattern '{src['pattern']}' matched" not in reasons:
+                                reasons.append(f"Pattern '{src['pattern']}' matched")
+                            break
+        
+        # Check for public access
+        if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):
+            if "Public access (*)" not in reasons:
+                reasons.append("Public access (*)")
+        
+        if not has_permission and not reasons:
+            reasons.append("No permission found")
+        
+        return has_permission, reasons
+
+    def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
+        """Get all permissions including inherited ones with source tracking."""
+        # Start with empty permissions and sources
+        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
+        source_info = {"read": [], "create": [], "write": [], "admin": []}
+        terminal_path = None
+        
+        # Walk up the directory tree collecting permissions
+        current_path = self._path
+        while current_path.parent != current_path:  # Stop at root
+            parent_dir = current_path.parent
+            syftpub_path = parent_dir / "syft.pub.yaml"
+            
+            if syftpub_path.exists():
+                try:
+                    with open(syftpub_path, 'r') as f:
+                        content = yaml.safe_load(f) or {"rules": []}
+                    
+                    # Check if this is a terminal node
+                    if content.get("terminal", False):
+                        terminal_path = syftpub_path
+                        # Terminal nodes stop inheritance
+                        rules = content.get("rules", [])
+                        for rule in rules:
+                            pattern = rule.get("pattern", "")
+                            # Check if pattern matches our folder path relative to this directory
+                            rel_path = str(self._path.relative_to(parent_dir))
+                            if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
+                                access = rule.get("access", {})
+                                # Terminal rules override everything
+                                for perm in ["read", "create", "write", "admin"]:
+                                    users = format_users(access.get(perm, []))
+                                    if users:
+                                        effective_perms[perm] = users
+                                        source_info[perm] = [{
+                                            "path": syftpub_path,
+                                            "pattern": pattern,
+                                            "terminal": True,
+                                            "inherited": False
+                                        }]
+                                return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                        # If no match in terminal, stop inheritance
+                        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                    
+                    # Process rules for non-terminal nodes
+                    rules = content.get("rules", [])
+                    for rule in rules:
+                        pattern = rule.get("pattern", "")
+                        # Check if pattern matches our folder path relative to this directory
+                        rel_path = str(self._path.relative_to(parent_dir))
+                        if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
+                            access = rule.get("access", {})
+                            # Check file limits if present
+                            limits = rule.get("limits", {})
+                            if limits:
+                                # Check if directories are allowed
+                                if not limits.get("allow_dirs", True):
+                                    continue  # Skip this rule for directories
+                            
+                            # Merge permissions (inheritance)
+                            for perm in ["read", "create", "write", "admin"]:
+                                users = access.get(perm, [])
+                                if users and not effective_perms[perm]:
+                                    # Only inherit if we don't have more specific permissions
+                                    effective_perms[perm] = format_users(users)
+                                    source_info[perm].append({
+                                        "path": syftpub_path,
+                                        "pattern": pattern,
+                                        "terminal": False,
+                                        "inherited": parent_dir != self._path.parent
+                                    })
+                except Exception:
+                    pass
+            
+            current_path = parent_dir
+        
+        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+    
+    def explain_permissions(self, user: str) -> str:
+        """Provide detailed explanation of why user has/lacks permissions."""
+        explanation = f"Permission analysis for {user} on {self._path}:\n\n"
+        
+        for perm in ["admin", "write", "create", "read"]:
+            has_perm, reasons = self._check_permission_with_reasons(user, perm)
+            status = "✓ GRANTED" if has_perm else "✗ DENIED"
+            explanation += f"{perm.upper()}: {status}\n"
+            for reason in reasons:
+                explanation += f"  • {reason}\n"
+            explanation += "\n"
+        
+        return explanation
 
     def move_folder_and_permissions(self, new_path: Union[str, Path], *, force: bool = False) -> 'SyftFolder':
         """

@@ -58,6 +58,11 @@ class TestCreatePermissions(unittest.TestCase):
         self.assertFalse(syft_file.has_write_access("alice@example.com"))
         self.assertFalse(syft_file.has_admin_access("alice@example.com"))
         
+        # Check reason for hierarchical read permission
+        has_read, reasons = syft_file._check_permission_with_reasons("alice@example.com", "read")
+        self.assertTrue(has_read)
+        self.assertIn("Included via create permission", reasons[0])
+        
         # Others have no permissions
         self.assertNotIn("bob@example.com", perms.get("create", []))
         self.assertFalse(syft_file.has_read_access("bob@example.com"))

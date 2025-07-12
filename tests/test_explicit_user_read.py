@@ -53,6 +53,11 @@ class TestExplicitUserRead(unittest.TestCase):
         self.assertFalse(syft_file.has_write_access("alice@example.com"))
         self.assertFalse(syft_file.has_admin_access("alice@example.com"))
         
+        # Check reason for alice's read permission
+        has_read, reasons = syft_file._check_permission_with_reasons("alice@example.com", "read")
+        self.assertTrue(has_read)
+        self.assertIn("Explicitly granted read in", reasons[0])
+        
         # Check other users have no permissions
         for user in ["bob@example.com", "charlie@example.com"]:
             self.assertFalse(syft_file.has_read_access(user))
@@ -338,6 +343,34 @@ rules:
         self.assertTrue(syft_file.has_read_access("bob@example.com"))
         self.assertFalse(syft_file.has_write_access("bob@example.com"))
         self.assertFalse(syft_file.has_admin_access("bob@example.com"))
+
+    def test_owner_permissions_with_reasons(self):
+        """Test owner has all permissions with appropriate reasons."""
+        # Create file under datasites owner path
+        owner_dir = Path(self.test_dir) / "datasites" / "alice@example.com"
+        owner_dir.mkdir(parents=True)
+        test_file = owner_dir / "owned_file.txt"
+        test_file.write_text("owned content")
+        
+        # Open file
+        syft_file = syft_perm.open(test_file)
+        
+        # Owner should have all permissions
+        self.assertTrue(syft_file.has_read_access("alice@example.com"))
+        self.assertTrue(syft_file.has_create_access("alice@example.com"))
+        self.assertTrue(syft_file.has_write_access("alice@example.com"))
+        self.assertTrue(syft_file.has_admin_access("alice@example.com"))
+        
+        # Check reasons for owner permissions
+        has_admin, reasons = syft_file._check_permission_with_reasons("alice@example.com", "admin")
+        self.assertTrue(has_admin)
+        self.assertEqual(len(reasons), 1)
+        self.assertEqual(reasons[0], "Owner of path")
+        
+        # Non-owner should have no permissions
+        has_read, reasons = syft_file._check_permission_with_reasons("bob@example.com", "read")
+        self.assertFalse(has_read)
+        self.assertEqual(reasons[0], "No permission found")
 
 
 if __name__ == "__main__":
