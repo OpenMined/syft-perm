@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from ._syftbox import SYFTBOX_AVAILABLE, SyftBoxURL
 from ._syftbox import client as _syftbox_client
@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 
-def resolve_path(path_or_syfturl: str) -> Optional[Path]:
+def resolve_path(path_or_syfturl: Any) -> Optional[Path]:
     """Convert any path (local or syft://) to a local Path object."""
     if not isinstance(path_or_syfturl, str):
         return Path(path_or_syfturl)
@@ -25,9 +25,10 @@ def resolve_path(path_or_syfturl: str) -> Optional[Path]:
         if not SYFTBOX_AVAILABLE or _syftbox_client is None:
             return None
         try:
-            return SyftBoxURL(path_or_syfturl).to_local_path(
-                datasites_path=_syftbox_client.datasites
-            )
+            if SyftBoxURL is not None:
+                url_obj = SyftBoxURL(path_or_syfturl)
+                return url_obj.to_local_path(datasites_path=_syftbox_client.datasites)
+            return None
         except Exception:
             return None
     return Path(path_or_syfturl)
@@ -88,7 +89,7 @@ def update_syftpub_yaml(
     target_path.mkdir(parents=True, exist_ok=True)
 
     # Read existing rules
-    existing_content = {"rules": []}
+    existing_content: Dict[str, Any] = {"rules": []}
     if syftpub_path.exists():
         try:
             with open(syftpub_path, "r") as f:
@@ -120,11 +121,11 @@ def update_syftpub_yaml(
         for perm in ["admin", "write", "create", "read"]:
             if perm in access_dict:
                 ordered_access[perm] = access_dict[perm]
-        new_rule["access"] = ordered_access
+        new_rule["access"] = ordered_access  # type: ignore[assignment]
 
     # Update limits if provided
     if limits_dict:
-        new_rule["limits"] = limits_dict
+        new_rule["limits"] = limits_dict  # type: ignore[assignment]
 
     # Write back
     with open(syftpub_path, "w") as f:
@@ -174,7 +175,7 @@ def read_syftpub_yaml(path: Path, pattern: str) -> Optional[Dict[str, List[str]]
             content = yaml.safe_load(f) or {"rules": []}
         for rule in content.get("rules", []):
             if rule.get("pattern") == pattern:
-                return rule.get("access")
+                return rule.get("access")  # type: ignore[no-any-return]
     except Exception:
         pass
     return None
@@ -199,7 +200,7 @@ def read_syftpub_yaml_full(path: Path, pattern: str) -> Optional[Dict[str, Any]]
 
 def get_syftbox_datasites() -> List[str]:
     """Get list of available datasites from SyftBox for autocompletion."""
-    datasites = []
+    datasites: List[str] = []
 
     if not SYFTBOX_AVAILABLE or _syftbox_client is None:
         return datasites

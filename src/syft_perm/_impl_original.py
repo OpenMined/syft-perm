@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Literal, Union
 
-import yaml
+import yaml  # type: ignore  # type: ignore
 
 from ._utils import (
     format_users,
@@ -105,9 +105,10 @@ class SyftFile:
     """A file wrapper that manages SyftBox permissions."""
 
     def __init__(self, path: Union[str, Path]):
-        self._path = resolve_path(path)
-        if self._path is None:
+        resolved_path = resolve_path(path)
+        if resolved_path is None:
             raise ValueError("Could not resolve path")
+        self._path = resolved_path
 
         # Ensure parent directory exists
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -120,7 +121,7 @@ class SyftFile:
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this file, including inherited permissions."""
         # Start with empty permissions
-        effective_perms = {"read": [], "write": [], "admin": []}
+        effective_perms: Dict[str, List[str]] = {"read": [], "write": [], "admin": []}
 
         # Walk up the directory tree collecting permissions
         current_path = self._path
@@ -216,7 +217,7 @@ class SyftFile:
             return f"SyftFile('{self._path}') - No permissions set"
 
         try:
-            from tabulate import tabulate
+            from tabulate import tabulate  # type: ignore
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="simple")
             return f"SyftFile('{self._path}')\n\n{table}"
@@ -236,7 +237,7 @@ class SyftFile:
             return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>"
 
         try:
-            from tabulate import tabulate
+            from tabulate import tabulate  # type: ignore
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="html")
             return f"<p><b>SyftFile('{self._path}')</b></p>\n{table}"
@@ -380,9 +381,10 @@ class SyftFile:
             ValueError: If new_path is invalid
         """
         # Resolve and validate paths
-        new_path = resolve_path(new_path)
-        if new_path is None:
+        resolved_new_path = resolve_path(new_path)
+        if resolved_new_path is None:
             raise ValueError("Could not resolve new path")
+        new_path = resolved_new_path
 
         if not self._path.exists():
             raise FileNotFoundError(f"Source file not found: {self._path}")
@@ -405,7 +407,8 @@ class SyftFile:
         # Apply permissions to new location
         for permission, users in perms.items():
             for user in users:
-                new_file._grant_access(user, permission)
+                if permission in ["read", "write", "admin"]:
+                    new_file._grant_access(user, permission)  # type: ignore
 
         return new_file
 
@@ -414,9 +417,10 @@ class SyftFolder:
     """A folder wrapper that manages SyftBox permissions."""
 
     def __init__(self, path: Union[str, Path]):
-        self._path = resolve_path(path)
-        if self._path is None:
+        resolved_path = resolve_path(path)
+        if resolved_path is None:
             raise ValueError("Could not resolve path")
+        self._path = resolved_path
 
         # Ensure folder exists
         self._path.mkdir(parents=True, exist_ok=True)
@@ -429,7 +433,7 @@ class SyftFolder:
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this folder, including inherited permissions."""
         # Start with empty permissions
-        effective_perms = {"read": [], "write": [], "admin": []}
+        effective_perms: Dict[str, List[str]] = {"read": [], "write": [], "admin": []}
 
         # Walk up the directory tree collecting permissions
         current_path = self._path
@@ -527,7 +531,7 @@ class SyftFolder:
             return f"SyftFolder('{self._path}') - No permissions set"
 
         try:
-            from tabulate import tabulate
+            from tabulate import tabulate  # type: ignore
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="simple")
             return f"SyftFolder('{self._path}')\n\n{table}"
@@ -547,7 +551,7 @@ class SyftFolder:
             return f"<p><b>SyftFolder('{self._path}')</b> - No permissions set</p>"
 
         try:
-            from tabulate import tabulate
+            from tabulate import tabulate  # type: ignore
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="html")
             return f"<p><b>SyftFolder('{self._path}')</b></p>\n{table}"
@@ -694,9 +698,10 @@ class SyftFolder:
             ValueError: If new_path is invalid
         """
         # Resolve and validate paths
-        new_path = resolve_path(new_path)
-        if new_path is None:
+        resolved_new_path = resolve_path(new_path)
+        if resolved_new_path is None:
             raise ValueError("Could not resolve new path")
+        new_path = resolved_new_path
 
         if not self._path.exists():
             raise FileNotFoundError(f"Source folder not found: {self._path}")
@@ -716,6 +721,8 @@ class SyftFolder:
 
         # Get permissions for all files and folders
         permission_map = {}
+        if self._path is None:
+            raise ValueError("Source path is None")
         for item in self._path.rglob("*"):
             if item.is_file():
                 file_obj = SyftFile(item)
@@ -747,11 +754,13 @@ class SyftFolder:
                 file_obj = SyftFile(new_item_path)
                 for permission, users in perms.items():
                     for user in users:
-                        file_obj._grant_access(user, permission)
+                        if permission in ["read", "write", "admin"]:
+                            file_obj._grant_access(user, permission)  # type: ignore
             elif new_item_path.is_dir():
                 folder_obj = SyftFolder(new_item_path)
                 for permission, users in perms.items():
                     for user in users:
-                        folder_obj._grant_access(user, permission)
+                        if permission in ["read", "write", "admin"]:
+                            folder_obj._grant_access(user, permission)  # type: ignore
 
         return new_folder

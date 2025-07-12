@@ -6,7 +6,7 @@ client = None
 SyftBoxURL = None
 
 
-def _initialize_syftbox():
+def _initialize_syftbox() -> None:
     """Initialize SyftBox client classes if available"""
     global SYFTBOX_AVAILABLE, client, SyftBoxURL
 
