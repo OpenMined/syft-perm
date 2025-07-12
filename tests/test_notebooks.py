@@ -1,9 +1,11 @@
 """Test that all tutorial notebooks execute without errors."""
 
+import sys
 from pathlib import Path
 
 import nbformat
 import pytest
+from jupyter_client.kernelspec import KernelSpecManager
 from nbconvert.preprocessors import ExecutePreprocessor
 
 TUTORIALS_DIR = Path(__file__).parent.parent / "tutorials"
@@ -15,13 +17,28 @@ def get_notebooks():
     return sorted([f for f in TUTORIALS_DIR.glob("*.ipynb") if not f.name.startswith(".")])
 
 
+def get_kernel_name():
+    """Get the appropriate kernel name for the current Python version."""
+    ksm = KernelSpecManager()
+    kernel_name = f"python{sys.version_info.major}"
+
+    # If python3 kernel not available, try ipykernel install
+    if kernel_name not in ksm.find_kernel_specs():
+        import subprocess
+
+        subprocess.run([sys.executable, "-m", "ipykernel", "install", "--user"], check=True)
+
+    return kernel_name
+
+
 @pytest.mark.parametrize("notebook_path", get_notebooks())
 def test_notebook_execution(notebook_path):
     """Test that a notebook executes without errors."""
     with open(notebook_path) as f:
         nb = nbformat.read(f, as_version=4)
 
-    ep = ExecutePreprocessor(timeout=TIMEOUT, kernel_name="python3")
+    kernel_name = get_kernel_name()
+    ep = ExecutePreprocessor(timeout=TIMEOUT, kernel_name=kernel_name)
 
     try:
         # Execute the notebook
