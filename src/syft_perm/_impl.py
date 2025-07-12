@@ -1157,8 +1157,13 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
     def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
         """Get all permissions using old syftbox nearest-node algorithm with source tracking."""
         # Start with empty permissions and sources
-        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
-        source_info = {"read": [], "create": [], "write": [], "admin": []}
+        effective_perms: Dict[str, List[str]] = {"read": [], "create": [], "write": [], "admin": []}
+        source_info: Dict[str, List[Dict[str, Any]]] = {
+            "read": [],
+            "create": [],
+            "write": [],
+            "admin": [],
+        }
         terminal_path = None
         terminal_pattern = None  # Track the pattern that was matched in terminal
         matched_pattern = None  # Track any pattern that was matched (terminal or non-terminal)
@@ -2345,8 +2350,13 @@ class SyftFolder:
     def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
         """Get all permissions using old syftbox nearest-node algorithm with source tracking."""
         # Start with empty permissions and sources
-        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
-        source_info = {"read": [], "create": [], "write": [], "admin": []}
+        effective_perms: Dict[str, List[str]] = {"read": [], "create": [], "write": [], "admin": []}
+        source_info: Dict[str, List[Dict[str, Any]]] = {
+            "read": [],
+            "create": [],
+            "write": [],
+            "admin": [],
+        }
         terminal_path = None
         terminal_pattern = None  # Track the pattern that was matched in terminal
         matched_pattern = None  # Track any pattern that was matched (terminal or non-terminal)
@@ -2557,9 +2567,10 @@ class SyftFolder:
             ValueError: If new_path is invalid
         """
         # Resolve and validate paths
-        new_path = resolve_path(new_path)
-        if new_path is None:
+        resolved_new_path = resolve_path(str(new_path))
+        if resolved_new_path is None:
             raise ValueError("Could not resolve new path")
+        new_path = resolved_new_path
 
         if not self._path.exists():
             raise FileNotFoundError(f"Source folder not found: {self._path}")

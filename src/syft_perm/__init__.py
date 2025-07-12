@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.12"
+__version__ = "0.3.14"
 
 __all__ = [
     "open",
@@ -65,7 +65,7 @@ def start_permission_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     """
     from .server import start_server
 
-    return start_server(port, host)
+    return start_server(port, host)  # type: ignore[no-any-return]
 
 
 # Server will auto-start when _repr_html_ is called in Jupyter notebooks

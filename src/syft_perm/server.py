@@ -3,37 +3,51 @@
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-try:
-    import uvicorn
-    from fastapi import FastAPI, HTTPException
-    from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import HTMLResponse
-    from pydantic import BaseModel
-
-    _SERVER_AVAILABLE = True
-except ImportError:
-    _SERVER_AVAILABLE = False
-
-    # Create dummy classes for type hints
-    class _FastAPI:
-        pass
-
-    class _HTTPException:
-        pass
-
-    class _BaseModel:
-        pass
-
-    # Use dummy classes when dependencies not available
-    FastAPI = _FastAPI  # type: ignore[misc,assignment]
-    HTTPException = _HTTPException  # type: ignore[misc,assignment]
-    BaseModel = _BaseModel  # type: ignore[misc,assignment]
-
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from . import open as syft_open
 from ._utils import get_syftbox_datasites
+
+if TYPE_CHECKING:
+    # Import types for type checking only
+    from fastapi import FastAPI as _FastAPI
+    from fastapi import HTTPException as _HTTPException
+    from fastapi.responses import HTMLResponse as _HTMLResponse
+    from pydantic import BaseModel as _BaseModel
+else:
+    # Runtime imports with fallbacks
+    try:
+        import uvicorn  # type: ignore[import-untyped]
+        from fastapi import FastAPI as _FastAPI
+        from fastapi import HTTPException as _HTTPException
+        from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-untyped]
+        from fastapi.responses import HTMLResponse as _HTMLResponse
+        from pydantic import BaseModel as _BaseModel
+
+        _SERVER_AVAILABLE = True
+    except ImportError:
+        _SERVER_AVAILABLE = False
+
+        # Create dummy classes for runtime when dependencies not available
+        class _FastAPI:  # type: ignore[misc]
+            pass
+
+        class _HTTPException:  # type: ignore[misc]
+            pass
+
+        class _HTMLResponse:  # type: ignore[misc]
+            pass
+
+        class _BaseModel:  # type: ignore[misc]
+            pass
+
+
+# Type aliases for convenience
+FastAPI = _FastAPI
+HTTPException = _HTTPException
+HTMLResponse = _HTMLResponse
+BaseModel = _BaseModel
+
 
 # Only create the FastAPI app if server dependencies are available
 if _SERVER_AVAILABLE:
