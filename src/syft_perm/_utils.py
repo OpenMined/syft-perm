@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from ._syftbox import SYFTBOX_AVAILABLE, SyftBoxURL
 from ._syftbox import client as _syftbox_client
@@ -27,7 +27,9 @@ def resolve_path(path_or_syfturl: Any) -> Optional[Path]:
         try:
             if SyftBoxURL is not None:
                 url_obj = SyftBoxURL(path_or_syfturl)
-                return url_obj.to_local_path(datasites_path=_syftbox_client.datasites)
+                return url_obj.to_local_path(
+                    datasites_path=_syftbox_client.datasites
+                )  # type: ignore[no-any-return]
             return None
         except Exception:
             return None
@@ -152,7 +154,7 @@ def is_datasite_email(email: str) -> bool:
         datasites_path = _syftbox_client.datasites
         if datasites_path and datasites_path.exists():
             datasite_folder = datasites_path / email
-            return datasite_folder.exists()
+            return datasite_folder.exists()  # type: ignore[no-any-return]
 
     # Fallback: check default location ~/SyftBox/datasites
     home = Path.home()

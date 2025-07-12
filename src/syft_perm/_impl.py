@@ -1120,7 +1120,7 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
         all_perms = self._get_all_permissions()
 
         # Check if user is the owner using old syftbox logic
-        if _is_owner(self._path, user):
+        if _is_owner(str(self._path), user):
             return True
 
         # Implement permission hierarchy following old syftbox logic: Admin > Write > Create > Read
@@ -1314,7 +1314,7 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
         reasons = []
 
         # Check if user is the owner using old syftbox logic
-        if _is_owner(self._path, user):
+        if _is_owner(str(self._path), user):
             reasons.append("Owner of path")
             return True, reasons
 
@@ -1521,9 +1521,10 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
             ValueError: If new_path is invalid
         """
         # Resolve and validate paths
-        new_path = resolve_path(new_path)
-        if new_path is None:
+        resolved_new_path = resolve_path(str(new_path))
+        if resolved_new_path is None:
             raise ValueError("Could not resolve new path")
+        new_path = resolved_new_path
 
         if not self._path.exists():
             raise FileNotFoundError(f"Source file not found: {self._path}")
@@ -1577,7 +1578,12 @@ class SyftFolder:
             return cached
 
         # Find the nearest node with matching rules (old syftbox algorithm)
-        nearest_permissions = {"read": [], "create": [], "write": [], "admin": []}
+        nearest_permissions: Dict[str, List[str]] = {
+            "read": [],
+            "create": [],
+            "write": [],
+            "admin": [],
+        }
 
         # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
@@ -2186,7 +2192,7 @@ class SyftFolder:
         all_perms = self._get_all_permissions()
 
         # Check if user is the owner using old syftbox logic
-        if _is_owner(self._path, user):
+        if _is_owner(str(self._path), user):
             return True
 
         # Implement permission hierarchy following old syftbox logic: Admin > Write > Create > Read
@@ -2227,7 +2233,7 @@ class SyftFolder:
         reasons = []
 
         # Check if user is the owner using old syftbox logic
-        if _is_owner(self._path, user):
+        if _is_owner(str(self._path), user):
             reasons.append("Owner of path")
             return True, reasons
 
