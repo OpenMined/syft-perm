@@ -11,6 +11,7 @@ __all__ = [
     "resolve_path",
     "SYFTBOX_AVAILABLE",
     "is_datasite_email",
+    "get_syftbox_datasites",
 ]
 
 def resolve_path(path_or_syfturl: str) -> Optional[Path]:
@@ -186,4 +187,35 @@ def read_syftpub_yaml_full(path: Path, pattern: str) -> Optional[Dict[str, Any]]
                 }
     except Exception:
         pass
-    return None 
+    return None
+
+
+def get_syftbox_datasites() -> List[str]:
+    """Get list of available datasites from SyftBox for autocompletion."""
+    datasites = []
+    
+    if not SYFTBOX_AVAILABLE or _syftbox_client is None:
+        return datasites
+    
+    try:
+        # Get datasites directory from syftbox client
+        datasites_path = _syftbox_client.datasites
+        if datasites_path and datasites_path.exists():
+            # List all subdirectories (datasites) 
+            for item in datasites_path.iterdir():
+                if item.is_dir() and not item.name.startswith('.'):
+                    # Add the datasite name (which should be an email)
+                    datasites.append(item.name)
+    except Exception:
+        # Fallback: try to find SyftBox directory manually
+        try:
+            home = Path.home()
+            syftbox_datasites = home / "SyftBox" / "datasites"
+            if syftbox_datasites.exists():
+                for item in syftbox_datasites.iterdir():
+                    if item.is_dir() and not item.name.startswith('.'):
+                        datasites.append(item.name)
+        except Exception:
+            pass
+    
+    return sorted(datasites) 

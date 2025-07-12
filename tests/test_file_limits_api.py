@@ -274,13 +274,13 @@ class TestFileLimitsAPI(unittest.TestCase):
         folder_html = syft_folder._repr_html_()
         
         # Should contain file limits information
-        self.assertIn("File Limits:", file_html)
-        self.assertIn("1.0KB", file_html)  # SyftFile format shows as KB
-        self.assertIn("No directories", file_html)
+        self.assertIn("File Compliance Check:", file_html)
+        self.assertIn("1.00 KB", file_html)  # SyftFile format shows as KB
+        self.assertIn("Dirs: ✗", file_html)
         
-        self.assertIn("File Limits:", folder_html)
-        self.assertIn("2,048 bytes", folder_html)  # SyftFolder format shows as bytes
-        self.assertIn("Allow symlinks: No", folder_html)
+        self.assertIn("Folder Compliance Check:", folder_html)
+        self.assertIn("2.00 KB", folder_html)  # SyftFolder format shows as KB  
+        self.assertIn("Blocked", folder_html)
 
 
 if __name__ == "__main__":

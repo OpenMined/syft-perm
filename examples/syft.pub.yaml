@@ -10,3 +10,7 @@ rules:
     create: []
     read:
     - '*'
+  limits:
+    max_file_size: 2000
+    allow_dirs: true
+    allow_symlinks: true
