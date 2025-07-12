@@ -79,10 +79,187 @@ class PermissionCache:
 # Global cache instance
 _permission_cache = PermissionCache()
 
+def _acl_norm_path(path: str) -> str:
+    """
+    Normalize a file system path for use in ACL operations by:
+    1. Converting all path separators to forward slashes
+    2. Cleaning the path (resolving . and ..)
+    3. Removing leading path separators
+    This ensures consistent path handling across different operating systems
+    and compatibility with glob pattern matching.
+    """
+    import os
+    from pathlib import PurePath
+    
+    # Convert to forward slashes using pathlib for proper path handling
+    normalized = str(PurePath(path).as_posix())
+    
+    # Remove leading slashes and resolve . components
+    normalized = normalized.lstrip("/")
+    
+    # Handle relative path components
+    if normalized.startswith("./"):
+        normalized = normalized[2:]
+    elif normalized == ".":
+        normalized = ""
+        
+    return normalized
+
+def _doublestar_match(pattern: str, path: str) -> bool:
+    """
+    Match a path against a glob pattern using doublestar algorithm.
+    This implementation matches the Go doublestar library behavior used in old syftbox.
+    
+    Args:
+        pattern: Glob pattern (supports *, ?, ** for recursive)
+        path: Path to match against pattern (should be normalized)
+        
+    Returns:
+        bool: True if path matches pattern
+    """
+    # Normalize inputs
+    pattern = _acl_norm_path(pattern)
+    path = _acl_norm_path(path)
+    
+    # Quick exact match
+    if pattern == path:
+        return True
+        
+    # Handle ** patterns
+    if "**" in pattern:
+        return _match_doublestar(pattern, path)
+    
+    # Handle single * and ? patterns
+    return _match_simple_glob(pattern, path)
+
+def _match_doublestar(pattern: str, path: str) -> bool:
+    """Handle patterns containing ** (doublestar) recursion."""
+    # Split pattern by **
+    parts = pattern.split("**")
+    
+    if len(parts) == 1:
+        # No ** in pattern, shouldn't happen but handle gracefully
+        return _match_simple_glob(pattern, path)
+    
+    if len(parts) == 2:
+        # Pattern like "prefix**/suffix" or "**/suffix" or "prefix/**"
+        prefix, suffix = parts
+        prefix = prefix.rstrip("/")
+        suffix = suffix.lstrip("/")
+        
+        # Check prefix
+        if prefix:
+            if not path.startswith(prefix):
+                return False
+            # Remove prefix from path
+            remaining = path[len(prefix):].lstrip("/")
+        else:
+            remaining = path
+        
+        # Check suffix
+        if suffix:
+            # Find if suffix matches any segment of remaining path
+            return _match_suffix_recursive(suffix, remaining)
+        else:
+            # Pattern ends with **, matches everything after prefix
+            return True
+    
+    # Multiple ** patterns - handle recursively
+    # Pattern like "a/**/b/**/c"
+    first_part = parts[0].rstrip("/")
+    rest_pattern = "**".join(parts[1:])
+    
+    if first_part:
+        if not path.startswith(first_part):
+            return False
+        remaining = path[len(first_part):].lstrip("/")
+    else:
+        remaining = path
+    
+    # Try matching rest of pattern at every possible position
+    path_segments = remaining.split("/") if remaining else [""]
+    for i in range(len(path_segments)):
+        test_path = "/".join(path_segments[i:])
+        if _match_doublestar(rest_pattern, test_path):
+            return True
+    
+    return False
+
+def _match_suffix_recursive(suffix: str, path: str) -> bool:
+    """Match suffix pattern against path, trying all possible positions."""
+    if not suffix:
+        return True
+    
+    if not path:
+        return suffix == ""
+    
+    # Try matching suffix at current position
+    if _match_simple_glob(suffix, path):
+        return True
+    
+    # Try matching suffix at each segment
+    path_segments = path.split("/")
+    for i in range(len(path_segments)):
+        test_path = "/".join(path_segments[i:])
+        if _match_simple_glob(suffix, test_path):
+            return True
+    
+    return False
+
+def _match_simple_glob(pattern: str, path: str) -> bool:
+    """Match simple glob patterns with * and ? but no **. Case-sensitive matching."""
+    if not pattern and not path:
+        return True
+    if not pattern:
+        return False
+    if not path:
+        return pattern == "*" or all(c == "*" for c in pattern)
+    
+    # Handle exact match (case-sensitive)
+    if pattern == path:
+        return True
+    
+    # Convert glob pattern to regex-like matching (case-sensitive)
+    pattern_idx = 0
+    path_idx = 0
+    star_pattern_idx = -1
+    star_path_idx = -1
+    
+    while path_idx < len(path):
+        if pattern_idx < len(pattern):
+            if pattern[pattern_idx] == "*":
+                # Found *, remember positions
+                star_pattern_idx = pattern_idx
+                star_path_idx = path_idx
+                pattern_idx += 1
+                continue
+            elif pattern[pattern_idx] == "?" or pattern[pattern_idx] == path[path_idx]:
+                # ? matches any char, or exact char match (case-sensitive)
+                pattern_idx += 1
+                path_idx += 1
+                continue
+        
+        # No match at current position, backtrack if we have a *
+        if star_pattern_idx >= 0:
+            # For single *, don't match across directory boundaries
+            if path[star_path_idx] == "/":
+                return False
+            pattern_idx = star_pattern_idx + 1
+            star_path_idx += 1
+            path_idx = star_path_idx
+        else:
+            return False
+    
+    # Skip trailing * in pattern
+    while pattern_idx < len(pattern) and pattern[pattern_idx] == "*":
+        pattern_idx += 1
+    
+    return pattern_idx == len(pattern)
+
 def _glob_match(pattern: str, path: str) -> bool:
     """
     Match a path against a glob pattern, supporting ** for recursive matching.
-    This implementation aims to match the doublestar library behavior from Go.
+    This implementation uses doublestar algorithm to match old syftbox behavior.
     
     Args:
         pattern: Glob pattern (supports *, ?, ** for recursive)
@@ -91,69 +268,91 @@ def _glob_match(pattern: str, path: str) -> bool:
     Returns:
         bool: True if path matches pattern
     """
-    # Handle the ** pattern specially
-    if "**" in pattern:
-        # Convert pattern to regex-like parts
-        parts = pattern.split("**")
+    return _doublestar_match(pattern, path)
+
+def _calculate_glob_specificity(pattern: str) -> int:
+    """
+    Calculate glob specificity score matching old syftbox algorithm.
+    Higher scores = more specific patterns.
+    
+    Args:
+        pattern: Glob pattern to score
         
-        # Handle patterns like "**/*.txt" or "dir/**/*.py"
-        if len(parts) == 2:
-            prefix, suffix = parts
-            prefix = prefix.rstrip("/")
-            suffix = suffix.lstrip("/")
-            
-            # Check prefix match
-            if prefix and not path.startswith(prefix):
-                return False
-            
-            # Remove prefix from path for suffix matching
-            if prefix:
-                remaining = path[len(prefix):].lstrip("/")
+    Returns:
+        int: Specificity score (higher = more specific)
+    """
+    # Early return for the most specific glob patterns
+    if pattern == "**":
+        return -100
+    elif pattern == "**/*":
+        return -99
+    
+    # 2L + 10D - wildcard penalty
+    # Use forward slash for glob patterns
+    score = len(pattern) * 2 + pattern.count("/") * 10
+    
+    # Penalize base score for substr wildcards
+    for i, c in enumerate(pattern):
+        if c == "*":
+            if i == 0:
+                score -= 20  # Leading wildcards are very unspecific
             else:
-                remaining = path
-            
-            # For suffix, we need to check if it matches anywhere in the remaining path
-            if suffix:
-                # Simple patterns like "*.txt"
-                if suffix.startswith("*") and "." in suffix:
-                    # Extension matching
-                    return remaining.endswith(suffix[1:])
-                else:
-                    # More complex suffix patterns
-                    from fnmatch import fnmatch
-                    # Check if suffix matches any part of the path
-                    path_parts = remaining.split("/")
-                    for i in range(len(path_parts)):
-                        subpath = "/".join(path_parts[i:])
-                        if fnmatch(subpath, suffix):
-                            return True
-                    return False
-            else:
-                # Pattern ends with **, matches everything under prefix
-                return True
+                score -= 10  # Other wildcards are less penalized
+        elif c in "?!][{":
+            score -= 2  # Non * wildcards get smaller penalty
+    
+    return score
+
+def _sort_rules_by_specificity(rules: list) -> list:
+    """
+    Sort rules by specificity (most specific first) matching old syftbox algorithm.
+    
+    Args:
+        rules: List of rule dictionaries
         
-        # Multiple ** patterns - more complex handling
-        elif len(parts) > 2:
-            # For now, fall back to simpler logic
-            # This could be enhanced to handle more complex patterns
-            from fnmatch import fnmatch
-            # Replace ** with * for simple matching
-            simple_pattern = pattern.replace("**", "*")
-            return fnmatch(path, simple_pattern)
+    Returns:
+        list: Rules sorted by specificity (descending)
+    """
+    # Create list of (rule, specificity) tuples
+    rules_with_scores = []
+    for rule in rules:
+        pattern = rule.get("pattern", "")
+        score = _calculate_glob_specificity(pattern)
+        rules_with_scores.append((rule, score))
+    
+    # Sort by specificity (descending - higher scores first)
+    rules_with_scores.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return just the rules
+    return [rule for rule, score in rules_with_scores]
+
+def _is_owner(path: str, user: str) -> bool:
+    """
+    Check if the user is the owner of the path using old syftbox logic.
+    Converts absolute path to datasites-relative path, then checks prefix matching.
+    
+    Args:
+        path: File/directory path (absolute or relative)
+        user: User ID to check
         
-        # Single "**" matches everything
-        elif pattern == "**":
-            return True
+    Returns:
+        bool: True if user is owner
+    """
+    path_str = str(path)
     
-    # For non-** patterns, use standard fnmatch
-    from fnmatch import fnmatch
+    # Convert to datasites-relative path if it's an absolute path
+    if "datasites" in path_str:
+        # Find the datasites directory and extract the relative path from there
+        parts = path_str.split("datasites")
+        if len(parts) > 1:
+            # Take everything after "datasites/" and normalize it
+            datasites_relative = parts[-1].lstrip("/\\")
+            normalized_path = _acl_norm_path(datasites_relative)
+            return normalized_path.startswith(user)
     
-    # Special handling for * patterns that shouldn't match across directories
-    if "*" in pattern and "/" not in pattern and "/" in path:
-        # Pattern like "*.txt" shouldn't match "subdir/file.txt"
-        return False
-    
-    return fnmatch(path, pattern)
+    # If not under datasites, treat as already relative and normalize
+    normalized_path = _acl_norm_path(path_str)
+    return normalized_path.startswith(user)
 
 def _confirm_action(message: str, force: bool = False) -> bool:
     """
@@ -193,17 +392,17 @@ class SyftFile:
         return self._path.name
 
     def _get_all_permissions(self) -> Dict[str, List[str]]:
-        """Get all permissions for this file, including inherited permissions."""
+        """Get all permissions for this file using old syftbox nearest-node algorithm."""
         # Check cache first
         cache_key = str(self._path)
         cached = _permission_cache.get(cache_key)
         if cached is not None:
             return cached
         
-        # Start with empty permissions
-        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
+        # Find the nearest node with matching rules (old syftbox algorithm)
+        nearest_permissions = {"read": [], "create": [], "write": [], "admin": []}
         
-        # Walk up the directory tree collecting permissions
+        # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
         while current_path.parent != current_path:  # Stop at root
             parent_dir = current_path.parent
@@ -216,25 +415,44 @@ class SyftFile:
                     
                     # Check if this is a terminal node
                     if content.get("terminal", False):
-                        # Terminal nodes stop inheritance
+                        # Terminal nodes stop inheritance and their rules take precedence
                         rules = content.get("rules", [])
-                        for rule in rules:
+                        sorted_rules = _sort_rules_by_specificity(rules)
+                        for rule in sorted_rules:
                             pattern = rule.get("pattern", "")
                             # Check if pattern matches our file path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path):
                                 access = rule.get("access", {})
-                                # Terminal rules override everything
+                                # Check file limits if present
+                                limits = rule.get("limits", {})
+                                if limits:
+                                    # Check file size limit
+                                    max_size = limits.get("max_file_size")
+                                    if max_size is not None and self._size > max_size:
+                                        continue  # Skip this rule due to size limit
+                                    
+                                    # Check if directories are allowed
+                                    if not limits.get("allow_dirs", True) and self._path.is_dir():
+                                        continue  # Skip this rule for directories
+                                    
+                                    # Check if symlinks are allowed
+                                    if not limits.get("allow_symlinks", True) and self._is_symlink:
+                                        continue  # Skip this rule for symlinks
+                                
+                                # Terminal rules override everything - return immediately
                                 result = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
                                 _permission_cache.set(cache_key, result)
                                 return result
                         # If no match in terminal, stop inheritance with empty permissions
-                        _permission_cache.set(cache_key, effective_perms)
-                        return effective_perms
+                        _permission_cache.set(cache_key, nearest_permissions)
+                        return nearest_permissions
                     
-                    # Process rules for non-terminal nodes
+                    # Process rules for non-terminal nodes (sort by specificity first)
                     rules = content.get("rules", [])
-                    for rule in rules:
+                    sorted_rules = _sort_rules_by_specificity(rules)
+                    found_matching_rule = False
+                    for rule in sorted_rules:
                         pattern = rule.get("pattern", "")
                         # Check if pattern matches our file path relative to this directory
                         rel_path = str(self._path.relative_to(parent_dir))
@@ -256,20 +474,24 @@ class SyftFile:
                                 if not limits.get("allow_symlinks", True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
                             
-                            # Merge permissions (inheritance)
-                            for perm in ["read", "create", "write", "admin"]:
-                                users = access.get(perm, [])
-                                if users and not effective_perms[perm]:
-                                    # Only inherit if we don't have more specific permissions
-                                    effective_perms[perm] = format_users(users)
+                            # Found a matching rule - this becomes our nearest node
+                            # Use this node's permissions (not accumulate)
+                            nearest_permissions = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
+                            found_matching_rule = True
+                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                    
+                    # If we found a matching rule, this is our nearest node - stop searching
+                    if found_matching_rule:
+                        break
+                        
                 except Exception:
                     pass
             
             current_path = parent_dir
         
         # Cache and return the effective permissions
-        _permission_cache.set(cache_key, effective_perms)
-        return effective_perms
+        _permission_cache.set(cache_key, nearest_permissions)
+        return nearest_permissions
 
     def _get_permission_table(self) -> List[List[str]]:
         """Get permissions formatted as a table showing effective permissions with hierarchy and reasons."""
@@ -569,40 +791,30 @@ class SyftFile:
         # Get all permissions including inherited ones
         all_perms = self._get_all_permissions()
         
-        # Check if user is the owner (first part of path after datasites/)
-        path_parts = self._path.parts
-        try:
-            datasites_idx = path_parts.index("datasites")
-            if datasites_idx + 1 < len(path_parts):
-                owner = path_parts[datasites_idx + 1]
-                if owner == user:
-                    return True  # Owner has all permissions
-        except (ValueError, IndexError):
-            pass
-        
-        # Also check simple prefix matching (like old ACL)
-        path_str = str(self._path)
-        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
+        # Check if user is the owner using old syftbox logic
+        if _is_owner(self._path, user):
             return True
         
-        # Implement permission hierarchy: Admin > Write > Create > Read
-        # Check if user has admin permission
+        # Implement permission hierarchy following old syftbox logic: Admin > Write > Create > Read
+        # Get all permission sets
         admin_users = all_perms.get("admin", [])
-        is_admin = "*" in admin_users or user in admin_users
-        
-        # Check if user has write permission (includes admin)
         write_users = all_perms.get("write", [])
-        is_writer = is_admin or "*" in write_users or user in write_users
-        
-        # Check if user has create permission (includes write and admin)
         create_users = all_perms.get("create", [])
-        is_creator = is_writer or "*" in create_users or user in create_users
-        
-        # Check if user has read permission (includes all higher permissions)
         read_users = all_perms.get("read", [])
-        is_reader = is_creator or "*" in read_users or user in read_users
         
-        # Return based on requested permission
+        # Check public access for each level
+        everyone_admin = "*" in admin_users
+        everyone_write = "*" in write_users
+        everyone_create = "*" in create_users
+        everyone_read = "*" in read_users
+        
+        # Check user-specific access following old syftbox hierarchy logic
+        is_admin = everyone_admin or user in admin_users
+        is_writer = is_admin or everyone_write or user in write_users
+        is_creator = is_writer or everyone_create or user in create_users  
+        is_reader = is_creator or everyone_read or user in read_users
+        
+        # Return based on requested permission level
         if permission == "admin":
             return is_admin
         elif permission == "write":
@@ -705,22 +917,9 @@ class SyftFile:
         """Check if a user has a specific permission and return reasons why."""
         reasons = []
         
-        # Check if user is the owner
-        path_parts = self._path.parts
-        try:
-            datasites_idx = path_parts.index("datasites")
-            if datasites_idx + 1 < len(path_parts):
-                owner = path_parts[datasites_idx + 1]
-                if owner == user:
-                    reasons.append("Owner of path")
-                    return True, reasons
-        except (ValueError, IndexError):
-            pass
-        
-        # Also check simple prefix matching (like old ACL)
-        path_str = str(self._path)
-        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
-            reasons.append("Owner of path (prefix match)")
+        # Check if user is the owner using old syftbox logic
+        if _is_owner(self._path, user):
+            reasons.append("Owner of path")
             return True, reasons
         
         # Get all permissions with source tracking
@@ -926,17 +1125,17 @@ class SyftFolder:
         return self._path.name
 
     def _get_all_permissions(self) -> Dict[str, List[str]]:
-        """Get all permissions for this folder, including inherited permissions."""
+        """Get all permissions for this folder using old syftbox nearest-node algorithm."""
         # Check cache first
         cache_key = str(self._path)
         cached = _permission_cache.get(cache_key)
         if cached is not None:
             return cached
         
-        # Start with empty permissions
-        effective_perms = {"read": [], "create": [], "write": [], "admin": []}
+        # Find the nearest node with matching rules (old syftbox algorithm)
+        nearest_permissions = {"read": [], "create": [], "write": [], "admin": []}
         
-        # Walk up the directory tree collecting permissions
+        # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
         while current_path.parent != current_path:  # Stop at root
             parent_dir = current_path.parent
@@ -949,9 +1148,10 @@ class SyftFolder:
                     
                     # Check if this is a terminal node
                     if content.get("terminal", False):
-                        # Terminal nodes stop inheritance
+                        # Terminal nodes stop inheritance and their rules take precedence
                         rules = content.get("rules", [])
-                        for rule in rules:
+                        sorted_rules = _sort_rules_by_specificity(rules)
+                        for rule in sorted_rules:
                             pattern = rule.get("pattern", "")
                             # Check if pattern matches our folder path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
@@ -964,17 +1164,19 @@ class SyftFolder:
                                     if not limits.get("allow_dirs", True):
                                         continue  # Skip this rule for directories
                                 
-                                # Terminal rules override everything
+                                # Terminal rules override everything - return immediately
                                 result = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
                                 _permission_cache.set(cache_key, result)
                                 return result
                         # If no match in terminal, stop inheritance with empty permissions
-                        _permission_cache.set(cache_key, effective_perms)
-                        return effective_perms
+                        _permission_cache.set(cache_key, nearest_permissions)
+                        return nearest_permissions
                     
-                    # Process rules for non-terminal nodes
+                    # Process rules for non-terminal nodes (sort by specificity first)
                     rules = content.get("rules", [])
-                    for rule in rules:
+                    sorted_rules = _sort_rules_by_specificity(rules)
+                    found_matching_rule = False
+                    for rule in sorted_rules:
                         pattern = rule.get("pattern", "")
                         # Check if pattern matches our folder path relative to this directory
                         rel_path = str(self._path.relative_to(parent_dir))
@@ -987,20 +1189,24 @@ class SyftFolder:
                                 if not limits.get("allow_dirs", True):
                                     continue  # Skip this rule for directories
                             
-                            # Merge permissions (inheritance)
-                            for perm in ["read", "create", "write", "admin"]:
-                                users = access.get(perm, [])
-                                if users and not effective_perms[perm]:
-                                    # Only inherit if we don't have more specific permissions
-                                    effective_perms[perm] = format_users(users)
+                            # Found a matching rule - this becomes our nearest node
+                            # Use this node's permissions (not accumulate)
+                            nearest_permissions = {perm: format_users(access.get(perm, [])) for perm in ["read", "create", "write", "admin"]}
+                            found_matching_rule = True
+                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                    
+                    # If we found a matching rule, this is our nearest node - stop searching
+                    if found_matching_rule:
+                        break
+                        
                 except Exception:
                     pass
             
             current_path = parent_dir
         
         # Cache and return the effective permissions
-        _permission_cache.set(cache_key, effective_perms)
-        return effective_perms
+        _permission_cache.set(cache_key, nearest_permissions)
+        return nearest_permissions
 
     def _get_permission_table(self) -> List[List[str]]:
         """Get permissions formatted as a table showing effective permissions with hierarchy and reasons."""
@@ -1300,40 +1506,30 @@ class SyftFolder:
         # Get all permissions including inherited ones
         all_perms = self._get_all_permissions()
         
-        # Check if user is the owner (first part of path after datasites/)
-        path_parts = self._path.parts
-        try:
-            datasites_idx = path_parts.index("datasites")
-            if datasites_idx + 1 < len(path_parts):
-                owner = path_parts[datasites_idx + 1]
-                if owner == user:
-                    return True  # Owner has all permissions
-        except (ValueError, IndexError):
-            pass
-        
-        # Also check simple prefix matching (like old ACL)
-        path_str = str(self._path)
-        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
+        # Check if user is the owner using old syftbox logic
+        if _is_owner(self._path, user):
             return True
         
-        # Implement permission hierarchy: Admin > Write > Create > Read
-        # Check if user has admin permission
+        # Implement permission hierarchy following old syftbox logic: Admin > Write > Create > Read
+        # Get all permission sets
         admin_users = all_perms.get("admin", [])
-        is_admin = "*" in admin_users or user in admin_users
-        
-        # Check if user has write permission (includes admin)
         write_users = all_perms.get("write", [])
-        is_writer = is_admin or "*" in write_users or user in write_users
-        
-        # Check if user has create permission (includes write and admin)
         create_users = all_perms.get("create", [])
-        is_creator = is_writer or "*" in create_users or user in create_users
-        
-        # Check if user has read permission (includes all higher permissions)
         read_users = all_perms.get("read", [])
-        is_reader = is_creator or "*" in read_users or user in read_users
         
-        # Return based on requested permission
+        # Check public access for each level
+        everyone_admin = "*" in admin_users
+        everyone_write = "*" in write_users
+        everyone_create = "*" in create_users
+        everyone_read = "*" in read_users
+        
+        # Check user-specific access following old syftbox hierarchy logic
+        is_admin = everyone_admin or user in admin_users
+        is_writer = is_admin or everyone_write or user in write_users
+        is_creator = is_writer or everyone_create or user in create_users  
+        is_reader = is_creator or everyone_read or user in read_users
+        
+        # Return based on requested permission level
         if permission == "admin":
             return is_admin
         elif permission == "write":
@@ -1349,22 +1545,9 @@ class SyftFolder:
         """Check if a user has a specific permission and return reasons why."""
         reasons = []
         
-        # Check if user is the owner
-        path_parts = self._path.parts
-        try:
-            datasites_idx = path_parts.index("datasites")
-            if datasites_idx + 1 < len(path_parts):
-                owner = path_parts[datasites_idx + 1]
-                if owner == user:
-                    reasons.append("Owner of path")
-                    return True, reasons
-        except (ValueError, IndexError):
-            pass
-        
-        # Also check simple prefix matching (like old ACL)
-        path_str = str(self._path)
-        if path_str.startswith(user + "/") or path_str.startswith("/" + user + "/"):
-            reasons.append("Owner of path (prefix match)")
+        # Check if user is the owner using old syftbox logic
+        if _is_owner(self._path, user):
+            reasons.append("Owner of path")
             return True, reasons
         
         # Get all permissions with source tracking

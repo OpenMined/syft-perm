@@ -255,20 +255,22 @@ class TestPermissionAccumulation(unittest.TestCase):
         self.assertTrue(l1_syft.has_create_access("bob@example.com"))
         self.assertTrue(l1_syft.has_read_access("bob@example.com"))  # Via hierarchy
         
-        # Test level 2 - alice has write (includes create+read), bob still has create
+        # Test level 2 - nearest-node: only alice has write (from level 2 rule)
         l2_syft = syft_perm.open(level2_file)
-        self.assertTrue(l2_syft.has_write_access("alice@example.com"))
+        self.assertTrue(l2_syft.has_write_access("alice@example.com"))   # From level 2 rule
         self.assertTrue(l2_syft.has_create_access("alice@example.com"))  # Via hierarchy
         self.assertTrue(l2_syft.has_read_access("alice@example.com"))    # Via hierarchy
-        self.assertTrue(l2_syft.has_create_access("bob@example.com"))    # Inherited
+        self.assertFalse(l2_syft.has_create_access("bob@example.com"))   # Not in nearest rule
+        self.assertFalse(l2_syft.has_read_access("bob@example.com"))     # Not in nearest rule
         
-        # Test level 3 - alice has admin (all permissions), bob still has create
+        # Test level 3 - nearest-node: only alice has admin (from level 3 rule)
         l3_syft = syft_perm.open(level3_file)
-        self.assertTrue(l3_syft.has_admin_access("alice@example.com"))
+        self.assertTrue(l3_syft.has_admin_access("alice@example.com"))   # From level 3 rule
         self.assertTrue(l3_syft.has_write_access("alice@example.com"))   # Via hierarchy
         self.assertTrue(l3_syft.has_create_access("alice@example.com"))  # Via hierarchy
         self.assertTrue(l3_syft.has_read_access("alice@example.com"))    # Via hierarchy
-        self.assertTrue(l3_syft.has_create_access("bob@example.com"))    # Inherited
+        self.assertFalse(l3_syft.has_create_access("bob@example.com"))   # Not in nearest rule
+        self.assertFalse(l3_syft.has_read_access("bob@example.com"))     # Not in nearest rule
     
     def test_public_and_specific_user_accumulation(self):
         """Test public (*) at one level, specific users at another."""

@@ -190,24 +190,30 @@ class TestPermissionPriority(unittest.TestCase):
         self.assertFalse(syft_root.has_write_access("bob@example.com"))
         self.assertFalse(syft_root.has_admin_access("alice@example.com"))
         
-        # Test docs/guide.txt - matches **/*.txt and docs/**/*.txt
+        # Test docs/guide.txt - most specific match is docs/**/*.txt  
         syft_docs = syft_perm.open(files["docs.txt"])
-        self.assertTrue(syft_docs.has_read_access("charlie@example.com"))  # From **/*.txt
-        self.assertTrue(syft_docs.has_write_access("bob@example.com"))     # From docs/**/*.txt
+        self.assertFalse(syft_docs.has_read_access("charlie@example.com"))  # Not most specific
+        self.assertTrue(syft_docs.has_write_access("bob@example.com"))      # Most specific match: docs/**/*.txt
+        self.assertTrue(syft_docs.has_create_access("bob@example.com"))     # Via hierarchy
+        self.assertTrue(syft_docs.has_read_access("bob@example.com"))       # Via hierarchy
         self.assertFalse(syft_docs.has_admin_access("alice@example.com"))   # No match for specific pattern
         
-        # Test docs/api/overview.txt - matches exact file pattern (most specific)
+        # Test docs/api/overview.txt - most specific match is exact file pattern
         syft_api = syft_perm.open(files["api.txt"])
-        self.assertTrue(syft_api.has_admin_access("bob@example.com"))      # From exact match
-        # Also has permissions from less specific patterns
-        self.assertTrue(syft_api.has_write_access("bob@example.com"))      # From docs/**/*.txt (via hierarchy)
-        self.assertTrue(syft_api.has_read_access("charlie@example.com"))   # From **/*.txt
+        self.assertTrue(syft_api.has_admin_access("bob@example.com"))       # Most specific: docs/api/overview.txt
+        self.assertTrue(syft_api.has_write_access("bob@example.com"))       # Via hierarchy
+        self.assertTrue(syft_api.has_create_access("bob@example.com"))      # Via hierarchy
+        self.assertTrue(syft_api.has_read_access("bob@example.com"))        # Via hierarchy
+        self.assertFalse(syft_api.has_read_access("charlie@example.com"))   # Not most specific
         
-        # Test docs/api/v1/spec.txt - matches most specific pattern
+        # Test docs/api/v1/spec.txt - most specific match is docs/api/v1/*.txt
         syft_v1 = syft_perm.open(files["v1.txt"])
-        self.assertTrue(syft_v1.has_admin_access("alice@example.com"))     # From docs/api/v1/*.txt
-        self.assertTrue(syft_v1.has_write_access("bob@example.com"))       # From docs/**/*.txt
-        self.assertTrue(syft_v1.has_read_access("charlie@example.com"))    # From **/*.txt
+        self.assertTrue(syft_v1.has_admin_access("alice@example.com"))      # Most specific: docs/api/v1/*.txt
+        self.assertTrue(syft_v1.has_write_access("alice@example.com"))      # Via hierarchy
+        self.assertTrue(syft_v1.has_create_access("alice@example.com"))     # Via hierarchy
+        self.assertTrue(syft_v1.has_read_access("alice@example.com"))       # Via hierarchy
+        self.assertFalse(syft_v1.has_write_access("bob@example.com"))       # Not most specific
+        self.assertFalse(syft_v1.has_read_access("charlie@example.com"))   # Not most specific
     
     def test_terminal_vs_non_terminal_same_patterns(self):
         """Test terminal vs non-terminal with identical patterns."""
@@ -504,17 +510,17 @@ class TestPermissionPriority(unittest.TestCase):
         # Open the file
         syft_file = syft_perm.open(test_file)
         
-        # Current implementation merges permissions from all matching rules in the same file
-        # So the file gets permissions from all rules that match: *.txt, document.*, document.txt, **/*.txt
-        self.assertTrue(syft_file.has_read_access("alice@example.com"))       # From *.txt
-        self.assertTrue(syft_file.has_write_access("bob@example.com"))        # From document.*
-        self.assertTrue(syft_file.has_admin_access("charlie@example.com"))    # From document.txt
-        self.assertTrue(syft_file.has_create_access("david@example.com"))     # From **/*.txt
+        # Following old syftbox behavior: most specific matching rule takes precedence
+        # document.txt is most specific, so only charlie gets admin (and hierarchy permissions)
+        self.assertFalse(syft_file.has_read_access("alice@example.com"))       # Not from most specific rule
+        self.assertFalse(syft_file.has_write_access("bob@example.com"))        # Not from most specific rule
+        self.assertTrue(syft_file.has_admin_access("charlie@example.com"))     # From most specific rule (document.txt)
+        self.assertFalse(syft_file.has_create_access("david@example.com"))     # Not from most specific rule
         
-        # Check reasons to confirm which rule matched
-        has_read, read_reasons = syft_file._check_permission_with_reasons("alice@example.com", "read")
-        self.assertTrue(has_read)
-        self.assertTrue(any("Explicitly granted read" in r for r in read_reasons))
+        # Charlie also gets lower permissions via hierarchy
+        self.assertTrue(syft_file.has_write_access("charlie@example.com"))     # Via admin hierarchy
+        self.assertTrue(syft_file.has_create_access("charlie@example.com"))    # Via admin hierarchy  
+        self.assertTrue(syft_file.has_read_access("charlie@example.com"))      # Via admin hierarchy
 
 
 if __name__ == "__main__":

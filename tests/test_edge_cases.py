@@ -65,10 +65,11 @@ class TestEdgeCases(unittest.TestCase):
         # This should complete without infinite loop
         syft_file = syft_perm.open(test_file)
         
-        # Should have permissions from all levels in the chain
-        self.assertTrue(syft_file.has_read_access("user_a@example.com"))
-        self.assertTrue(syft_file.has_read_access("user_b@example.com"))
-        self.assertTrue(syft_file.has_read_access("user_c@example.com"))
+        # Should use nearest-node algorithm: only the most specific (deepest) matching rule applies
+        # The deepest directory with a matching rule is the final 'c' directory
+        self.assertFalse(syft_file.has_read_access("user_a@example.com"))  # Not nearest
+        self.assertFalse(syft_file.has_read_access("user_b@example.com"))  # Not nearest  
+        self.assertTrue(syft_file.has_read_access("user_c@example.com"))   # Nearest matching rule
     
     def test_missing_intermediate_directories(self):
         """Test permissions work correctly when intermediate directories don't exist or lack permissions."""
@@ -153,11 +154,12 @@ class TestEdgeCases(unittest.TestCase):
         # Should work despite corrupt YAML in middle
         syft_file = syft_perm.open(test_file)
         
-        # Bob should have write from grandchild
+        # Bob should have write from grandchild (nearest matching rule)
         self.assertTrue(syft_file.has_write_access("bob@example.com"))
         
-        # Alice should have read from parent (skipping corrupt child)
-        self.assertTrue(syft_file.has_read_access("alice@example.com"))
+        # Alice should NOT have read because nearest-node algorithm uses grandchild rule only
+        # The corrupt child YAML is properly skipped, but grandchild rule is more specific than parent
+        self.assertFalse(syft_file.has_read_access("alice@example.com"))
     
     def test_very_deep_nesting_10_plus_levels(self):
         """Test permissions work correctly with very deep nesting (10+ levels)."""
@@ -190,12 +192,13 @@ class TestEdgeCases(unittest.TestCase):
         # Should complete in reasonable time
         syft_file = syft_perm.open(test_file)
         
-        # Should have permissions from all levels that defined them
-        self.assertTrue(syft_file.has_read_access("user_level_0@example.com"))
-        self.assertTrue(syft_file.has_read_access("user_level_3@example.com"))
-        self.assertTrue(syft_file.has_read_access("user_level_6@example.com"))
-        self.assertTrue(syft_file.has_read_access("user_level_9@example.com"))
-        self.assertTrue(syft_file.has_read_access("user_level_12@example.com"))
+        # Should use nearest-node algorithm: only the deepest matching rule applies
+        # Level 12 is the nearest node with matching rules
+        self.assertFalse(syft_file.has_read_access("user_level_0@example.com"))  # Not nearest
+        self.assertFalse(syft_file.has_read_access("user_level_3@example.com"))  # Not nearest
+        self.assertFalse(syft_file.has_read_access("user_level_6@example.com"))  # Not nearest
+        self.assertFalse(syft_file.has_read_access("user_level_9@example.com"))  # Not nearest
+        self.assertTrue(syft_file.has_read_access("user_level_12@example.com"))  # Nearest matching rule
         
         # Should not have permissions from levels that didn't define them
         self.assertFalse(syft_file.has_read_access("user_level_1@example.com"))
@@ -315,10 +318,10 @@ class TestEdgeCases(unittest.TestCase):
         self.assertTrue(syft_TXT.has_read_access("uppercase@example.com"))
         self.assertFalse(syft_TXT.has_read_access("lowercase@example.com"))
         
-        # TEST.txt should not match either (mixed case)
+        # TEST.txt should match *.txt (case-sensitive: extension matches) but not *.TXT
         syft_mixed = syft_perm.open(base_dir / "TEST.txt")
-        self.assertFalse(syft_mixed.has_read_access("lowercase@example.com"))
-        self.assertFalse(syft_mixed.has_read_access("uppercase@example.com"))
+        self.assertTrue(syft_mixed.has_read_access("lowercase@example.com"))  # *.txt matches TEST.txt
+        self.assertFalse(syft_mixed.has_read_access("uppercase@example.com"))  # *.TXT does not match TEST.txt
         
         # readme.md should match *.md
         syft_md = syft_perm.open(base_dir / "readme.md")
@@ -394,11 +397,15 @@ class TestEdgeCases(unittest.TestCase):
         base_dir.mkdir()
         
         for i, limit in enumerate(large_limits):
-            # Create YAML with large limit
-            yaml_path = base_dir / f"syft_limit_{i}.pub.yaml"
+            # Create directory for this test case
+            test_dir = base_dir / f"limit_{i}"
+            test_dir.mkdir()
+            
+            # Create YAML with large limit (must be named syft.pub.yaml)
+            yaml_path = test_dir / "syft.pub.yaml"
             rules = {
                 "rules": [{
-                    "pattern": f"file_{i}.txt",
+                    "pattern": "file.txt",
                     "access": {
                         "read": ["user@example.com"]
                     },
@@ -411,7 +418,7 @@ class TestEdgeCases(unittest.TestCase):
                 yaml.dump(rules, f)
             
             # Create small test file
-            file_path = base_dir / f"file_{i}.txt"
+            file_path = test_dir / "file.txt"
             file_path.write_text("small content")
             
             # Should work with large limits
