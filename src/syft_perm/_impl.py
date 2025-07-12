@@ -586,7 +586,11 @@ class SyftFile:
                     for rule in sorted_rules:
                         pattern = rule.get("pattern", "")
                         # Check if pattern matches our file path relative to this directory
-                        rel_path = str(self._path.relative_to(parent_dir)) if self._path is not None else ""
+                        rel_path = (
+                            str(self._path.relative_to(parent_dir))
+                            if self._path is not None
+                            else ""
+                        )
                         if _glob_match(pattern, rel_path):
                             access = rule.get("access", {})
                             # Check file limits if present
@@ -1236,7 +1240,11 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
                     for rule in sorted_rules:
                         pattern = rule.get("pattern", "")
                         # Check if pattern matches our file path relative to this directory
-                        rel_path = str(self._path.relative_to(parent_dir)) if self._path is not None else ""
+                        rel_path = (
+                            str(self._path.relative_to(parent_dir))
+                            if self._path is not None
+                            else ""
+                        )
                         if _glob_match(pattern, rel_path):
                             access = rule.get("access", {})
 

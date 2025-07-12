@@ -27,9 +27,9 @@ except ImportError:
         pass
 
     # Use dummy classes when dependencies not available
-    FastAPI = _FastAPI
-    HTTPException = _HTTPException
-    BaseModel = _BaseModel
+    FastAPI = _FastAPI  # type: ignore[misc,assignment]
+    HTTPException = _HTTPException  # type: ignore[misc,assignment]
+    BaseModel = _BaseModel  # type: ignore[misc,assignment]
 
 
 from . import open as syft_open
