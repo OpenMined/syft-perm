@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Literal, Union
 
-import yaml  # type: ignore  # type: ignore
+import yaml  # type: ignore
 
 from ._utils import (
     format_users,
@@ -108,7 +108,7 @@ class SyftFile:
         resolved_path = resolve_path(path)
         if resolved_path is None:
             raise ValueError("Could not resolve path")
-        self._path = resolved_path
+        self._path: Path = resolved_path
 
         # Ensure parent directory exists
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -217,7 +217,7 @@ class SyftFile:
             return f"SyftFile('{self._path}') - No permissions set"
 
         try:
-            from tabulate import tabulate  # type: ignore
+            from tabulate import tabulate  # type: ignore[import-untyped]
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="simple")
             return f"SyftFile('{self._path}')\n\n{table}"
@@ -237,7 +237,7 @@ class SyftFile:
             return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>"
 
         try:
-            from tabulate import tabulate  # type: ignore
+            from tabulate import tabulate  # type: ignore[import-untyped]
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="html")
             return f"<p><b>SyftFile('{self._path}')</b></p>\n{table}"
@@ -420,7 +420,7 @@ class SyftFolder:
         resolved_path = resolve_path(path)
         if resolved_path is None:
             raise ValueError("Could not resolve path")
-        self._path = resolved_path
+        self._path: Path = resolved_path
 
         # Ensure folder exists
         self._path.mkdir(parents=True, exist_ok=True)
@@ -531,7 +531,7 @@ class SyftFolder:
             return f"SyftFolder('{self._path}') - No permissions set"
 
         try:
-            from tabulate import tabulate  # type: ignore
+            from tabulate import tabulate  # type: ignore[import-untyped]
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="simple")
             return f"SyftFolder('{self._path}')\n\n{table}"
@@ -551,7 +551,7 @@ class SyftFolder:
             return f"<p><b>SyftFolder('{self._path}')</b> - No permissions set</p>"
 
         try:
-            from tabulate import tabulate  # type: ignore
+            from tabulate import tabulate  # type: ignore[import-untyped]
 
             table = tabulate(rows, headers=["User", "Read", "Write", "Admin"], tablefmt="html")
             return f"<p><b>SyftFolder('{self._path}')</b></p>\n{table}"

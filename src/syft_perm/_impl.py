@@ -2,7 +2,7 @@
 
 import shutil
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
@@ -40,8 +40,8 @@ class PermissionResult:
 
     has_permission: bool
     reasons: List[str]
-    source_paths: List[Path] = None
-    patterns: List[str] = None
+    source_paths: List[Path] = field(default_factory=list)
+    patterns: List[str] = field(default_factory=list)
 
 
 # Cache implementation for permission lookups
@@ -494,9 +494,10 @@ class SyftFile:
     """A file wrapper that manages SyftBox permissions."""
 
     def __init__(self, path: Union[str, Path]):
-        self._path = resolve_path(path)
-        if self._path is None:
+        resolved_path = resolve_path(str(path))
+        if resolved_path is None:
             raise ValueError("Could not resolve path")
+        self._path: Path = resolved_path
 
         # Ensure parent directory exists
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -549,7 +550,11 @@ class SyftFile:
                                 limits = rule.get("limits", {})
                                 if limits:
                                     # Check if directories are allowed
-                                    if not limits.get("allow_dirs", True) and self._path.is_dir():
+                                    if (
+                                        not limits.get("allow_dirs", True)
+                                        and self._path is not None
+                                        and self._path.is_dir()
+                                    ):
                                         continue  # Skip this rule for directories
 
                                     # Check if symlinks are allowed
@@ -1178,7 +1183,11 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
                                 limits = rule.get("limits", {})
                                 if limits:
                                     # Check if directories are allowed
-                                    if not limits.get("allow_dirs", True) and self._path.is_dir():
+                                    if (
+                                        not limits.get("allow_dirs", True)
+                                        and self._path is not None
+                                        and self._path.is_dir()
+                                    ):
                                         continue  # Skip this rule for directories
 
                                     # Check if symlinks are allowed

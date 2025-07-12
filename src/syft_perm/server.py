@@ -65,13 +65,13 @@ if _SERVER_AVAILABLE:
     )
 
     @app.get("/")
-    async def root():
+    async def root() -> Dict[str, str]:
         """Root endpoint with basic info."""
         return {"message": "SyftPerm Permission Editor", "docs": "/docs"}
 
 
 @app.get("/permissions/{path:path}", response_model=PermissionResponse)
-async def get_permissions(path: str):
+async def get_permissions(path: str) -> PermissionResponse:
     """Get permissions for a file or folder."""
     try:
         # Resolve the path
@@ -117,7 +117,7 @@ async def get_permissions(path: str):
 
 
 @app.post("/permissions/update")
-async def update_permission(update: PermissionUpdate):
+async def update_permission(update: PermissionUpdate) -> Dict[str, Any]:
     """Update permissions for a file or folder."""
     try:
         # Resolve the path
@@ -169,7 +169,7 @@ async def update_permission(update: PermissionUpdate):
 
 
 @app.get("/datasites")
-async def get_datasites():
+async def get_datasites() -> Dict[str, Any]:
     """Get list of available datasites for autocompletion."""
     try:
         datasites = get_syftbox_datasites()
@@ -179,7 +179,7 @@ async def get_datasites():
 
 
 @app.get("/editor/{path:path}", response_class=HTMLResponse)
-async def permission_editor(path: str):
+async def permission_editor(path: str) -> str:
     """Serve the Google Drive-style permission editor."""
     return get_editor_html(path)
 
@@ -756,7 +756,7 @@ _server_thread = None
 _server_port = 8765
 
 
-def start_server(port: int = 8765, host: str = "127.0.0.1"):
+def start_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     """Start the FastAPI server in a background thread."""
     if not _SERVER_AVAILABLE:
         raise ImportError(
@@ -771,7 +771,7 @@ def start_server(port: int = 8765, host: str = "127.0.0.1"):
 
     _server_port = port
 
-    def run_server():
+    def run_server() -> None:
         uvicorn.run(app, host=host, port=port, log_level="warning")
 
     _server_thread = threading.Thread(target=run_server, daemon=True)

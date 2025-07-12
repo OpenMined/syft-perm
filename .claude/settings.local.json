@@ -11,7 +11,12 @@
       "Bash(grep:*)",
       "Bash(uv run:*)",
       "Bash(git commit:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(ls:*)",
+      "Bash(uv add:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(uv sync:*)"
     ],
     "deny": []
   }
