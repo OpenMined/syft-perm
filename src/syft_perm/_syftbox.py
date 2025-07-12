@@ -1,9 +1,11 @@
 """SyftBox client integration for syft_perm."""
 
+from typing import Any, Optional
+
 # Global variables for client state
 SYFTBOX_AVAILABLE = False
-client = None
-SyftBoxURL = None
+client: Optional[Any] = None
+SyftBoxURL: Optional[Any] = None
 
 
 def _initialize_syftbox() -> None:

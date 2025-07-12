@@ -27,9 +27,8 @@ def resolve_path(path_or_syfturl: Any) -> Optional[Path]:
         try:
             if SyftBoxURL is not None:
                 url_obj = SyftBoxURL(path_or_syfturl)
-                return url_obj.to_local_path(
-                    datasites_path=_syftbox_client.datasites
-                )  # type: ignore[no-any-return]
+                result = url_obj.to_local_path(datasites_path=_syftbox_client.datasites)
+                return result if isinstance(result, Path) else None
             return None
         except Exception:
             return None
@@ -154,7 +153,7 @@ def is_datasite_email(email: str) -> bool:
         datasites_path = _syftbox_client.datasites
         if datasites_path and datasites_path.exists():
             datasite_folder = datasites_path / email
-            return datasite_folder.exists()  # type: ignore[no-any-return]
+            return bool(datasite_folder.exists())
 
     # Fallback: check default location ~/SyftBox/datasites
     home = Path.home()
@@ -177,7 +176,10 @@ def read_syftpub_yaml(path: Path, pattern: str) -> Optional[Dict[str, List[str]]
             content = yaml.safe_load(f) or {"rules": []}
         for rule in content.get("rules", []):
             if rule.get("pattern") == pattern:
-                return rule.get("access")  # type: ignore[no-any-return]
+                access = rule.get("access")
+                if isinstance(access, dict):
+                    return access
+                return None
     except Exception:
         pass
     return None

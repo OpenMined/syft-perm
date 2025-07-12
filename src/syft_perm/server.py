@@ -3,43 +3,25 @@
 import threading
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from . import open as syft_open
 from ._utils import get_syftbox_datasites
 
-if TYPE_CHECKING:
-    # Import types for type checking only
+_SERVER_AVAILABLE = False
+CORSMiddleware = None
+uvicorn = None
+try:
+    import uvicorn
     from fastapi import FastAPI as _FastAPI
     from fastapi import HTTPException as _HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import HTMLResponse as _HTMLResponse
     from pydantic import BaseModel as _BaseModel
-else:
-    # Runtime imports with fallbacks
-    try:
-        import uvicorn  # type: ignore[import-untyped]
-        from fastapi import FastAPI as _FastAPI
-        from fastapi import HTTPException as _HTTPException
-        from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-untyped]
-        from fastapi.responses import HTMLResponse as _HTMLResponse
-        from pydantic import BaseModel as _BaseModel
 
-        _SERVER_AVAILABLE = True
-    except ImportError:
-        _SERVER_AVAILABLE = False
-
-        # Create dummy classes for runtime when dependencies not available
-        class _FastAPI:  # type: ignore[misc]
-            pass
-
-        class _HTTPException:  # type: ignore[misc]
-            pass
-
-        class _HTMLResponse:  # type: ignore[misc]
-            pass
-
-        class _BaseModel:  # type: ignore[misc]
-            pass
+    _SERVER_AVAILABLE = True
+except ImportError:
+    _SERVER_AVAILABLE = False
 
 
 # Type aliases for convenience
@@ -75,13 +57,14 @@ if _SERVER_AVAILABLE:
     )
 
     # Add CORS middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    if CORSMiddleware is not None:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     @app.get("/")
     async def root() -> Dict[str, str]:
@@ -791,7 +774,8 @@ def start_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     _server_port = port
 
     def run_server() -> None:
-        uvicorn.run(app, host=host, port=port, log_level="warning")
+        if _SERVER_AVAILABLE and uvicorn is not None:
+            uvicorn.run(app, host=host, port=port, log_level="warning")
 
     _server_thread = threading.Thread(target=run_server, daemon=True)
     _server_thread.start()
