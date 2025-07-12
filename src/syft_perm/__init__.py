@@ -6,13 +6,10 @@ from typing import Union, Optional
 from ._impl import SyftFile, SyftFolder
 from ._utils import SYFTBOX_AVAILABLE
 
-__version__ = "0.2.14"
+__version__ = "0.2.15"
 
 __all__ = [
     "open",
-    "SyftFile",
-    "SyftFolder",
-    "SYFTBOX_AVAILABLE",
 ]
 
 def open(path: Union[str, Path]) -> Union[SyftFile, SyftFolder]:
