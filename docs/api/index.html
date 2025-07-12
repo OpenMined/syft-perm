@@ -115,12 +115,21 @@ file.grant_read_access("*")  # Make public</code></pre>
             </div>
             
             <div class="api-method">
-                <div class="method-signature">grant_write_access(user)</div>
-                <p>Grant read and write access to a user.</p>
+                <div class="method-signature">grant_create_access(user)</div>
+                <p>Grant read and create access to a user.</p>
                 <ul class="param-list">
                     <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address</li>
                 </ul>
-                <pre><code class="language-python">file.grant_write_access("bob@example.com")</code></pre>
+                <pre><code class="language-python">folder.grant_create_access("bob@example.com")</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">grant_write_access(user)</div>
+                <p>Grant read, create, and write access to a user.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address</li>
+                </ul>
+                <pre><code class="language-python">file.grant_write_access("editor@example.com")</code></pre>
             </div>
             
             <div class="api-method">
@@ -150,6 +159,17 @@ file.grant_read_access("*")  # Make public</code></pre>
                 </div>
                 <pre><code class="language-python">if file.has_read_access("alice@example.com"):
     print("Alice can read this file")</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">has_create_access(user)</div>
+                <p>Check if a user can create files in the folder.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
+                </ul>
+                <div class="returns">
+                    <strong>Returns:</strong> bool - True if user has create access
+                </div>
             </div>
             
             <div class="api-method">
@@ -235,13 +255,14 @@ print(explanation)
             <h2>Permission Hierarchy</h2>
             <p>Permissions follow a simple hierarchy:</p>
             <div style="text-align: center; font-size: 1.3rem; margin: var(--space-4) 0;">
-                <code>read</code> → <code>write</code> → <code>admin</code>
+                <code>read</code> → <code>create</code> → <code>write</code> → <code>admin</code>
             </div>
             <p>Each level includes all permissions from previous levels:</p>
             <ul style="font-size: 1.1rem; line-height: 2;">
                 <li><strong>read</strong> - Can view file contents</li>
-                <li><strong>write</strong> - Can read + modify file contents</li>
-                <li><strong>admin</strong> - Can read + write + manage permissions</li>
+                <li><strong>create</strong> - Can read + create new files</li>
+                <li><strong>write</strong> - Can read + create + modify existing files</li>
+                <li><strong>admin</strong> - Can read + create + write + manage permissions</li>
             </ul>
         </div>
     </section>

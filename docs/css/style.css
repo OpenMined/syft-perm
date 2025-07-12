@@ -24,18 +24,18 @@
     --space-16: 128px;
     --space-20: 160px;
     
-    /* Colors - OpenMined Theme */
-    --color-primary: #00D4FF;        /* OpenMined Blue */
-    --color-primary-dark: #00A8CC;   /* Darker blue for hover */
-    --color-secondary: #0080FF;      /* Secondary blue */
-    --color-accent: #FF6B6B;         /* Accent coral/red */
-    --color-dark: #0F1419;           /* Rich black */
-    --color-gray: #536471;           /* Medium gray */
-    --color-light-gray: #F7F9FA;     /* Light background */
+    /* Colors - OpenMined Brand Guide */
+    --color-primary: #4B5563;        /* OpenMined primary dark gray */
+    --color-primary-dark: #374151;   /* Darker gray for hover */
+    --color-secondary: #10B981;      /* OpenMined green accent */
+    --color-accent: #3B82F6;         /* Blue accent */
+    --color-dark: #111827;           /* Rich black */
+    --color-gray: #6B7280;           /* Medium gray */
+    --color-light-gray: #F9FAFB;     /* Light background */
     --color-white: #ffffff;
     --color-code-bg: #F3F4F6;        /* Code background */
-    --color-gradient-start: #00D4FF;
-    --color-gradient-end: #0080FF;
+    --color-gradient-start: #4B5563;
+    --color-gradient-end: #6B7280;
     
     /* Typography */
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -138,10 +138,7 @@ nav {
 .logo {
     font-size: 1.75rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--color-dark);
     text-decoration: none;
     letter-spacing: -0.5px;
 }
@@ -187,10 +184,7 @@ nav {
     margin-bottom: var(--space-3);
     letter-spacing: -2px;
     line-height: 1.1;
-    background: linear-gradient(135deg, var(--color-dark) 0%, var(--color-gray) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--color-dark);
 }
 
 .hero-subtitle {
@@ -223,7 +217,7 @@ nav {
 
 .code-arrow {
     font-size: 2.5rem;
-    color: var(--color-primary);
+    color: var(--color-secondary);
     font-weight: bold;
     display: flex;
     align-items: center;
@@ -247,20 +241,20 @@ code {
 /* Syntax Highlighting */
 .language-python .comment, 
 .language-yaml .comment { 
-    color: #6a737d; 
+    color: #6B7280; 
     font-style: italic;
 }
 .language-python .string,
 .language-yaml .string { 
-    color: #22863a; 
+    color: #059669; 
 }
 .language-python .keyword,
 .language-yaml .keyword { 
-    color: #0969da;
+    color: #3B82F6;
     font-weight: 600;
 }
 .language-python .function { 
-    color: #6f42c1;
+    color: #7C3AED;
     font-weight: 600;
 }
 
@@ -287,7 +281,7 @@ code {
 }
 
 .copy-btn {
-    background: var(--color-primary);
+    background: var(--color-secondary);
     color: white;
     border: none;
     padding: var(--space-1) var(--space-2);
@@ -296,11 +290,10 @@ code {
     font-size: 0.9rem;
     transition: all 0.2s;
     font-weight: 600;
-    box-shadow: 0 2px 4px rgba(0,212,255,0.3);
 }
 
 .copy-btn:hover {
-    background: var(--color-primary-dark);
+    background: #059669;
 }
 
 .copy-btn:active {
@@ -425,15 +418,14 @@ code {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background: var(--color-dark);
     color: white;
-    box-shadow: 0 4px 14px rgba(0,212,255,0.4);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-secondary) 100%);
+    background: var(--color-primary);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,212,255,0.5);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-secondary {
@@ -570,21 +562,21 @@ footer a:hover {
 }
 
 .alert-info {
-    background: #e3f2fd;
-    color: #1565c0;
-    border: 1px solid #90caf9;
+    background: #F0F9FF;
+    color: #1E40AF;
+    border: 1px solid #BFDBFE;
 }
 
 .alert-success {
-    background: #e8f5e9;
-    color: #2e7d32;
-    border: 1px solid #81c784;
+    background: #D1FAE5;
+    color: #065F46;
+    border: 1px solid #6EE7B7;
 }
 
 .alert-warning {
-    background: #fff3e0;
-    color: #ef6c00;
-    border: 1px solid #ffb74d;
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FCD34D;
 }
 
 /* ================================
@@ -623,7 +615,7 @@ footer a:hover {
 .api-method-name {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-secondary);
     margin-bottom: var(--space-2);
 }
 
@@ -683,11 +675,11 @@ footer a:hover {
 }
 
 .nav-link:hover {
-    color: var(--color-primary);
+    color: var(--color-secondary);
 }
 
 .nav-link.active {
-    color: var(--color-primary);
+    color: var(--color-secondary);
     font-weight: 600;
 }
 
@@ -706,7 +698,7 @@ footer a:hover {
 }
 
 .footer a {
-    color: var(--color-primary);
+    color: var(--color-secondary);
     text-decoration: none;
 }
 
@@ -768,7 +760,7 @@ footer a:hover {
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: var(--color-primary);
+    background: var(--color-secondary);
     color: white;
     border-radius: 50%;
     font-weight: bold;

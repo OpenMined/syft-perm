@@ -34,35 +34,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const codeBlocks = document.querySelectorAll('code.language-python');
     
     codeBlocks.forEach(block => {
-        let html = block.innerHTML;
+        // Get the text content first to avoid HTML entity issues
+        let text = block.textContent || '';
         
+        // Escape HTML special characters
+        text = text.replace(/&/g, '&amp;')
+                   .replace(/</g, '&lt;')
+                   .replace(/>/g, '&gt;');
+        
+        // Apply syntax highlighting
         // Comments first (to avoid highlighting # in strings)
-        html = html.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
+        text = text.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
         
         // Strings (do this before keywords to avoid highlighting keywords in strings)
-        html = html.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
-        html = html.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+        text = text.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
+        text = text.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
         
         // Functions (match function names including underscores)
-        html = html.replace(/([a-zA-Z_]\w*)\s*\(/g, '<span class="function">$1</span>(');
+        text = text.replace(/([a-zA-Z_]\w*)\s*\(/g, '<span class="function">$1</span>(');
         
         // Keywords (do this after functions to avoid conflicts)
         const keywords = ['import', 'from', 'if', 'else', 'elif', 'def', 'class', 'return', 'for', 'while', 'in', 'or', 'and', 'not', 'True', 'False', 'None', 'print'];
         keywords.forEach(keyword => {
-            // Simple word boundary check
-            const regex = new RegExp(`\\b${keyword}\\b`, 'g');
-            html = html.replace(regex, (match, offset, string) => {
-                // Check if we're inside a tag or already highlighted
-                const before = string.substring(Math.max(0, offset - 20), offset);
-                const after = string.substring(offset, offset + 20);
-                if (before.includes('<span') || before.includes('class=') || after.includes('</span>')) {
-                    return match;
-                }
-                return `<span class="keyword">${match}</span>`;
-            });
+            const regex = new RegExp(`\\b${keyword}\\b(?![^<]*>)`, 'g');
+            text = text.replace(regex, `<span class="keyword">${keyword}</span>`);
         });
         
-        block.innerHTML = html;
+        // Set the HTML with highlighting
+        block.innerHTML = text;
     });
     
     // ================================
@@ -71,28 +70,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const yamlBlocks = document.querySelectorAll('code.language-yaml');
     
     yamlBlocks.forEach(block => {
-        // Get the text content, not HTML
+        // Get the text content to ensure we're working with plain text
         let text = block.textContent || '';
         
-        // Escape HTML special characters first
+        // Escape HTML special characters
         text = text.replace(/&/g, '&amp;')
                    .replace(/</g, '&lt;')
                    .replace(/>/g, '&gt;');
         
-        // Now apply syntax highlighting
-        // Comments
+        // Apply YAML syntax highlighting
+        // Comments (must be done first)
         text = text.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
         
         // Strings in quotes
         text = text.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+        text = text.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
         
-        // Keys (before colon)
-        text = text.replace(/^(\s*)([a-zA-Z_-]+):/gm, '$1<span class="keyword">$2</span>:');
+        // Keys (before colon) - make sure not to match inside strings
+        text = text.replace(/^(\s*)([a-zA-Z_-]+)(?=:)/gm, '$1<span class="keyword">$2</span>');
         
         // List items
-        text = text.replace(/^(\s*)-(\s+)/gm, '$1<span class="keyword">-</span>$2');
+        text = text.replace(/^(\s*)(-)(\s+)/gm, '$1<span class="keyword">$2</span>$3');
         
-        // Set the HTML with syntax highlighting applied
+        // Set the final HTML
         block.innerHTML = text;
     });
     
