@@ -172,40 +172,25 @@ def _match_doublestar(pattern: str, path: str) -> bool:
     
     # Match the prefix
     if prefix:
-        # For doublestar patterns, prefix should match as a path component
-        # Either exact match or path should start with prefix + "/"
-        prefix_matches = False
-        remaining = ""
-        
+        # For doublestar patterns, prefix should match at the beginning of the path
+        # or we need to try matching the entire pattern at later positions (for leading **)
         if path == prefix:
             # Exact match
-            prefix_matches = True
             remaining = ""
         elif path.startswith(prefix + "/"):
             # Path starts with prefix followed by separator
-            prefix_matches = True
             remaining = path[len(prefix) + 1:]
         elif _match_simple_glob(prefix, path):
-            # Glob pattern match
-            prefix_matches = True
+            # Glob pattern matches entire path
             remaining = ""
         else:
-            # Try to find prefix match at segment boundaries
-            path_segments = path.split("/")
-            for i in range(len(path_segments)):
-                segment_prefix = "/".join(path_segments[:i+1])
-                if _match_simple_glob(prefix, segment_prefix):
-                    prefix_matches = True
-                    remaining = "/".join(path_segments[i+1:])
-                    break
-        
-        if not prefix_matches:
-            # Prefix doesn't match anywhere, try the pattern at later positions
-            path_segments = path.split("/")
-            for i in range(1, len(path_segments) + 1):
-                remaining_path = "/".join(path_segments[i:])
-                if _match_doublestar(pattern, remaining_path):
-                    return True
+            # Prefix doesn't match at start, for leading ** try at later positions
+            if pattern.startswith("**/"):
+                path_segments = path.split("/")
+                for i in range(1, len(path_segments) + 1):
+                    remaining_path = "/".join(path_segments[i:])
+                    if _match_doublestar(pattern, remaining_path):
+                        return True
             return False
     else:
         # No prefix, ** can match from the beginning
@@ -213,8 +198,14 @@ def _match_doublestar(pattern: str, path: str) -> bool:
     
     # Match the suffix
     if not suffix:
-        # Pattern ends with **, matches everything remaining
-        return True
+        # Pattern ends with **
+        # Check if this came from a trailing /** (which requires something after)
+        if pattern.endswith("/**"):
+            # /** requires something after the prefix
+            return bool(remaining)
+        else:
+            # ** at end matches everything remaining
+            return True
     
     # Try matching suffix at every possible position in remaining path
     if not remaining:

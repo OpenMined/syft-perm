@@ -5,7 +5,7 @@ from typing import Union as _Union
 
 from ._impl import SyftFile as _SyftFile, SyftFolder as _SyftFolder
 
-__version__ = "0.2.24"
+__version__ = "0.2.25"
 
 __all__ = [
     "open",
