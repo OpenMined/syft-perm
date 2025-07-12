@@ -111,8 +111,8 @@ class TestPermissionPriority(unittest.TestCase):
         self.assertTrue(syft_file1.has_create_access("alice@example.com"))  # Via hierarchy
         self.assertTrue(syft_file1.has_read_access("alice@example.com"))    # Via hierarchy
         
-        # Bob should have read from ** pattern
-        self.assertTrue(syft_file1.has_read_access("bob@example.com"))
+        # Bob should have NO access (file1.txt pattern has higher specificity than **/*.txt)
+        self.assertFalse(syft_file1.has_read_access("bob@example.com"))
         self.assertFalse(syft_file1.has_write_access("bob@example.com"))
         
         # Test file2 - only matches ** pattern
@@ -126,8 +126,12 @@ class TestPermissionPriority(unittest.TestCase):
         self.assertTrue(syft_file2.has_read_access("bob@example.com"))
         self.assertFalse(syft_file2.has_write_access("bob@example.com"))
         
-        # Check pattern matching in reasons
+        # Check pattern matching in reasons for file1 - bob has no access
         has_read, read_reasons = syft_file1._check_permission_with_reasons("bob@example.com", "read")
+        self.assertFalse(has_read)
+        
+        # Check pattern matching in reasons for file2 - bob should have access from **/*.txt
+        has_read, read_reasons = syft_file2._check_permission_with_reasons("bob@example.com", "read") 
         self.assertTrue(has_read)
         self.assertTrue(any("**/*.txt" in r for r in read_reasons))
     
@@ -278,7 +282,7 @@ class TestPermissionPriority(unittest.TestCase):
         # Check reasons for terminal behavior
         has_admin, admin_reasons = syft_child._check_permission_with_reasons("alice@example.com", "admin")
         self.assertFalse(has_admin)
-        self.assertTrue(any("No permission found" in r for r in admin_reasons))
+        self.assertTrue(any("Pattern '**/*.data' matched" in r for r in admin_reasons))
     
     def test_create_permission_inheritance_priority(self):
         """Test create permission priority in inheritance chains."""
@@ -337,33 +341,36 @@ class TestPermissionPriority(unittest.TestCase):
         # Open the file
         syft_file = syft_perm.open(test_file)
         
-        # Alice should have all permissions through admin inheritance
-        self.assertTrue(syft_file.has_admin_access("alice@example.com"))
-        self.assertTrue(syft_file.has_write_access("alice@example.com"))
-        self.assertTrue(syft_file.has_create_access("alice@example.com"))
-        self.assertTrue(syft_file.has_read_access("alice@example.com"))
+        # Alice should have NO access (nearest-node: child rule doesn't grant to alice)
+        self.assertFalse(syft_file.has_admin_access("alice@example.com"))
+        self.assertFalse(syft_file.has_write_access("alice@example.com"))
+        self.assertFalse(syft_file.has_create_access("alice@example.com"))
+        self.assertFalse(syft_file.has_read_access("alice@example.com"))
         
-        # Bob should have create + read through inheritance
+        # Bob should have NO access (nearest-node: child rule doesn't grant to bob)
         self.assertFalse(syft_file.has_admin_access("bob@example.com"))
         self.assertFalse(syft_file.has_write_access("bob@example.com"))
-        self.assertTrue(syft_file.has_create_access("bob@example.com"))
-        self.assertTrue(syft_file.has_read_access("bob@example.com"))
+        self.assertFalse(syft_file.has_create_access("bob@example.com"))
+        self.assertFalse(syft_file.has_read_access("bob@example.com"))
         
-        # Charlie should have only read from explicit grant
+        # Charlie should have only read from child rule (nearest-node)
         self.assertFalse(syft_file.has_admin_access("charlie@example.com"))
         self.assertFalse(syft_file.has_write_access("charlie@example.com"))
         self.assertFalse(syft_file.has_create_access("charlie@example.com"))
         self.assertTrue(syft_file.has_read_access("charlie@example.com"))
         
-        # Check priority in reasons - alice should show admin as highest
+        # Check reasons - alice should have no access
         has_read, read_reasons = syft_file._check_permission_with_reasons("alice@example.com", "read")
-        self.assertTrue(has_read)
-        self.assertTrue(any("admin permission" in r for r in read_reasons))
+        self.assertFalse(has_read)
         
-        # Bob should show create permission as source for read
+        # Bob should have no access
         has_read, read_reasons = syft_file._check_permission_with_reasons("bob@example.com", "read")
+        self.assertFalse(has_read)
+        
+        # Charlie should show explicit read permission
+        has_read, read_reasons = syft_file._check_permission_with_reasons("charlie@example.com", "read")
         self.assertTrue(has_read)
-        self.assertTrue(any("create permission" in r for r in read_reasons))
+        self.assertTrue(any("Explicitly granted read" in r for r in read_reasons))
         
         # Charlie should show explicit read grant
         has_read, read_reasons = syft_file._check_permission_with_reasons("charlie@example.com", "read")

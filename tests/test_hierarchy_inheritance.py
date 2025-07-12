@@ -135,10 +135,10 @@ class TestHierarchyInheritance(unittest.TestCase):
         self.assertTrue(any("Explicitly granted read" in r for r in read_reasons))
         self.assertFalse(any("admin" in r.lower() for r in read_reasons))
         
-        # Admin check should fail with appropriate reason
+        # Admin check should fail with pattern explanation (terminal rule blocks inheritance)
         has_admin, admin_reasons = syft_file._check_permission_with_reasons("alice@example.com", "admin")
         self.assertFalse(has_admin)
-        self.assertTrue(any("No permission found" in r for r in admin_reasons))
+        self.assertTrue(any("Pattern 'data.txt' matched" in r for r in admin_reasons))
     
     def test_mixed_hierarchy_reasons(self):
         """Test that highest permission level is shown in reasons when user has multiple."""

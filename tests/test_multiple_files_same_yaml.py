@@ -309,14 +309,14 @@ class TestMultipleFilesSameYaml(unittest.TestCase):
         # Test accum2.txt - different permissions (no bleeding from accum1)
         syft_accum2 = syft_perm.open(Path(self.test_dir) / "accum2.txt")
         self.assertTrue(syft_accum2.has_write_access("user1@example.com"))
-        self.assertFalse(syft_accum2.has_read_access("user1@example.com"))  # Only has write, not read
+        self.assertTrue(syft_accum2.has_read_access("user1@example.com"))   # Has read via write hierarchy
         self.assertTrue(syft_accum2.has_admin_access("user2@example.com"))
         
         # Test accum3.py - completely different permissions
         syft_accum3 = syft_perm.open(Path(self.test_dir) / "accum3.py")
         self.assertTrue(syft_accum3.has_admin_access("user1@example.com"))
-        self.assertTrue(syft_accum3.has_read_access("user2@example.com"))
-        self.assertFalse(syft_accum3.has_write_access("user2@example.com"))  # Demoted from admin to read
+        self.assertTrue(syft_accum3.has_read_access("user2@example.com"))     # Explicitly granted read
+        self.assertFalse(syft_accum3.has_write_access("user2@example.com"))  # Only has read, not write
         self.assertFalse(syft_accum3.has_admin_access("user2@example.com"))
     
     def test_reason_tracking_multi_file(self):

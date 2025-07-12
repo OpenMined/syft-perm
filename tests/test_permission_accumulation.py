@@ -130,26 +130,18 @@ class TestPermissionAccumulation(unittest.TestCase):
         with open(parent_yaml, 'w') as f:
             yaml.dump(parent_rules, f)
         
-        # Create child with both write AND admin for alice
+        # Create child with admin for alice (includes write/create/read via hierarchy)
         child_dir = parent_dir / "child"
         child_dir.mkdir()
         
         child_yaml = child_dir / "syft.pub.yaml"
         child_rules = {
-            "rules": [
-                {
-                    "pattern": "important.txt",
-                    "access": {
-                        "write": ["alice@example.com"]
-                    }
-                },
-                {
-                    "pattern": "important.txt",
-                    "access": {
-                        "admin": ["alice@example.com"]
-                    }
+            "rules": [{
+                "pattern": "important.txt",
+                "access": {
+                    "admin": ["alice@example.com"]
                 }
-            ]
+            }]
         }
         with open(child_yaml, 'w') as f:
             yaml.dump(child_rules, f)
@@ -161,7 +153,7 @@ class TestPermissionAccumulation(unittest.TestCase):
         # Open the child file
         syft_file = syft_perm.open(child_file)
         
-        # Alice should have admin (highest of all accumulated permissions)
+        # Alice should have admin/write/create/read from child rule (nearest-node)
         self.assertTrue(syft_file.has_admin_access("alice@example.com"))
         self.assertTrue(syft_file.has_write_access("alice@example.com"))
         self.assertTrue(syft_file.has_create_access("alice@example.com"))
@@ -330,29 +322,29 @@ class TestPermissionAccumulation(unittest.TestCase):
         # Open the child file
         syft_file = syft_perm.open(child_file)
         
-        # Charlie should have admin + inherited public read
+        # Charlie should have admin/write/create/read from child rule (nearest-node)
         self.assertTrue(syft_file.has_admin_access("charlie@example.com"))
         self.assertTrue(syft_file.has_write_access("charlie@example.com"))  # Via hierarchy
         self.assertTrue(syft_file.has_create_access("charlie@example.com")) # Via hierarchy
-        self.assertTrue(syft_file.has_read_access("charlie@example.com"))   # Via hierarchy + public
+        self.assertTrue(syft_file.has_read_access("charlie@example.com"))   # Via hierarchy
         
-        # Alice should have write + inherited public read
+        # Alice should have NO access (nearest-node: child rule doesn't grant to alice)
         self.assertFalse(syft_file.has_admin_access("alice@example.com"))
-        self.assertTrue(syft_file.has_write_access("alice@example.com"))    # From parent
-        self.assertTrue(syft_file.has_create_access("alice@example.com"))   # Via hierarchy
-        self.assertTrue(syft_file.has_read_access("alice@example.com"))     # Public + hierarchy
+        self.assertFalse(syft_file.has_write_access("alice@example.com"))
+        self.assertFalse(syft_file.has_create_access("alice@example.com"))
+        self.assertFalse(syft_file.has_read_access("alice@example.com"))
         
-        # Bob should have create + inherited public read
+        # Bob should have NO access (nearest-node: child rule doesn't grant to bob)
         self.assertFalse(syft_file.has_admin_access("bob@example.com"))
         self.assertFalse(syft_file.has_write_access("bob@example.com"))
-        self.assertTrue(syft_file.has_create_access("bob@example.com"))     # From parent
-        self.assertTrue(syft_file.has_read_access("bob@example.com"))       # Public + hierarchy
+        self.assertFalse(syft_file.has_create_access("bob@example.com"))
+        self.assertFalse(syft_file.has_read_access("bob@example.com"))
         
-        # Random user should only have public read
+        # Random user should have NO access (nearest-node: child rule only grants to charlie)
         self.assertFalse(syft_file.has_admin_access("random@example.com"))
         self.assertFalse(syft_file.has_write_access("random@example.com"))
         self.assertFalse(syft_file.has_create_access("random@example.com"))
-        self.assertTrue(syft_file.has_read_access("random@example.com"))    # Public only
+        self.assertFalse(syft_file.has_read_access("random@example.com"))
     
     def test_patterns_becoming_more_specific(self):
         """Test ** patterns becoming more specific down the tree."""
@@ -525,7 +517,7 @@ class TestPermissionAccumulation(unittest.TestCase):
         # Test permission reasoning
         has_write, write_reasons = syft_file._check_permission_with_reasons("alice@example.com", "write")
         self.assertFalse(has_write)
-        self.assertTrue(any("No permission found" in r for r in write_reasons))
+        self.assertTrue(any("Pattern '*.doc' matched" in r for r in write_reasons))
         
         has_create_bob, create_reasons_bob = syft_file._check_permission_with_reasons("bob@example.com", "create")
         self.assertFalse(has_create_bob)

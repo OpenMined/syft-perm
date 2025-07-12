@@ -1009,19 +1009,15 @@ class SyftFile:
                     src = sources["read"][0]
                     reasons.append(f"Explicitly granted read in {src['path'].parent}")
         
-        # Add pattern info if available
+        # Add pattern info if available (shows which rule was applied, explaining grant or denial)
         for perm_type in ["admin", "write", "create", "read"]:
             if sources.get(perm_type):
                 for src in sources[perm_type]:
-                    if src["pattern"] and src["pattern"] != self._name:
-                        # User has permission and pattern is not just the filename
-                        if (perm_type == permission or 
-                            (perm_type == "admin") or
-                            (perm_type == "write" and permission in ["create", "read"]) or
-                            (perm_type == "create" and permission == "read")):
-                            if f"Pattern '{src['pattern']}' matched" not in reasons:
-                                reasons.append(f"Pattern '{src['pattern']}' matched")
-                            break
+                    if src["pattern"]:
+                        # Show the pattern that was matched (explains grant or nearest-node override)
+                        if f"Pattern '{src['pattern']}' matched" not in reasons:
+                            reasons.append(f"Pattern '{src['pattern']}' matched")
+                        break
         
         # Check for public access
         if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):
@@ -1637,19 +1633,15 @@ class SyftFolder:
                     src = sources["read"][0]
                     reasons.append(f"Explicitly granted read in {src['path'].parent}")
         
-        # Add pattern info if available
+        # Add pattern info if available (shows which rule was applied, explaining grant or denial)
         for perm_type in ["admin", "write", "create", "read"]:
             if sources.get(perm_type):
                 for src in sources[perm_type]:
-                    if src["pattern"] and src["pattern"] != self._name:
-                        # User has permission and pattern is not just the folder name
-                        if (perm_type == permission or 
-                            (perm_type == "admin") or
-                            (perm_type == "write" and permission in ["create", "read"]) or
-                            (perm_type == "create" and permission == "read")):
-                            if f"Pattern '{src['pattern']}' matched" not in reasons:
-                                reasons.append(f"Pattern '{src['pattern']}' matched")
-                            break
+                    if src["pattern"]:
+                        # Show the pattern that was matched (explains grant or nearest-node override)
+                        if f"Pattern '{src['pattern']}' matched" not in reasons:
+                            reasons.append(f"Pattern '{src['pattern']}' matched")
+                        break
         
         # Check for public access
         if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):

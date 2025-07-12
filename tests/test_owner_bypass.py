@@ -79,7 +79,7 @@ class TestOwnerBypass(unittest.TestCase):
         
         has_write, reasons = syft_file._check_permission_with_reasons("bob@example.com", "write")
         self.assertFalse(has_write)
-        self.assertTrue(any("No permission found" in r for r in reasons))
+        self.assertTrue(any("Pattern 'alice_data.txt' matched" in r for r in reasons))
     
     def test_nested_owner_permissions(self):
         """Test that ownership works in nested subdirectories under datasites/user/."""
