@@ -294,22 +294,46 @@ class SyftFile:
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
             
-            # Combine unique reasons only for permissions the user has
-            if read_has:
-                all_reasons.update(read_reasons)
-            if create_has:
-                all_reasons.update(create_reasons)
-            if write_has:
-                all_reasons.update(write_reasons)
-            if admin_has:
-                all_reasons.update(admin_reasons)
+            # Collect reasons with permission level prefixes
+            permission_reasons = []
             
-            # Format reasons for display - always show all reasons
-            reason_list = sorted(list(all_reasons))
-            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+            # Collect all reasons with their permission levels
+            if admin_has:
+                for reason in admin_reasons:
+                    permission_reasons.append(f"[Admin] {reason}")
+            
+            if write_has:
+                for reason in write_reasons:
+                    # Skip if this is just hierarchy from admin
+                    if "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Write] {reason}")
+            
+            if create_has:
+                for reason in create_reasons:
+                    # Skip if this is just hierarchy from write/admin
+                    if "Included via write permission" not in reason and "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Create] {reason}")
+            
+            if read_has:
+                for reason in read_reasons:
+                    # Skip if this is just hierarchy from create/write/admin
+                    if ("Included via create permission" not in reason and 
+                        "Included via write permission" not in reason and 
+                        "Included via admin permission" not in reason):
+                        permission_reasons.append(f"[Read] {reason}")
+            
+            # Format reasons for display
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                reason_text = "; ".join(reason_list)
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_reasons = []
+                for reason in permission_reasons:
+                    if reason not in seen:
+                        seen.add(reason)
+                        unique_reasons.append(reason)
+                reason_text = "; ".join(unique_reasons)
             
             rows.append([
                 "public",
@@ -332,22 +356,46 @@ class SyftFile:
             write_has, write_reasons = self._check_permission_with_reasons(user, "write")
             admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
             
-            # Combine unique reasons only for permissions the user has
-            if read_has:
-                all_reasons.update(read_reasons)
-            if create_has:
-                all_reasons.update(create_reasons)
-            if write_has:
-                all_reasons.update(write_reasons)
-            if admin_has:
-                all_reasons.update(admin_reasons)
+            # Collect reasons with permission level prefixes
+            permission_reasons = []
             
-            # Format reasons for display - always show all reasons
-            reason_list = sorted(list(all_reasons))
-            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+            # Collect all reasons with their permission levels
+            if admin_has:
+                for reason in admin_reasons:
+                    permission_reasons.append(f"[Admin] {reason}")
+            
+            if write_has:
+                for reason in write_reasons:
+                    # Skip if this is just hierarchy from admin
+                    if "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Write] {reason}")
+            
+            if create_has:
+                for reason in create_reasons:
+                    # Skip if this is just hierarchy from write/admin
+                    if "Included via write permission" not in reason and "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Create] {reason}")
+            
+            if read_has:
+                for reason in read_reasons:
+                    # Skip if this is just hierarchy from create/write/admin
+                    if ("Included via create permission" not in reason and 
+                        "Included via write permission" not in reason and 
+                        "Included via admin permission" not in reason):
+                        permission_reasons.append(f"[Read] {reason}")
+            
+            # Format reasons for display
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                reason_text = "; ".join(reason_list)
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_reasons = []
+                for reason in permission_reasons:
+                    if reason not in seen:
+                        seen.add(reason)
+                        unique_reasons.append(reason)
+                reason_text = "; ".join(unique_reasons)
             
             row = [
                 user,
@@ -977,22 +1025,46 @@ class SyftFolder:
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
             
-            # Combine unique reasons only for permissions the user has
-            if read_has:
-                all_reasons.update(read_reasons)
-            if create_has:
-                all_reasons.update(create_reasons)
-            if write_has:
-                all_reasons.update(write_reasons)
-            if admin_has:
-                all_reasons.update(admin_reasons)
+            # Collect reasons with permission level prefixes
+            permission_reasons = []
             
-            # Format reasons for display - always show all reasons
-            reason_list = sorted(list(all_reasons))
-            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+            # Collect all reasons with their permission levels
+            if admin_has:
+                for reason in admin_reasons:
+                    permission_reasons.append(f"[Admin] {reason}")
+            
+            if write_has:
+                for reason in write_reasons:
+                    # Skip if this is just hierarchy from admin
+                    if "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Write] {reason}")
+            
+            if create_has:
+                for reason in create_reasons:
+                    # Skip if this is just hierarchy from write/admin
+                    if "Included via write permission" not in reason and "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Create] {reason}")
+            
+            if read_has:
+                for reason in read_reasons:
+                    # Skip if this is just hierarchy from create/write/admin
+                    if ("Included via create permission" not in reason and 
+                        "Included via write permission" not in reason and 
+                        "Included via admin permission" not in reason):
+                        permission_reasons.append(f"[Read] {reason}")
+            
+            # Format reasons for display
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                reason_text = "; ".join(reason_list)
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_reasons = []
+                for reason in permission_reasons:
+                    if reason not in seen:
+                        seen.add(reason)
+                        unique_reasons.append(reason)
+                reason_text = "; ".join(unique_reasons)
             
             rows.append([
                 "public",
@@ -1015,22 +1087,46 @@ class SyftFolder:
             write_has, write_reasons = self._check_permission_with_reasons(user, "write")
             admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
             
-            # Combine unique reasons only for permissions the user has
-            if read_has:
-                all_reasons.update(read_reasons)
-            if create_has:
-                all_reasons.update(create_reasons)
-            if write_has:
-                all_reasons.update(write_reasons)
-            if admin_has:
-                all_reasons.update(admin_reasons)
+            # Collect reasons with permission level prefixes
+            permission_reasons = []
             
-            # Format reasons for display - always show all reasons
-            reason_list = sorted(list(all_reasons))
-            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+            # Collect all reasons with their permission levels
+            if admin_has:
+                for reason in admin_reasons:
+                    permission_reasons.append(f"[Admin] {reason}")
+            
+            if write_has:
+                for reason in write_reasons:
+                    # Skip if this is just hierarchy from admin
+                    if "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Write] {reason}")
+            
+            if create_has:
+                for reason in create_reasons:
+                    # Skip if this is just hierarchy from write/admin
+                    if "Included via write permission" not in reason and "Included via admin permission" not in reason:
+                        permission_reasons.append(f"[Create] {reason}")
+            
+            if read_has:
+                for reason in read_reasons:
+                    # Skip if this is just hierarchy from create/write/admin
+                    if ("Included via create permission" not in reason and 
+                        "Included via write permission" not in reason and 
+                        "Included via admin permission" not in reason):
+                        permission_reasons.append(f"[Read] {reason}")
+            
+            # Format reasons for display
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
-                reason_text = "; ".join(reason_list)
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_reasons = []
+                for reason in permission_reasons:
+                    if reason not in seen:
+                        seen.add(reason)
+                        unique_reasons.append(reason)
+                reason_text = "; ".join(unique_reasons)
             
             row = [
                 user,
