@@ -1,11 +1,13 @@
 """FastAPI server for syft-perm permission editor."""
 
+import os
 import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from . import open as syft_open
+from ._syftbox import client as syftbox_client
 from ._utils import get_syftbox_datasites
 
 _SERVER_AVAILABLE = False
@@ -13,6 +15,7 @@ try:
     import uvicorn
     from fastapi import FastAPI as _FastAPI
     from fastapi import HTTPException as _HTTPException
+    from fastapi import Query as _Query
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import HTMLResponse as _HTMLResponse
     from pydantic import BaseModel as _BaseModel
@@ -26,6 +29,7 @@ except ImportError:
 FastAPI = _FastAPI
 HTTPException = _HTTPException
 HTMLResponse = _HTMLResponse
+Query = _Query
 
 
 # Only create the FastAPI app if server dependencies are available
@@ -47,6 +51,27 @@ if _SERVER_AVAILABLE:
         compliance: Dict[str, Any]
         datasites: List[str]
 
+    class FileInfo(_BaseModel):
+        """Model for file information in the files list."""
+
+        path: str
+        name: str
+        is_dir: bool
+        size: Optional[int]
+        modified: Optional[float]
+        permissions: Dict[str, List[str]]
+        has_yaml: bool
+
+    class FilesResponse(_BaseModel):
+        """Model for paginated files response."""
+
+        files: List[FileInfo]
+        total_count: int
+        offset: int
+        limit: int
+        has_more: bool
+        syftbox_path: Optional[str]
+
     app = FastAPI(
         title="SyftPerm Permission Editor",
         description="Google Drive-style permission editor for SyftBox",
@@ -67,119 +92,229 @@ if _SERVER_AVAILABLE:
         """Root endpoint with basic info."""
         return {"message": "SyftPerm Permission Editor", "docs": "/docs"}
 
+    @app.get("/permissions/{path:path}", response_model=PermissionResponse)  # type: ignore[misc]
+    async def get_permissions(path: str) -> PermissionResponse:
+        """Get permissions for a file or folder."""
+        try:
+            # Resolve the path
+            file_path = Path(path)
+            if not file_path.exists():
+                raise HTTPException(status_code=404, detail=f"Path not found: {path}")
 
-@app.get("/permissions/{path:path}", response_model=PermissionResponse)  # type: ignore[misc]
-async def get_permissions(path: str) -> PermissionResponse:
-    """Get permissions for a file or folder."""
-    try:
-        # Resolve the path
-        file_path = Path(path)
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+            # Open with syft-perm
+            syft_obj = syft_open(file_path)
 
-        # Open with syft-perm
-        syft_obj = syft_open(file_path)
+            # Get current permissions
+            permissions = syft_obj._get_all_permissions()
 
-        # Get current permissions
-        permissions = syft_obj._get_all_permissions()
+            # Get compliance information
+            if hasattr(syft_obj, "get_file_limits"):
+                limits = syft_obj.get_file_limits()
+                compliance = {
+                    "has_limits": limits["has_limits"],
+                    "max_file_size": limits["max_file_size"],
+                    "allow_dirs": limits["allow_dirs"],
+                    "allow_symlinks": limits["allow_symlinks"],
+                }
 
-        # Get compliance information
-        if hasattr(syft_obj, "get_file_limits"):
-            limits = syft_obj.get_file_limits()
-            compliance = {
-                "has_limits": limits["has_limits"],
-                "max_file_size": limits["max_file_size"],
-                "allow_dirs": limits["allow_dirs"],
-                "allow_symlinks": limits["allow_symlinks"],
-            }
-
-            # Add compliance status for files
-            if hasattr(syft_obj, "_size"):
-                file_size = syft_obj._size
-                compliance["current_size"] = file_size
-                compliance["size_compliant"] = (
-                    limits["max_file_size"] is None or file_size <= limits["max_file_size"]
-                )
-        else:
-            compliance = {"has_limits": False}
-
-        # Get available datasites
-        datasites = get_syftbox_datasites()
-
-        return PermissionResponse(
-            path=str(file_path), permissions=permissions, compliance=compliance, datasites=datasites
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/permissions/update")  # type: ignore[misc]
-async def update_permission(update: PermissionUpdate) -> Dict[str, Any]:
-    """Update permissions for a file or folder."""
-    try:
-        # Resolve the path
-        file_path = Path(update.path)
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail=f"Path not found: {update.path}")
-
-        # Open with syft-perm
-        syft_obj = syft_open(file_path)
-
-        # Apply the permission change
-        if update.action == "grant":
-            if update.permission == "read":
-                syft_obj.grant_read_access(update.user)
-            elif update.permission == "create":
-                syft_obj.grant_create_access(update.user)
-            elif update.permission == "write":
-                syft_obj.grant_write_access(update.user)
-            elif update.permission == "admin":
-                syft_obj.grant_admin_access(update.user)
+                # Add compliance status for files
+                if hasattr(syft_obj, "_size"):
+                    file_size = syft_obj._size
+                    compliance["current_size"] = file_size
+                    compliance["size_compliant"] = (
+                        limits["max_file_size"] is None or file_size <= limits["max_file_size"]
+                    )
             else:
-                raise HTTPException(
-                    status_code=400, detail=f"Invalid permission: {update.permission}"
-                )
+                compliance = {"has_limits": False}
 
-        elif update.action == "revoke":
-            if update.permission == "read":
-                syft_obj.revoke_read_access(update.user)
-            elif update.permission == "create":
-                syft_obj.revoke_create_access(update.user)
-            elif update.permission == "write":
-                syft_obj.revoke_write_access(update.user)
-            elif update.permission == "admin":
-                syft_obj.revoke_admin_access(update.user)
+            # Get available datasites
+            datasites = get_syftbox_datasites()
+
+            return PermissionResponse(
+                path=str(file_path),
+                permissions=permissions,
+                compliance=compliance,
+                datasites=datasites,
+            )
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/permissions/update")  # type: ignore[misc]
+    async def update_permission(update: PermissionUpdate) -> Dict[str, Any]:
+        """Update permissions for a file or folder."""
+        try:
+            # Resolve the path
+            file_path = Path(update.path)
+            if not file_path.exists():
+                raise HTTPException(status_code=404, detail=f"Path not found: {update.path}")
+
+            # Open with syft-perm
+            syft_obj = syft_open(file_path)
+
+            # Apply the permission change
+            if update.action == "grant":
+                if update.permission == "read":
+                    syft_obj.grant_read_access(update.user)
+                elif update.permission == "create":
+                    syft_obj.grant_create_access(update.user)
+                elif update.permission == "write":
+                    syft_obj.grant_write_access(update.user)
+                elif update.permission == "admin":
+                    syft_obj.grant_admin_access(update.user)
+                else:
+                    raise HTTPException(
+                        status_code=400, detail=f"Invalid permission: {update.permission}"
+                    )
+
+            elif update.action == "revoke":
+                if update.permission == "read":
+                    syft_obj.revoke_read_access(update.user)
+                elif update.permission == "create":
+                    syft_obj.revoke_create_access(update.user)
+                elif update.permission == "write":
+                    syft_obj.revoke_write_access(update.user)
+                elif update.permission == "admin":
+                    syft_obj.revoke_admin_access(update.user)
+                else:
+                    raise HTTPException(
+                        status_code=400, detail=f"Invalid permission: {update.permission}"
+                    )
+
             else:
+                raise HTTPException(status_code=400, detail=f"Invalid action: {update.action}")
+
+            # Return updated permissions
+            updated_permissions = syft_obj._get_all_permissions()
+            return {"success": True, "permissions": updated_permissions}
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/datasites")  # type: ignore[misc]
+    async def get_datasites() -> Dict[str, Any]:
+        """Get list of available datasites for autocompletion."""
+        try:
+            datasites = get_syftbox_datasites()
+            return {"datasites": datasites}
+        except Exception as e:
+            return {"datasites": [], "error": str(e)}
+
+    @app.get("/files", response_model=FilesResponse)  # type: ignore[misc]
+    async def get_files(
+        limit: int = Query(50, ge=1, le=1000, description="Number of items per page"),
+        offset: int = Query(0, ge=0, description="Starting index"),
+        search: Optional[str] = Query(None, description="Search term for file names"),
+    ) -> FilesResponse:
+        """Get paginated list of files with permissions from SyftBox directory."""
+        try:
+            # Get SyftBox directory path
+            syftbox_path = None
+            if syftbox_client:
+                syftbox_path = str(syftbox_client.datadir)
+            else:
+                # Fallback to environment variable or home directory
+                syftbox_path = os.environ.get("SYFTBOX_PATH", str(Path.home() / "SyftBox"))
+
+            syftbox_dir = Path(syftbox_path)
+            if not syftbox_dir.exists():
                 raise HTTPException(
-                    status_code=400, detail=f"Invalid permission: {update.permission}"
+                    status_code=404, detail=f"SyftBox directory not found: {syftbox_path}"
                 )
 
-        else:
-            raise HTTPException(status_code=400, detail=f"Invalid action: {update.action}")
+            # Collect all files with permissions
+            all_files = []
 
-        # Return updated permissions
-        updated_permissions = syft_obj._get_all_permissions()
-        return {"success": True, "permissions": updated_permissions}
+            def scan_directory(dir_path: Path, base_path: Path) -> None:
+                """Recursively scan directory for files with permissions."""
+                try:
+                    for item in dir_path.iterdir():
+                        # Skip hidden files and system directories
+                        if item.name.startswith("."):
+                            continue
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+                        # Skip syft.pub.yaml files themselves
+                        if item.name == "syft.pub.yaml":
+                            continue
 
+                        # Apply search filter if provided
+                        if search and search.lower() not in item.name.lower():
+                            if item.is_dir():
+                                # Still scan subdirectories even if parent doesn't match
+                                scan_directory(item, base_path)
+                            continue
 
-@app.get("/datasites")  # type: ignore[misc]
-async def get_datasites() -> Dict[str, Any]:
-    """Get list of available datasites for autocompletion."""
-    try:
-        datasites = get_syftbox_datasites()
-        return {"datasites": datasites}
-    except Exception as e:
-        return {"datasites": [], "error": str(e)}
+                        try:
+                            # Get permissions for this file/folder
+                            syft_obj = syft_open(item)
+                            permissions = syft_obj._get_all_permissions()
 
+                            # Check if this item has any permissions defined
+                            has_any_permissions = any(
+                                users for users in permissions.values() if users
+                            )
 
-@app.get("/editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
-async def permission_editor(path: str) -> str:
-    """Serve the Google Drive-style permission editor."""
-    return get_editor_html(path)
+                            # Check if there's a syft.pub.yaml in this directory
+                            has_yaml = (item / "syft.pub.yaml").exists() if item.is_dir() else False
+
+                            # Only include items with permissions or yaml config
+                            if has_any_permissions or has_yaml:
+                                file_info = {
+                                    "path": str(item),
+                                    "name": item.name,
+                                    "is_dir": item.is_dir(),
+                                    "size": item.stat().st_size if item.is_file() else None,
+                                    "modified": item.stat().st_mtime,
+                                    "permissions": permissions,
+                                    "has_yaml": has_yaml,
+                                }
+                                all_files.append(file_info)
+
+                        except Exception:
+                            # Skip files we can't access
+                            pass
+
+                        # Recursively scan subdirectories
+                        if item.is_dir():
+                            scan_directory(item, base_path)
+
+                except PermissionError:
+                    # Skip directories we can't access
+                    pass
+
+            # Start scanning from SyftBox directory
+            scan_directory(syftbox_dir, syftbox_dir)
+
+            # Sort by modified time (newest first) like the syft-objects widget
+            all_files.sort(key=lambda x: x["modified"] or 0, reverse=True)
+
+            # Apply pagination
+            total_count = len(all_files)
+            start_idx = offset
+            end_idx = offset + limit
+            paginated_files = all_files[start_idx:end_idx]
+
+            # Convert to FileInfo objects
+            files = [FileInfo(**file_data) for file_data in paginated_files]
+
+            return FilesResponse(
+                files=files,
+                total_count=total_count,
+                offset=offset,
+                limit=limit,
+                has_more=end_idx < total_count,
+                syftbox_path=syftbox_path,
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
+    async def permission_editor(path: str) -> str:
+        """Serve the Google Drive-style permission editor."""
+        return get_editor_html(path)
 
 
 def get_editor_html(path: str) -> str:

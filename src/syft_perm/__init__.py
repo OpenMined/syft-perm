@@ -6,12 +6,13 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.17"
+__version__ = "0.3.18"
 
 __all__ = [
     "open",
     "get_editor_url",
     "start_permission_server",
+    "get_files_url",
 ]
 
 
@@ -67,6 +68,32 @@ def start_permission_server(port: int = 8765, host: str = "127.0.0.1") -> str:
 
     result = start_server(port, host)
     return str(result)
+
+
+def get_files_url(limit: int = 50, offset: int = 0, search: _Union[str, None] = None) -> str:
+    """
+    Get the URL for the files API endpoint.
+
+    Args:
+        limit: Number of items per page (default: 50)
+        offset: Starting index (default: 0)
+        search: Optional search term for file names
+
+    Returns:
+        URL to the files API endpoint
+    """
+    from .server import get_server_url, start_server
+
+    server_url = get_server_url()
+    if not server_url:
+        server_url = start_server()
+
+    # Build query parameters
+    params = f"?limit={limit}&offset={offset}"
+    if search:
+        params += f"&search={search}"
+
+    return f"{server_url}/files{params}"
 
 
 # Server will auto-start when _repr_html_ is called in Jupyter notebooks

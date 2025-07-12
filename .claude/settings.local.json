@@ -23,7 +23,8 @@
       "Bash(sed:*)",
       "Bash(uv add:*)",
       "Bash(git clone:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

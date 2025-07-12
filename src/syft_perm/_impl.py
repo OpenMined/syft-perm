@@ -975,42 +975,16 @@ class SyftFile:
         """
 
     def _repr_html_(self) -> str:
-        """Return HTML representation for Jupyter notebooks."""
-        try:
-            # Quick check if server is already running
-            import requests
+        """Return static HTML representation for Jupyter notebooks."""
+        import datetime
+        import os
 
-            from .server import get_server_url
-
-            server_url = get_server_url()
-            if server_url:
-                try:
-                    # Quick health check with short timeout
-                    response = requests.get(f"{server_url}/", timeout=0.5)
-                    if response.status_code == 200:
-                        # Server is healthy, proceed normally
-                        editor_url = self._ensure_server_and_get_editor_url()
-                    else:
-                        # Server exists but not healthy, show loading
-                        return self._get_loading_html()
-                except Exception:
-                    # Can't connect, show loading
-                    return self._get_loading_html()
-            else:
-                # No server running, show loading
-                return self._get_loading_html()
-
-        except Exception:
-            # Any error, show loading
-            return self._get_loading_html()
-
-        rows = self._get_permission_table()
-
-        # Create compliance table showing current state vs limits
-        limits = self.get_file_limits()
-
-        # File size comparison
+        # Get file metadata
+        stat = self._path.stat()
         file_size = self._size
+        modified_time = datetime.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Format file size
         if file_size >= 1024 * 1024 * 1024:
             size_display = f"{file_size / (1024 * 1024 * 1024):.2f} GB"
         elif file_size >= 1024 * 1024:
@@ -1020,109 +994,183 @@ class SyftFile:
         else:
             size_display = f"{file_size} bytes"
 
-        # Size limit comparison
-        if limits["max_file_size"] is not None:
-            if limits["max_file_size"] >= 1024 * 1024:
-                limit_display = f"{limits['max_file_size'] / (1024 * 1024):.2f} MB"
-            elif limits["max_file_size"] >= 1024:
-                limit_display = f"{limits['max_file_size'] / 1024:.2f} KB"
-            else:
-                limit_display = f"{limits['max_file_size']} bytes"
+        # Get permission data
+        rows = self._get_permission_table()
+        permissions_data = self._get_all_permissions()
 
-            size_status = "✓ OK" if file_size <= limits["max_file_size"] else "✗ EXCEEDS"
-        else:
-            limit_display = "No limit"
-            size_status = "✓ OK"
+        # Get file limits
+        limits = self.get_file_limits()
 
-        # Check if this file type is allowed by the limits
+        # Build permissions summary
+        permission_counts = {
+            "read": len(permissions_data.get("read", [])),
+            "create": len(permissions_data.get("create", [])),
+            "write": len(permissions_data.get("write", [])),
+            "admin": len(permissions_data.get("admin", [])),
+        }
+
+        # Check compliance
         is_dir = self._path.is_dir()
         is_symlink = self._is_symlink
-
-        # For files: check if the file itself would be blocked
-        type_status = "✓ OK"
-        if is_dir and not limits["allow_dirs"]:
-            type_status = "✗ BLOCKED (directories not allowed)"
-        elif is_symlink and not limits["allow_symlinks"]:
-            type_status = "✗ BLOCKED (symlinks not allowed)"
-
-        # Overall compliance
-        all_ok = size_status.startswith("✓") and type_status.startswith("✓")
-        overall_status = "✓ COMPLIANT" if all_ok else "✗ NON-COMPLIANT"
-
-        # Build compliance table
         file_type = "Directory" if is_dir else ("Symlink" if is_symlink else "Regular File")
-        compliance_html = f"""<p><b>File Compliance Check:</b></p>
-<table border="1" style="border-collapse: collapse; margin: 10px 0;">
-<tr>
-<th style="padding: 5px;">Property</th>
-<th style="padding: 5px;">Current</th>
-<th style="padding: 5px;">Limit/Setting</th>
-<th style="padding: 5px;">Status</th>
-</tr>
-<tr>
-<td style="padding: 5px;">File Size</td>
-<td style="padding: 5px;">{size_display}</td>
-<td style="padding: 5px;">{limit_display}</td>
-<td style="padding: 5px;">{size_status}</td>
-</tr>
-<tr>
-<td style="padding: 5px;">File Type</td>
-<td style="padding: 5px;">{file_type}</td>
-<td style="padding: 5px;">Dirs: {'✓' if limits['allow_dirs'] else '✗'} |
-Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
-<td style="padding: 5px;">{type_status}</td>
-</tr>
-<tr>
-<td style="padding: 5px;"><b>Overall</b></td>
-<td style="padding: 5px;" colspan="2"><b>File access compliance</b></td>
-<td style="padding: 5px;"><b>{overall_status}</b></td>
-</tr>
-</table>\n"""
 
-        # Add editor link
-        editor_link = (
-            f'<p style="margin: 10px 0;">'
-            f'<a href="{editor_url}" target="_blank" '
-            f'style="background: #1976d2; color: white; padding: 8px 16px; '
-            f'text-decoration: none; border-radius: 4px; font-size: 14px;">'
-            f"🖊️ Edit Permissions</a></p>\n"
-        )
+        size_compliant = limits["max_file_size"] is None or file_size <= limits["max_file_size"]
+        type_compliant = True
+        if is_dir and not limits["allow_dirs"]:
+            type_compliant = False
+        elif is_symlink and not limits["allow_symlinks"]:
+            type_compliant = False
 
-        if not rows:
-            return (
-                f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n"
-                f"{editor_link}{compliance_html}"
-            )
+        # Create static HTML
+        html = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    max-width: 800px; margin: 20px 0;">
 
-        try:
-            from tabulate import tabulate
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                        color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                <h2 style="margin: 0; font-size: 24px; font-weight: 600;">
+                    📄 {self._path.name}
+                </h2>
+                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">
+                    {self._path.parent}
+                </p>
+            </div>
 
-            table = tabulate(
-                rows,
-                headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
-                tablefmt="html",
-            )
-            return (
-                f"<p><b>SyftFile('{self._path}')</b></p>\n" f"{editor_link}{compliance_html}{table}"
-            )
-        except ImportError:
-            # Fallback to simple HTML table if tabulate not available
-            result = [f"<p><b>SyftFile('{self._path}')</b></p>"]
-            result.append(editor_link.strip())
-            result.append(compliance_html.strip())
-            result.append("<table>")
-            result.append(
-                "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th>"
-                "<th>Admin</th><th>Reason</th></tr>"
-            )
-            for row in rows:
-                result.append(
-                    f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td>"
-                    f"<td>{row[3]}</td><td>{row[4]}</td>"
-                    f"<td>{row[5] if len(row) > 5 else ''}</td></tr>"
-                )
-            result.append("</table>")
-            return "\n".join(result)
+            <!-- Metadata Section -->
+            <div style="background: white; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">File Information</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));  # noqa: E501
+                            gap: 15px; font-size: 14px;">
+                    <div>
+                        <span style="color: #666;">Type:</span>
+                        <strong>{file_type}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Size:</span>
+                        <strong>{size_display}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Modified:</span>
+                        <strong>{modified_time}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Owner:</span>
+                        <strong>{os.path.basename(os.path.expanduser('~'))}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions Summary -->
+            <div style="background: #f8f9fa; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Permissions Summary</h3>  # noqa: E501
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Read</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #2196f3;">
+                            {permission_counts['read']}
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Create</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #ff9800;">
+                            {permission_counts['create']}
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Write</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #f44336;">
+                            {permission_counts['write']}
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Admin</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #9c27b0;">
+                            {permission_counts['admin']}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compliance Status -->
+            <div style="background: white; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Compliance Status</h3>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 14px;">Size Limit:</span>
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
+                                background: {'#4caf50' if size_compliant else '#f44336'}; color: white;">  # noqa: E501
+                        {'✓ COMPLIANT' if size_compliant else '✗ EXCEEDS LIMIT'}
+                    </span>
+                    {f'<span style="color: #666; font-size: 12px;">({size_display} / {limits["max_file_size"] / (1024 * 1024):.2f} MB)</span>' if limits["max_file_size"] else ''}  # noqa: E501
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 14px;">Type Allowed:</span>
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
+                                background: {'#4caf50' if type_compliant else '#f44336'}; color: white;">  # noqa: E501
+                        {'✓ ALLOWED' if type_compliant else '✗ BLOCKED'}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Detailed Permissions Table -->
+            <div style="background: white; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Detailed Permissions</h3>  # noqa: E501
+        """
+
+        if rows:
+            html += """
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">User</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Read</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Create</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Write</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Admin</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Reason</th>  # noqa: E501
+                        </tr>
+                    </thead>
+                    <tbody>
+            """
+
+            for i, row in enumerate(rows):
+                bg_color = "#ffffff" if i % 2 == 0 else "#f9f9f9"
+                html += f"""
+                        <tr style="background: {bg_color};">
+                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{row[0]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[1]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[2]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[3]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[4]}</td>  # noqa: E501
+                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #666; font-size: 12px;">  # noqa: E501
+                                {row[5] if len(row) > 5 else ''}
+                            </td>
+                        </tr>
+                """
+
+            html += """
+                    </tbody>
+                </table>
+            """
+        else:
+            html += """
+                <p style="color: #666; font-style: italic;">No permissions set for this file.</p>
+            """
+
+        html += """
+            </div>
+        </div>
+        """
+
+        return html
 
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""
@@ -2133,39 +2181,13 @@ class SyftFolder:
         """
 
     def _repr_html_(self) -> str:
-        """Return HTML representation for Jupyter notebooks."""
-        try:
-            # Quick check if server is already running
-            import requests
+        """Return static HTML representation for Jupyter notebooks."""
+        import datetime
+        import os
 
-            from .server import get_server_url
-
-            server_url = get_server_url()
-            if server_url:
-                try:
-                    # Quick health check with short timeout
-                    response = requests.get(f"{server_url}/", timeout=0.5)
-                    if response.status_code == 200:
-                        # Server is healthy, proceed normally
-                        editor_url = self._ensure_server_and_get_editor_url()
-                    else:
-                        # Server exists but not healthy, show loading
-                        return self._get_loading_html()
-                except Exception:
-                    # Can't connect, show loading
-                    return self._get_loading_html()
-            else:
-                # No server running, show loading
-                return self._get_loading_html()
-
-        except Exception:
-            # Any error, show loading
-            return self._get_loading_html()
-
+        # Get folder metadata
         rows = self._get_permission_table()
-        limits = self.get_file_limits()
-
-        # Create compliance table for folder
+        permissions_data = self._get_all_permissions()
         limits = self.get_file_limits()
 
         # Analyze folder contents
@@ -2246,83 +2268,198 @@ class SyftFolder:
         all_ok = size_ok and dirs_ok and symlinks_ok
         overall_status = "✓ COMPLIANT" if all_ok else "✗ NON-COMPLIANT"
 
-        # Build compliance table
-        compliance_html = f"""<p><b>Folder Compliance Check:</b></p>
-<table border="1" style="border-collapse: collapse; margin: 10px 0;">
-<tr>
-<th style="padding: 5px;">Property</th>
-<th style="padding: 5px;">Current State</th>
-<th style="padding: 5px;">Policy/Limit</th>
-<th style="padding: 5px;">Status</th>
-</tr>
-<tr>
-<td style="padding: 5px;">Largest File</td>
-<td style="padding: 5px;">{largest_display}</td>
-<td style="padding: 5px;">{limit_display}</td>
-<td style="padding: 5px;">{size_status}</td>
-</tr>
-<tr>
-<td style="padding: 5px;">Subdirectories</td>
-<td style="padding: 5px;">{subdirs} subdirectories</td>
-<td style="padding: 5px;">{'Allowed' if limits['allow_dirs'] else 'Blocked'}</td>
-<td style="padding: 5px;">{dir_status}</td>
-</tr>
-<tr>
-<td style="padding: 5px;">Symlinks</td>
-<td style="padding: 5px;">{symlinks} symlinks</td>
-<td style="padding: 5px;">{'Allowed' if limits['allow_symlinks'] else 'Blocked'}</td>
-<td style="padding: 5px;">{symlink_status}</td>
-</tr>
-<tr>
-<td style="padding: 5px;"><b>Overall</b></td>
-<td style="padding: 5px;" colspan="2"><b>Folder access compliance</b></td>
-<td style="padding: 5px;"><b>{overall_status}</b></td>
-</tr>
-</table>\n"""
+        # Build permissions summary
+        permission_counts = {
+            "read": len(permissions_data.get("read", [])),
+            "create": len(permissions_data.get("create", [])),
+            "write": len(permissions_data.get("write", [])),
+            "admin": len(permissions_data.get("admin", [])),
+        }
 
-        # Add editor link
-        editor_link = (
-            f'<p style="margin: 10px 0;">'
-            f'<a href="{editor_url}" target="_blank" '
-            f'style="background: #1976d2; color: white; padding: 8px 16px; '
-            f'text-decoration: none; border-radius: 4px; font-size: 14px;">'
-            f"🖊️ Edit Permissions</a></p>"
-        )
-
-        # Build the HTML output
-        result = [f"<p><b>SyftFolder('{self._path}')</b></p>", editor_link, compliance_html.strip()]
-
-        # File limits are now shown in the compliance table above
-
-        if not rows:
-            result.append("<p>No permissions set</p>")
-            return "\n".join(result)
-
+        # Get folder metadata
         try:
-            from tabulate import tabulate
+            stat = self._path.stat()
+            modified_time = datetime.datetime.fromtimestamp(stat.st_mtime).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        except Exception:
+            modified_time = "Unknown"
 
-            table = tabulate(
-                rows,
-                headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
-                tablefmt="html",
-            )
-            result.append(table)
-            return "\n".join(result)
-        except ImportError:
-            # Fallback to simple HTML table if tabulate not available
-            result.append("<table>")
-            result.append(
-                "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th>"
-                "<th>Admin</th><th>Reason</th></tr>"
-            )
-            for row in rows:
-                result.append(
-                    f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td>"
-                    f"<td>{row[3]}</td><td>{row[4]}</td>"
-                    f"<td>{row[5] if len(row) > 5 else ''}</td></tr>"
-                )
-            result.append("</table>")
-            return "\n".join(result)
+        # Create static HTML
+        html = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    max-width: 800px; margin: 20px 0;">
+
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                        color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                <h2 style="margin: 0; font-size: 24px; font-weight: 600;">
+                    📁 {self._path.name or 'Root Folder'}
+                </h2>
+                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">
+                    {self._path}
+                </p>
+            </div>
+
+            <!-- Folder Statistics -->
+            <div style="background: white; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Folder Statistics</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));  # noqa: E501
+                            gap: 15px; font-size: 14px;">
+                    <div>
+                        <span style="color: #666;">Files:</span>
+                        <strong>{total_files}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Subdirectories:</span>
+                        <strong>{subdirs}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Symlinks:</span>
+                        <strong>{symlinks}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Largest File:</span>
+                        <strong>{largest_display}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Modified:</span>
+                        <strong>{modified_time}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666;">Owner:</span>
+                        <strong>{os.path.basename(os.path.expanduser('~'))}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions Summary -->
+            <div style="background: #f8f9fa; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Permissions Summary</h3>  # noqa: E501
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Read</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #2196f3;">
+                            {permission_counts['read']}
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Create</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #ff9800;">
+                            {permission_counts['create']}
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Write</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #f44336;">
+                            {permission_counts['write']}
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 15px; border-radius: 6px;
+                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
+                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Admin</div>  # noqa: E501
+                        <div style="font-size: 24px; font-weight: bold; color: #9c27b0;">
+                            {permission_counts['admin']}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compliance Status -->
+            <div style="background: white; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Compliance Status</h3>
+                <div style="margin-bottom: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 14px; min-width: 120px;">File Size Limit:</span>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
+                                    background: {'#4caf50' if size_ok else '#f44336'}; color: white;">  # noqa: E501
+                            {size_status}
+                        </span>
+                        <span style="color: #666; font-size: 12px;">({limit_display})</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 14px; min-width: 120px;">Directories:</span>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
+                                    background: {'#4caf50' if dirs_ok else '#f44336'}; color: white;">  # noqa: E501
+                            {dir_status}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 14px; min-width: 120px;">Symlinks:</span>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
+                                    background: {'#4caf50' if symlinks_ok else '#f44336'}; color: white;">  # noqa: E501
+                            {symlink_status}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;
+                                padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                        <span style="font-size: 14px; min-width: 120px;"><strong>Overall:</strong></span>  # noqa: E501
+                        <span style="padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: bold;  # noqa: E501
+                                    background: {'#4caf50' if all_ok else '#f44336'}; color: white;">  # noqa: E501
+                            {overall_status}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Permissions Table -->
+            <div style="background: white; border: 1px solid #e0e0e0;
+                        border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Detailed Permissions</h3>  # noqa: E501
+        """
+
+        if rows:
+            html += """
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">User</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Read</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Create</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Write</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Admin</th>  # noqa: E501
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Reason</th>  # noqa: E501
+                        </tr>
+                    </thead>
+                    <tbody>
+            """
+
+            for i, row in enumerate(rows):
+                bg_color = "#ffffff" if i % 2 == 0 else "#f9f9f9"
+                html += f"""
+                        <tr style="background: {bg_color};">
+                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{row[0]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[1]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[2]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[3]}</td>  # noqa: E501
+                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[4]}</td>  # noqa: E501
+                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #666; font-size: 12px;">  # noqa: E501
+                                {row[5] if len(row) > 5 else ''}
+                            </td>
+                        </tr>
+                """
+
+            html += """
+                    </tbody>
+                </table>
+            """
+        else:
+            html += """
+                <p style="color: #666; font-style: italic;">No permissions set for this folder.</p>
+            """
+
+        html += """
+            </div>
+        </div>
+        """
+
+        return html
 
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""
