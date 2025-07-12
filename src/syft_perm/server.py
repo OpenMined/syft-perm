@@ -535,12 +535,18 @@ def get_editor_html(path: str) -> str:
                 item.className = 'permission-item';
 
                 const userPerms = [];
-                if (permissions.read && permissions.read.includes(user)) userPerms.push('Read');
-                if (permissions.create && permissions.create.includes(user)) {{
+                const p = permissions;  // Shorter alias
+                if (p.read && p.read.includes(user)) userPerms.push('Read');
+                if (p.create && p.create.includes(user)) {{
                     userPerms.push('Create');
                 }}
-                if (permissions.write && permissions.write.includes(user)) userPerms.push('Write');
-                if (permissions.admin && permissions.admin.includes(user)) userPerms.push('Admin');
+                if (p.write && p.write.includes(user)) userPerms.push('Write');
+                if (p.admin && p.admin.includes(user)) userPerms.push('Admin');
+
+                const readActive = p.read && p.read.includes(user) ? 'active' : 'inactive';
+                const createActive = p.create && p.create.includes(user) ? 'active' : 'inactive';
+                const writeActive = p.write && p.write.includes(user) ? 'active' : 'inactive';
+                const adminActive = p.admin && p.admin.includes(user) ? 'active' : 'inactive';
 
                 item.innerHTML = `
                     <div class="user-info">
@@ -548,17 +554,13 @@ def get_editor_html(path: str) -> str:
                         <div class="user-permissions">${{userPerms.join(', ')}}</div>
                     </div>
                     <div class="permission-controls">
-                        <span class="permission-badge ${{permissions.read && \
-permissions.read.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{readActive}}"
                               onclick="togglePermission('${{user}}', 'read')">Read</span>
-                        <span class="permission-badge ${{permissions.create && \
-permissions.create.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{createActive}}"
                               onclick="togglePermission('${{user}}', 'create')">Create</span>
-                        <span class="permission-badge ${{permissions.write && \
-permissions.write.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{writeActive}}"
                               onclick="togglePermission('${{user}}', 'write')">Write</span>
-                        <span class="permission-badge ${{permissions.admin && \
-permissions.admin.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{adminActive}}"
                               onclick="togglePermission('${{user}}', 'admin')">Admin</span>
                     </div>
                 `;
@@ -580,7 +582,8 @@ permissions.admin.includes(user) ? 'active' : 'inactive'}}"
             if (compliance.has_limits) {{
                 if (compliance.max_file_size !== null) {{
                     const sizeStatus = compliance.size_compliant ? 'status-ok' : 'status-error';
-                    const sizeText = compliance.size_compliant ? '✓ Within limit' : '✗ Exceeds limit';
+                    const sizeText = compliance.size_compliant ?
+                        '✓ Within limit' : '✗ Exceeds limit';
                     html += `
                         <div class="compliance-item">
                             <span>File Size: ${{formatFileSize(compliance.current_size)}} /
@@ -708,7 +711,8 @@ permissions.admin.includes(user) ? 'active' : 'inactive'}}"
 
                 if (filtered.length > 0) {{
                     suggestions.innerHTML = filtered.map(site =>
-                        `<div class="autocomplete-suggestion" \n                              onclick="selectSuggestion('${{site}}')">${{site}}</div>`
+                        `<div class="autocomplete-suggestion" ` +
+                        `onclick="selectSuggestion('${{site}}')">${{site}}</div>`
                     ).join('');
                     suggestions.style.display = 'block';
                 }} else {{
