@@ -22,7 +22,10 @@
     <header class="header">
         <div class="container">
             <div class="header-content">
-                <a href="index.html" class="logo">SyftPerm</a>
+                <div class="logo-group">
+                    <img src="https://raw.githubusercontent.com/OpenMined/syftbox-python/main/docs/img/syftbox-logo.png" alt="SyftBox" class="syftbox-logo">
+                    <a href="index.html" class="logo">SyftPerm</a>
+                </div>
                 <nav class="nav">
                     <a href="index.html" class="nav-link">Home</a>
                     <a href="installation.html" class="nav-link active">Installation</a>
@@ -155,14 +158,14 @@
                 <h2>Development Installation</h2>
                 <p>If you want to contribute to SyftPerm or work with the source code:</p>
 
-                <div class="code-block"># Clone the repository
+                <div class="code-block" style="padding: 1.5rem; line-height: 1.8; white-space: pre;"><span style="color: #6a737d;"># Clone the repository</span>
 git clone https://github.com/OpenMined/syft-perm.git
 cd syft-perm
 
-# Install in development mode with all dependencies
+<span style="color: #6a737d;"># Install in development mode with all dependencies</span>
 pip install -e ".[dev,server,display]"
 
-# Run tests to verify installation
+<span style="color: #6a737d;"># Run tests to verify installation</span>
 pytest</div>
 
                 <div class="alert alert-info">
@@ -181,21 +184,21 @@ pytest</div>
                 <div class="code-block">SyftPerm 0.2.32 installed successfully!</div>
 
                 <p>Test basic functionality:</p>
-                <div class="code-block">import syft_perm
+                <div class="code-block" style="padding: 1.5rem; line-height: 1.8;">import syft_perm
 import tempfile
 from pathlib import Path
 
-# Create a test file
+<span style="color: #6a737d;"># Create a test file</span>
 test_file = Path(tempfile.mktemp(suffix=".txt"))
 test_file.write_text("Hello SyftPerm!")
 
-# Open with SyftPerm
+<span style="color: #6a737d;"># Open with SyftPerm</span>
 syft_file = syft_perm.open(test_file)
 syft_file.grant_read_access("test@example.com")
 
 print("✅ SyftPerm is working correctly!")
 
-# Cleanup
+<span style="color: #6a737d;"># Cleanup</span>
 test_file.unlink()</div>
             </section>
 
