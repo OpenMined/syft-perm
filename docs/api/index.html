@@ -3,637 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Reference - SyftPerm Documentation</title>
-    <meta name="description" content="Complete Python API reference for SyftPerm - classes, functions, parameters, and examples.">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="../css/style.css">
-    
-    <!-- Favicon -->
+    <title>API Reference - SyftPerm</title>
     <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .api-method {
+            background: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+        }
+        
+        .method-signature {
+            background: var(--color-code-bg);
+            padding: var(--space-2) var(--space-3);
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            margin-bottom: var(--space-3);
+        }
+        
+        .param-list {
+            list-style: none;
+            padding: 0;
+            margin: var(--space-2) 0;
+        }
+        
+        .param-list li {
+            padding: var(--space-1) 0;
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+        }
+        
+        .param-name {
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+        
+        .param-type {
+            color: var(--color-gray);
+        }
+        
+        .returns {
+            margin-top: var(--space-3);
+            padding-top: var(--space-3);
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
+    <header>
+        <nav>
+            <div class="nav-wrapper">
                 <a href="../index.html" class="logo">SyftPerm</a>
-                <nav class="nav">
-                    <a href="../index.html" class="nav-link">Home</a>
-                    <a href="../installation.html" class="nav-link">Installation</a>
-                    <a href="../quickstart.html" class="nav-link">Quick Start</a>
-                    <a href="../tutorials/index.html" class="nav-link">Tutorials</a>
-                    <a href="index.html" class="nav-link active">API Reference</a>
-                    <a href="https://github.com/OpenMined/syft-perm" class="nav-link">GitHub</a>
-                </nav>
+                <div class="nav-links">
+                    <a href="../quickstart.html">Quick Start</a>
+                    <a href="index.html" class="active">API</a>
+                    <a href="https://github.com/OpenMined/syft-perm" class="github-link">GitHub</a>
+                </div>
             </div>
-        </div>
+        </nav>
     </header>
 
-    <!-- Main Content -->
-    <main class="main">
+    <!-- API Hero -->
+    <section class="api-hero">
         <div class="container">
-            <div class="grid" style="grid-template-columns: 250px 1fr; gap: 2rem;">
-                <!-- Sidebar -->
-                <aside class="doc-sidebar">
-                    <h3>API Reference</h3>
-                    <ul>
-                        <li><a href="#overview">Overview</a></li>
-                        <li><a href="#main-functions">Main Functions</a></li>
-                        <li><a href="#syftfile">SyftFile Class</a></li>
-                        <li><a href="#syftfolder">SyftFolder Class</a></li>
-                        <li><a href="#permission-methods">Permission Methods</a></li>
-                        <li><a href="#debugging-methods">Debugging Methods</a></li>
-                        <li><a href="#server-functions">Server Functions</a></li>
-                        <li><a href="#utility-functions">Utility Functions</a></li>
-                        <li><a href="#examples">Code Examples</a></li>
-                    </ul>
-                </aside>
-
-                <!-- Main Content -->
-                <div class="doc-content">
-                    <!-- Page Header -->
-                    <section id="overview">
-                        <h1 class="page-title">API Reference</h1>
-                        <p class="page-subtitle">
-                            Complete Python API documentation for SyftPerm with examples, parameters, and return values.
-                        </p>
-                    </section>
-
-                    <!-- Main Functions -->
-                    <section id="main-functions">
-                        <h2>Main Functions</h2>
-                        <p>The primary entry points for working with SyftPerm:</p>
-
-                        <div class="api-method">
-                            <div class="api-method-name">syft_perm.open(path)</div>
-                            <p>Open a file or folder for permission management.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">path</span> 
-                                    <span class="param-type">str | pathlib.Path</span>
-                                    <p>Path to the file or directory to open. Can be relative or absolute.</p>
-                                </div>
-                            </div>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">SyftFile | SyftFolder</span>
-                                    <p>Returns a SyftFile object if path is a file, SyftFolder if it's a directory.</p>
-                                </div>
-                            </div>
-
-                            <div class="api-parameters">
-                                <h4>Raises</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">ValueError</span>
-                                    <p>If the path doesn't exist or cannot be resolved.</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">import syft_perm
-
-# Open a file
-file_obj = syft_perm.open("data.txt")
-
-# Open a folder
-folder_obj = syft_perm.open("my_project/")
-
-# Works with pathlib.Path too
-from pathlib import Path
-path_obj = syft_perm.open(Path("documents/report.pdf"))</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">syft_perm.get_editor_url(path)</div>
-                            <p>Get the URL for the web-based permission editor for a file or folder.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">path</span> 
-                                    <span class="param-type">str | pathlib.Path</span>
-                                    <p>Path to the file or directory.</p>
-                                </div>
-                            </div>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">str</span>
-                                    <p>URL to open the permission editor in a web browser.</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block"># Get editor URL
-url = syft_perm.get_editor_url("my_project/data.csv")
-print(f"Edit permissions at: {url}")
-
-# Open automatically (requires webbrowser module)
-import webbrowser
-webbrowser.open(url)</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">syft_perm.start_permission_server(port=8765, host="127.0.0.1")</div>
-                            <p>Manually start the permission editor server.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">port</span> 
-                                    <span class="param-type">int</span>
-                                    <p>Port to run the server on. Default: 8765</p>
-                                </div>
-                                <div class="api-parameter">
-                                    <span class="param-name">host</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Host to bind to. Default: "127.0.0.1"</p>
-                                </div>
-                            </div>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">str</span>
-                                    <p>Server URL (e.g., "http://127.0.0.1:8765")</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block"># Start server on custom port
-server_url = syft_perm.start_permission_server(port=9000)
-print(f"Server running at: {server_url}")
-
-# Server starts automatically when needed, 
-# so you usually don't need to call this</div>
-                        </div>
-                    </section>
-
-                    <!-- SyftFile Class -->
-                    <section id="syftfile">
-                        <h2>SyftFile Class</h2>
-                        <p>Represents a single file with permission management capabilities.</p>
-
-                        <div class="alert alert-info">
-                            <strong>💡 Note:</strong> Don't instantiate SyftFile directly. Use <code class="code-inline">syft_perm.open()</code> instead.
-                        </div>
-
-                        <h3>Permission Grant Methods</h3>
-
-                        <div class="api-method">
-                            <div class="api-method-name">grant_read_access(user, force=False)</div>
-                            <p>Grant read access to a user for this specific file.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">user</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Email address of user, or "*" for public access.</p>
-                                </div>
-                                <div class="api-parameter">
-                                    <span class="param-name">force</span> 
-                                    <span class="param-type">bool</span>
-                                    <p>Skip confirmation prompts. Default: False</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">file = syft_perm.open("data.txt")
-
-# Grant read access
-file.grant_read_access("alice@example.com")
-
-# Grant public read access (no confirmation)
-file.grant_read_access("*", force=True)</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">grant_create_access(user, force=False)</div>
-                            <p>Grant create access (includes read) to a user.</p>
-                            
-                            <div class="code-block">file.grant_create_access("dev@company.com")</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">grant_write_access(user, force=False)</div>
-                            <p>Grant write access (includes read and create) to a user.</p>
-                            
-                            <div class="code-block">file.grant_write_access("editor@company.com")</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">grant_admin_access(user, force=False)</div>
-                            <p>Grant admin access (includes all permissions) to a user.</p>
-                            
-                            <div class="code-block">file.grant_admin_access("boss@company.com")</div>
-                        </div>
-
-                        <h3>Permission Check Methods</h3>
-
-                        <div class="api-method">
-                            <div class="api-method-name">has_read_access(user)</div>
-                            <p>Check if a user has read access to this file.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">user</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Email address of user to check.</p>
-                                </div>
-                            </div>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">bool</span>
-                                    <p>True if user has read access, False otherwise.</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">can_read = file.has_read_access("alice@example.com")
-if can_read:
-    print("Alice can read this file")
-else:
-    print("Alice cannot read this file")</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">has_create_access(user)</div>
-                            <div class="api-method-name">has_write_access(user)</div>
-                            <div class="api-method-name">has_admin_access(user)</div>
-                            <p>Similar to has_read_access() but for create, write, and admin permissions respectively.</p>
-                        </div>
-
-                        <h3>Permission Revoke Methods</h3>
-
-                        <div class="api-method">
-                            <div class="api-method-name">revoke_read_access(user)</div>
-                            <div class="api-method-name">revoke_create_access(user)</div>
-                            <div class="api-method-name">revoke_write_access(user)</div>
-                            <div class="api-method-name">revoke_admin_access(user)</div>
-                            <p>Remove specific permission levels from a user.</p>
-                            
-                            <div class="code-block"># Remove write access (user keeps read/create if granted separately)
-file.revoke_write_access("alice@example.com")
-
-# Remove all access
-file.revoke_admin_access("former_employee@company.com")</div>
-                        </div>
-
-                        <h3>File Limits Methods</h3>
-
-                        <div class="api-method">
-                            <div class="api-method-name">set_file_limits(max_size=None, allow_dirs=None, allow_symlinks=None)</div>
-                            <p>Set file size and type restrictions.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">max_size</span> 
-                                    <span class="param-type">int | None</span>
-                                    <p>Maximum file size in bytes. None for no limit.</p>
-                                </div>
-                                <div class="api-parameter">
-                                    <span class="param-name">allow_dirs</span> 
-                                    <span class="param-type">bool | None</span>
-                                    <p>Whether to allow directories. None to keep current setting.</p>
-                                </div>
-                                <div class="api-parameter">
-                                    <span class="param-name">allow_symlinks</span> 
-                                    <span class="param-type">bool | None</span>
-                                    <p>Whether to allow symbolic links. None to keep current setting.</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block"># Set 1MB file size limit
-file.set_file_limits(max_size=1024*1024)
-
-# Block directories and symlinks
-file.set_file_limits(allow_dirs=False, allow_symlinks=False)
-
-# Combined limits
-file.set_file_limits(
-    max_size=5*1024*1024,  # 5MB
-    allow_dirs=False,
-    allow_symlinks=False
-)</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">get_file_limits()</div>
-                            <p>Get current file limits configuration.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">dict</span>
-                                    <p>Dictionary with keys: max_file_size, allow_dirs, allow_symlinks, has_limits</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">limits = file.get_file_limits()
-print(f"Max size: {limits['max_file_size']}")
-print(f"Allow directories: {limits['allow_dirs']}")
-print(f"Has any limits: {limits['has_limits']}")</div>
-                        </div>
-                    </section>
-
-                    <!-- SyftFolder Class -->
-                    <section id="syftfolder">
-                        <h2>SyftFolder Class</h2>
-                        <p>Represents a folder with permission management capabilities. Inherits all methods from SyftFile with additional folder-specific functionality.</p>
-
-                        <div class="api-method">
-                            <div class="api-method-name">grant_access(pattern, permission_level, user, force=False)</div>
-                            <p>Grant access using glob patterns for multiple files.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">pattern</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Glob pattern to match files (e.g., "*.py", "docs/**/*.md")</p>
-                                </div>
-                                <div class="api-parameter">
-                                    <span class="param-name">permission_level</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Permission level: "read", "create", "write", or "admin"</p>
-                                </div>
-                                <div class="api-parameter">
-                                    <span class="param-name">user</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Email address of user, or "*" for public access</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">folder = syft_perm.open("my_project/")
-
-# Grant access to all Python files
-folder.grant_access("*.py", "write", "dev@company.com")
-
-# Grant access to all documentation
-folder.grant_access("docs/**/*.md", "read", "*")
-
-# Grant access to specific test files
-folder.grant_access("tests/test_*.py", "admin", "qa@company.com")</div>
-                        </div>
-                    </section>
-
-                    <!-- Debugging Methods -->
-                    <section id="debugging-methods">
-                        <h2>Debugging Methods</h2>
-                        <p>Essential tools for understanding and troubleshooting permissions.</p>
-
-                        <div class="api-method">
-                            <div class="api-method-name">explain_permissions(user)</div>
-                            <p>Get a detailed explanation of why a user has or doesn't have access.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">user</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Email address of user to explain permissions for.</p>
-                                </div>
-                            </div>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">str</span>
-                                    <p>Human-readable explanation of permission resolution.</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">explanation = file.explain_permissions("alice@example.com")
-print(explanation)
-
-# Example output:
-# "alice@example.com has READ access:
-#  - Granted by pattern '*.py' in directory /project/src
-#  - Inherited from parent directory permissions
-#  - Permission level: read (includes read)"</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">_check_permission_with_reasons(user, permission_type)</div>
-                            <p>Low-level debugging method that returns both permission status and detailed reasoning.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Parameters</h4>
-                                <div class="api-parameter">
-                                    <span class="param-name">user</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Email address of user to check.</p>
-                                </div>
-                                <div class="api-parameter">
-                                    <span class="param-name">permission_type</span> 
-                                    <span class="param-type">str</span>
-                                    <p>Type of permission: "read", "create", "write", or "admin"</p>
-                                </div>
-                            </div>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">tuple[bool, list[str]]</span>
-                                    <p>Tuple of (has_permission, list_of_reasons)</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">has_write, reasons = file._check_permission_with_reasons(
-    "alice@example.com", "write"
-)
-
-print(f"Has write access: {has_write}")
-for reason in reasons:
-    print(f"  - {reason}")</div>
-                        </div>
-
-                        <div class="api-method">
-                            <div class="api-method-name">_get_all_permissions()</div>
-                            <p>Get a complete overview of all current permissions.</p>
-                            
-                            <div class="api-parameters">
-                                <h4>Returns</h4>
-                                <div class="api-parameter">
-                                    <span class="param-type">dict</span>
-                                    <p>Dictionary mapping permission levels to lists of users.</p>
-                                </div>
-                            </div>
-
-                            <div class="code-block">all_perms = file._get_all_permissions()
-print("Current permissions:")
-for level, users in all_perms.items():
-    if users:
-        print(f"  {level}: {', '.join(users)}")
-
-# Example output:
-# Current permissions:
-#   read: alice@example.com, *
-#   write: bob@example.com
-#   admin: admin@example.com</div>
-                        </div>
-                    </section>
-
-                    <!-- Code Examples -->
-                    <section id="examples">
-                        <h2>Complete Examples</h2>
-
-                        <h3>Basic File Permissions</h3>
-                        <div class="code-block">import syft_perm
-
-# Open a file
-data_file = syft_perm.open("research_data.csv")
-
-# Set up team permissions
-data_file.grant_read_access("reviewer@external.org")
-data_file.grant_write_access("researcher@university.edu")  
-data_file.grant_admin_access("pi@university.edu")
-
-# Check permissions
-print(f"Reviewer can read: {data_file.has_read_access('reviewer@external.org')}")
-print(f"Researcher can write: {data_file.has_write_access('researcher@university.edu')}")
-
-# Debug permissions
-print(data_file.explain_permissions("researcher@university.edu"))</div>
-
-                        <h3>Folder with Pattern-Based Permissions</h3>
-                        <div class="code-block">import syft_perm
-
-# Open a project folder
-project = syft_perm.open("ml_project/")
-
-# Set up sophisticated permissions
-project.grant_access("*.py", "write", "developers@company.com")
-project.grant_access("docs/**/*.md", "write", "technical_writers@company.com")
-project.grant_access("data/**/*.csv", "read", "data_analysts@company.com")
-project.grant_access("models/**/*.pkl", "admin", "ml_engineers@company.com")
-
-# Public access to published results
-project.grant_access("results/published/**", "read", "*")
-
-# File size limits for uploads
-project.set_file_limits(max_size=100*1024*1024)  # 100MB limit
-
-# Verify setup
-print("Project permissions configured successfully!")
-print(f"Editor URL: {syft_perm.get_editor_url('ml_project/')}")</div>
-
-                        <h3>Complex Inheritance Scenario</h3>
-                        <div class="code-block">import syft_perm
-
-# Multi-level project structure
-university = syft_perm.open("university_research/")
-department = syft_perm.open("university_research/chemistry/")
-lab = syft_perm.open("university_research/chemistry/organic_lab/")
-project = syft_perm.open("university_research/chemistry/organic_lab/catalysis_2024/")
-
-# Permissions at different levels
-university.grant_read_access("public@university.edu")
-department.grant_write_access("chemistry_faculty@university.edu")
-lab.grant_admin_access("lab_head@university.edu")
-
-# Check what permissions a specific file inherits
-test_file = syft_perm.open("university_research/chemistry/organic_lab/catalysis_2024/results.txt")
-
-# Debug the inheritance chain
-explanation = test_file.explain_permissions("chemistry_faculty@university.edu")
-print("Permission inheritance:")
-print(explanation)
-
-# This will show which directory provided the permissions and why</div>
-
-                        <h3>Permission Auditing and Compliance</h3>
-                        <div class="code-block">import syft_perm
-from pathlib import Path
-
-def audit_project_permissions(project_path):
-    """Audit all permissions in a project for compliance."""
-    
-    project = syft_perm.open(project_path)
-    
-    print(f"=== Permission Audit for {project_path} ===")
-    
-    # Get all permissions
-    all_perms = project._get_all_permissions()
-    
-    print("Current permissions:")
-    for level, users in all_perms.items():
-        if users:
-            print(f"  {level.upper()}: {', '.join(users)}")
-    
-    # Check file limits
-    limits = project.get_file_limits()
-    print(f"\nFile limits: {limits}")
-    
-    # Test specific users
-    test_users = ["admin@company.com", "employee@company.com", "external@partner.com"]
-    
-    print(f"\nAccess test:")
-    for user in test_users:
-        can_read = project.has_read_access(user)
-        can_write = project.has_write_access(user)
-        can_admin = project.has_admin_access(user)
-        
-        permissions = []
-        if can_admin: permissions.append("admin")
-        elif can_write: permissions.append("write") 
-        elif can_read: permissions.append("read")
-        else: permissions.append("none")
-        
-        print(f"  {user}: {', '.join(permissions)}")
-
-# Run audit
-audit_project_permissions("sensitive_project/")</div>
-                    </section>
+            <h1>API Reference</h1>
+            <p class="hero-subtitle">Every method, clearly explained.</p>
+        </div>
+    </section>
+
+    <!-- Main Functions -->
+    <section class="api-section">
+        <div class="container">
+            <h2>Opening Files & Folders</h2>
+            
+            <div class="api-method">
+                <div class="method-signature">syft_perm.open(path)</div>
+                <p>Open a file or folder for permission management.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">path</span> <span class="param-type">str</span> - Path to file or directory</li>
+                </ul>
+                <div class="returns">
+                    <strong>Returns:</strong> SyftFile or SyftFolder object
+                </div>
+                <pre><code class="language-python">file = syft_perm.open("data.csv")
+folder = syft_perm.open("project/")</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Permission Methods -->
+    <section class="api-section alt-bg">
+        <div class="container">
+            <h2>Granting Permissions</h2>
+            
+            <div class="api-method">
+                <div class="method-signature">grant_read_access(user)</div>
+                <p>Grant read-only access to a user.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address or "*" for public</li>
+                </ul>
+                <pre><code class="language-python">file.grant_read_access("alice@example.com")
+file.grant_read_access("*")  # Make public</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">grant_write_access(user)</div>
+                <p>Grant read and write access to a user.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address</li>
+                </ul>
+                <pre><code class="language-python">file.grant_write_access("bob@example.com")</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">grant_admin_access(user)</div>
+                <p>Grant full control including permission management.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address</li>
+                </ul>
+                <pre><code class="language-python">file.grant_admin_access("admin@example.com")</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Checking Permissions -->
+    <section class="api-section">
+        <div class="container">
+            <h2>Checking Permissions</h2>
+            
+            <div class="api-method">
+                <div class="method-signature">has_read_access(user)</div>
+                <p>Check if a user can read the file.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
+                </ul>
+                <div class="returns">
+                    <strong>Returns:</strong> bool - True if user has read access
+                </div>
+                <pre><code class="language-python">if file.has_read_access("alice@example.com"):
+    print("Alice can read this file")</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">has_write_access(user)</div>
+                <p>Check if a user can write to the file.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
+                </ul>
+                <div class="returns">
+                    <strong>Returns:</strong> bool - True if user has write access
+                </div>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">has_admin_access(user)</div>
+                <p>Check if a user has admin permissions.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
+                </ul>
+                <div class="returns">
+                    <strong>Returns:</strong> bool - True if user has admin access
                 </div>
             </div>
         </div>
-    </main>
+    </section>
+
+    <!-- Revoking Permissions -->
+    <section class="api-section alt-bg">
+        <div class="container">
+            <h2>Revoking Permissions</h2>
+            
+            <div class="api-method">
+                <div class="method-signature">revoke_access(user)</div>
+                <p>Remove all permissions for a user.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
+                </ul>
+                <pre><code class="language-python">file.revoke_access("alice@example.com")</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">revoke_all_access()</div>
+                <p>Remove all permissions from everyone (except owner).</p>
+                <pre><code class="language-python">file.revoke_all_access()</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Utility Methods -->
+    <section class="api-section">
+        <div class="container">
+            <h2>Utility Methods</h2>
+            
+            <div class="api-method">
+                <div class="method-signature">get_permissions()</div>
+                <p>Get a dictionary of all current permissions.</p>
+                <div class="returns">
+                    <strong>Returns:</strong> dict - Users mapped to their permission levels
+                </div>
+                <pre><code class="language-python">perms = file.get_permissions()
+# {'alice@example.com': 'read', 'bob@example.com': 'write'}</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">explain_permissions(user)</div>
+                <p>Get detailed explanation of why a user has or doesn't have access.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to explain</li>
+                </ul>
+                <div class="returns">
+                    <strong>Returns:</strong> str - Human-readable explanation
+                </div>
+                <pre><code class="language-python">explanation = file.explain_permissions("alice@example.com")
+print(explanation)
+# "alice@example.com has read access granted directly on data.csv"</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Permission Hierarchy -->
+    <section class="api-section alt-bg">
+        <div class="container">
+            <h2>Permission Hierarchy</h2>
+            <p>Permissions follow a simple hierarchy:</p>
+            <div style="text-align: center; font-size: 1.3rem; margin: var(--space-4) 0;">
+                <code>read</code> → <code>write</code> → <code>admin</code>
+            </div>
+            <p>Each level includes all permissions from previous levels:</p>
+            <ul style="font-size: 1.1rem; line-height: 2;">
+                <li><strong>read</strong> - Can view file contents</li>
+                <li><strong>write</strong> - Can read + modify file contents</li>
+                <li><strong>admin</strong> - Can read + write + manage permissions</li>
+            </ul>
+        </div>
+    </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer>
         <div class="container">
-            <div class="grid grid-3">
-                <div>
-                    <h4 style="margin-bottom: 1rem;">SyftPerm</h4>
-                    <p>File permission management for SyftBox made simple.</p>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 1rem;">Documentation</h4>
-                    <ul style="list-style: none;">
-                        <li style="margin-bottom: 0.5rem;"><a href="../installation.html">Installation</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="../quickstart.html">Quick Start</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="../tutorials/index.html">Tutorials</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="index.html">API Reference</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 1rem;">Community</h4>
-                    <ul style="list-style: none;">
-                        <li style="margin-bottom: 0.5rem;"><a href="https://github.com/OpenMined/syft-perm">GitHub</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="https://openmined.org/">OpenMined</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="https://syftbox.net/">SyftBox</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #444;">
-                <p>&copy; 2024 OpenMined. Released under MIT License.</p>
-            </div>
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
         </div>
     </footer>
 
-    <!-- JavaScript -->
     <script src="../js/main.js"></script>
 </body>
 </html>

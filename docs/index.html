@@ -3,275 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SyftPerm Documentation - File Permission Management for SyftBox</title>
-    <meta name="description" content="Complete documentation for SyftPerm - the Python library for managing SyftBox file permissions with ease.">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="css/style.css">
-    
-    <!-- Favicon -->
+    <title>SyftPerm - Dead Simple File Permissions for SyftBox</title>
     <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
+    <header>
+        <nav>
+            <div class="nav-wrapper">
                 <a href="index.html" class="logo">SyftPerm</a>
-                <nav class="nav">
-                    <a href="index.html" class="nav-link active">Home</a>
-                    <a href="installation.html" class="nav-link">Installation</a>
-                    <a href="quickstart.html" class="nav-link">Quick Start</a>
-                    <a href="tutorials/index.html" class="nav-link">Tutorials</a>
-                    <a href="api/index.html" class="nav-link">API Reference</a>
-                    <a href="https://github.com/OpenMined/syft-perm" class="nav-link">GitHub</a>
-                </nav>
+                <div class="nav-links">
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="api/index.html">API</a>
+                    <a href="https://github.com/OpenMined/syft-perm" class="github-link">GitHub</a>
+                </div>
             </div>
-        </div>
+        </nav>
     </header>
 
-    <!-- Main Content -->
-    <main class="main">
+    <!-- Hero Section -->
+    <section class="hero">
         <div class="container">
-            <!-- Hero Section -->
-            <section class="hero">
-                <div class="hero-content">
-                    <h1>SyftPerm Documentation</h1>
-                    <p>
-                        Master file permission management for SyftBox with our comprehensive Python library. 
-                        Simple APIs, powerful patterns, and bullet-proof security for collaborative data science.
-                    </p>
-                    <div class="flex gap-4 justify-center" style="margin-top: 2rem;">
-                        <a href="quickstart.html" class="btn btn-primary">🚀 Get Started</a>
-                        <a href="tutorials/index.html" class="btn btn-secondary">📚 View Tutorials</a>
-                    </div>
+            <h1 class="hero-title">Stop Fighting File Permissions</h1>
+            <p class="hero-subtitle">Just say who can do what. In plain English.</p>
+            
+            <!-- Before/After Code Example -->
+            <div class="code-comparison">
+                <div class="code-before">
+                    <div class="code-label">❌ Before: Permission Hell</div>
+                    <pre><code class="language-python"># Is Alice allowed to read this file? Who knows...
+if user in admins or (user in writers and file.owner == user) or \
+   (user in readers and file.shared) or file.public or \
+   (user in file.collaborators and file.permissions[user] >= 'read'):
+    allow_access()</code></pre>
                 </div>
-            </section>
-
-            <!-- Quick Links Grid -->
-            <section class="grid grid-3" style="margin-bottom: 4rem;">
-                <div class="card">
-                    <h3 class="card-title">🚀 Quick Start</h3>
-                    <div class="card-content">
-                        <p>Get up and running with SyftPerm in 5 minutes. Learn the basics and start managing permissions right away.</p>
-                    </div>
-                    <div class="card-footer">
-                        <a href="quickstart.html" class="btn btn-primary">Start Tutorial</a>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3 class="card-title">📚 Complete Tutorials</h3>
-                    <div class="card-content">
-                        <p>Comprehensive tutorials covering everything from fundamentals to advanced patterns and debugging techniques.</p>
-                    </div>
-                    <div class="card-footer">
-                        <a href="tutorials/index.html" class="btn btn-secondary">View Tutorials</a>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3 class="card-title">🔧 API Reference</h3>
-                    <div class="card-content">
-                        <p>Complete Python API documentation with examples, parameters, and return values for every function.</p>
-                    </div>
-                    <div class="card-footer">
-                        <a href="api/index.html" class="btn btn-outline">Browse API</a>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Installation Section -->
-            <section style="margin-bottom: 4rem;">
-                <h2>Installation</h2>
-                <p>Install SyftPerm via pip in just one command:</p>
-                <div class="code-block">pip install syft-perm</div>
                 
-                <div class="alert alert-info">
-                    <strong>💡 Pro Tip:</strong> Install with optional dependencies for the full experience:
-                    <div class="code-block" style="margin-top: 1rem;">pip install "syft-perm[server,display]"</div>
-                </div>
-            </section>
-
-            <!-- Key Features -->
-            <section style="margin-bottom: 4rem;">
-                <h2>Key Features</h2>
-                <div class="grid grid-2">
-                    <div class="card">
-                        <h4 class="card-title">🎯 Intuitive Permission Hierarchy</h4>
-                        <div class="card-content">
-                            <p>Four permission levels (Read → Create → Write → Admin) that build naturally on each other. Higher permissions automatically include lower ones.</p>
-                            <div class="code-block">file.grant_write_access("alice@example.com")
-# Alice automatically gets read + create + write</div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🌟 Powerful Pattern Matching</h4>
-                        <div class="card-content">
-                            <p>Use glob patterns to control hundreds of files with single rules. Supports wildcards, recursive matching, and intelligent specificity resolution.</p>
-                            <div class="code-block"># All Python files anywhere in the project
-folder.grant_access("*.py", "dev@team.com")
-# All docs, nested arbitrarily deep  
-folder.grant_access("docs/**/*.md", "writers@team.com")</div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🔍 Nearest-Node Algorithm</h4>
-                        <div class="card-content">
-                            <p>Predictable inheritance that finds the "closest" permission rules. No confusing accumulation - the nearest directory with matching rules wins.</p>
-                            <div class="code-block"># Files inherit from nearest parent with rules
-project/
-├── data/           ← permissions set here
-│   └── analysis/
-│       └── results.csv  ← inherits from data/</div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🐛 Built-in Debugging</h4>
-                        <div class="card-content">
-                            <p>Never guess why permissions work or don't work. Trace the exact reasoning behind every access decision.</p>
-                            <div class="code-block">file.explain_permissions("alice@example.com")
-# Shows: "Read access granted by pattern '*.py' 
-#         in directory /project/src"</div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">📁 Folder-Level Efficiency</h4>
-                        <div class="card-content">
-                            <p>Set permissions once on directories, and all files inside automatically inherit them. Massive time savings for large projects.</p>
-                            <div class="code-block">folder = syft_perm.open("my_project/")
-folder.grant_read_access("team@company.com")
-# All 500+ files in project get team access!</div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🎮 Interactive Permission Editor</h4>
-                        <div class="card-content">
-                            <p>Google Drive-style web interface for managing permissions. Perfect for non-technical team members.</p>
-                            <div class="code-block">import syft_perm
-url = syft_perm.get_editor_url("my_file.txt")
-# Opens web interface for permission management</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Use Cases -->
-            <section style="margin-bottom: 4rem;">
-                <h2>Perfect For</h2>
-                <div class="grid grid-2">
-                    <div>
-                        <h4>🔬 Research Collaboration</h4>
-                        <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                            <li>External reviewers need read-only access</li>
-                            <li>Junior researchers can create but not modify core data</li>
-                            <li>Senior researchers have full editing rights</li>
-                            <li>PIs manage the entire permission structure</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4>💼 Enterprise Data Science</h4>
-                        <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                            <li>Different teams need access to different file types</li>
-                            <li>Compliance requires audit trails of access</li>
-                            <li>Projects have complex nested directory structures</li>
-                            <li>Permissions must be maintainable at scale</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Getting Started -->
-            <section style="margin-bottom: 4rem;">
-                <h2>Getting Started</h2>
-                <p>Ready to master SyftBox permissions? Follow our learning path:</p>
+                <div class="code-arrow">→</div>
                 
-                <div class="grid grid-2" style="margin-top: 2rem;">
-                    <div class="card">
-                        <h4 class="card-title">1. 📖 Read the Quick Start</h4>
-                        <div class="card-content">
-                            <p>5-minute tutorial covering the essential concepts you need to be productive immediately.</p>
-                        </div>
-                        <div class="card-footer">
-                            <a href="quickstart.html" class="btn btn-primary">Quick Start Guide</a>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">2. 🎓 Complete the Comprehensive Tutorials</h4>
-                        <div class="card-content">
-                            <p>Deep-dive tutorials covering advanced patterns, debugging, and real-world scenarios.</p>
-                        </div>
-                        <div class="card-footer">
-                            <a href="tutorials/index.html" class="btn btn-secondary">Start Learning</a>
-                        </div>
-                    </div>
+                <div class="code-after">
+                    <div class="code-label">✅ After: Crystal Clear</div>
+                    <pre><code class="language-python"># Just say what you mean
+file.grant_read_access("alice@example.com")</code></pre>
                 </div>
-            </section>
+            </div>
 
-            <!-- Community -->
-            <section>
-                <h2>Community & Support</h2>
-                <p>Join the SyftBox community and get help when you need it:</p>
-                
-                <div class="flex gap-4" style="margin-top: 1rem; flex-wrap: wrap;">
-                    <a href="https://github.com/OpenMined/syft-perm" class="btn btn-outline">
-                        📂 GitHub Repository
-                    </a>
-                    <a href="https://github.com/OpenMined/syft-perm/issues" class="btn btn-outline">
-                        🐛 Report Issues
-                    </a>
-                    <a href="https://openmined.org/" class="btn btn-outline">
-                        🏠 OpenMined Community
-                    </a>
+            <!-- Install Command -->
+            <div class="install-section">
+                <div class="install-command">
+                    <code>pip install syft-perm</code>
+                    <button class="copy-btn" data-copy="pip install syft-perm">Copy</button>
                 </div>
-            </section>
+                <p class="install-note">That's it. You're ready to go.</p>
+            </div>
         </div>
-    </main>
+    </section>
+
+    <!-- Three Key Benefits -->
+    <section class="benefits">
+        <div class="container">
+            <div class="benefit-grid">
+                <div class="benefit">
+                    <div class="benefit-icon">🎯</div>
+                    <h3>Direct & Obvious</h3>
+                    <p>No more permission matrices or role hierarchies. Just grant access to who needs it.</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">⚡</div>
+                    <h3>Instant Understanding</h3>
+                    <p>New team members understand permissions in seconds, not hours.</p>
+                </div>
+                <div class="benefit">
+                    <div class="benefit-icon">🛡️</div>
+                    <h3>Secure by Default</h3>
+                    <p>Built for SyftBox's privacy-first architecture. No accidental oversharing.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Simple API Preview -->
+    <section class="api-preview">
+        <div class="container">
+            <h2>The Entire API</h2>
+            <p class="section-subtitle">Yes, really. That's all of it.</p>
+            
+            <div class="api-examples">
+                <div class="api-example">
+                    <h3>Open a file or folder</h3>
+                    <pre><code class="language-python">file = syft_perm.open("data.csv")</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Grant permissions</h3>
+                    <pre><code class="language-python">file.grant_read_access("bob@university.edu")
+file.grant_write_access("alice@company.com")
+file.grant_admin_access("admin@org.com")</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Check permissions</h3>
+                    <pre><code class="language-python">if file.has_read_access("user@example.com"):
+    data = file.read()</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Make public (carefully!)</h3>
+                    <pre><code class="language-python">file.grant_read_access("*")  # Anyone can read</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Real Example -->
+    <section class="real-example">
+        <div class="container">
+            <h2>Real Example: Research Collaboration</h2>
+            <pre><code class="language-python"># Set up a research project
+project = syft_perm.open("cancer_research/")
+
+# Reviewers can read everything
+project.grant_read_access("reviewer@journal.org")
+
+# Collaborators can edit data
+project.grant_write_access("collaborator@university.edu")
+
+# PI has full control
+project.grant_admin_access("pi@institution.org")
+
+# That's it. Everyone has exactly the access they need.</code></pre>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to simplify your permissions?</h2>
+            <div class="cta-buttons">
+                <a href="quickstart.html" class="btn btn-primary">Get Started in 5 Minutes</a>
+                <a href="https://github.com/OpenMined/syft-perm" class="btn btn-secondary">View on GitHub</a>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer>
         <div class="container">
-            <div class="grid grid-3">
-                <div>
-                    <h4>SyftPerm</h4>
-                    <p>File permission management for SyftBox made simple.</p>
-                </div>
-                <div>
-                    <h4>Documentation</h4>
-                    <ul style="list-style: none; padding-left: 0;">
-                        <li><a href="installation.html">Installation</a></li>
-                        <li><a href="quickstart.html">Quick Start</a></li>
-                        <li><a href="tutorials/index.html">Tutorials</a></li>
-                        <li><a href="api/index.html">API Reference</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4>Community</h4>
-                    <ul style="list-style: none; padding-left: 0;">
-                        <li><a href="https://github.com/OpenMined/syft-perm">GitHub</a></li>
-                        <li><a href="https://openmined.org/">OpenMined</a></li>
-                        <li><a href="https://syftbox.net/">SyftBox</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 OpenMined. Released under MIT License.</p>
-            </div>
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
         </div>
     </footer>
 
-    <!-- JavaScript for mobile navigation -->
     <script src="js/main.js"></script>
 </body>
 </html>
