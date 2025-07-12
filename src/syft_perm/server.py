@@ -785,9 +785,6 @@ def start_server(port: int = 8765, host: str = "127.0.0.1"):
 
 def get_server_url() -> Optional[str]:
     """Get the URL of the running server, if any."""
-    global _server_thread
-    global _server_port
-
     if _server_thread and _server_thread.is_alive():
         return f"http://127.0.0.1:{_server_port}"
     return None
