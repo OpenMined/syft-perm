@@ -1,3 +1,11 @@
+[![CI](https://github.com/OpenMined/syft-perm/actions/workflows/test.yml/badge.svg)](https://github.com/OpenMined/syft-perm/actions/workflows/test.yml)
+[![PyPI version](https://img.shields.io/pypi/v/syft-perm.svg)](https://pypi.org/project/syft-perm/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/syft-perm.svg)](https://pypi.org/project/syft-perm/)
+[![Python versions](https://img.shields.io/pypi/pyversions/syft-perm.svg)](https://pypi.org/project/syft-perm/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License](https://img.shields.io/github/license/OpenMined/syft-perm.svg)](https://github.com/OpenMined/syft-perm/blob/main/LICENSE)
+
+
 # SyftPerm
 
 **File permission management for SyftBox made simple.**

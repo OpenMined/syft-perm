@@ -156,20 +156,94 @@
             <!-- Development Installation -->
             <section style="margin-bottom: 3rem;">
                 <h2>Development Installation</h2>
-                <p>If you want to contribute to SyftPerm or work with the source code:</p>
+                <p>Want to contribute to SyftPerm or work with the source code? Follow these steps:</p>
 
-                <div class="code-block" style="padding: 1.5rem; line-height: 1.8; white-space: pre;"><span style="color: #6a737d;"># Clone the repository</span>
-git clone https://github.com/OpenMined/syft-perm.git
-cd syft-perm
+                <div class="grid grid-2" style="margin-top: 2rem; margin-bottom: 2rem;">
+                    <div class="card">
+                        <h3 class="card-title">🔧 Prerequisites</h3>
+                        <div class="card-content">
+                            <ul style="margin-left: 1.5rem;">
+                                <li>Git installed on your system</li>
+                                <li>Python 3.9 or higher</li>
+                                <li>Virtual environment (recommended)</li>
+                                <li>Basic command line knowledge</li>
+                            </ul>
+                        </div>
+                    </div>
 
-<span style="color: #6a737d;"># Install in development mode with all dependencies</span>
-pip install -e ".[dev,server,display]"
+                    <div class="card">
+                        <h3 class="card-title">⚡ Quick Setup</h3>
+                        <div class="card-content">
+                            <p>Get up and running in under 2 minutes:</p>
+                            <ol style="margin-left: 1.5rem; margin-top: 1rem;">
+                                <li>Clone the repository</li>
+                                <li>Install dependencies</li>
+                                <li>Run tests</li>
+                                <li>Start coding!</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
 
-<span style="color: #6a737d;"># Run tests to verify installation</span>
-pytest</div>
+                <div class="api-method">
+                    <div class="api-method-name">Step 1: Clone the Repository</div>
+                    <div class="code-block">git clone https://github.com/OpenMined/syft-perm.git
+cd syft-perm</div>
+                </div>
 
-                <div class="alert alert-info">
-                    <strong>💡 For Contributors:</strong> We use <code class="code-inline">uv</code> for dependency management in development. Install it with <code class="code-inline">pip install uv</code> for the fastest development experience.
+                <div class="api-method">
+                    <div class="api-method-name">Step 2: Create Virtual Environment (Recommended)</div>
+                    <div class="code-block">python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate</div>
+                </div>
+
+                <div class="api-method">
+                    <div class="api-method-name">Step 3: Install in Development Mode</div>
+                    <div class="code-block">pip install -e ".[dev,server,display]"</div>
+                    <p>This installs SyftPerm in editable mode with all development dependencies including:</p>
+                    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                        <li><strong>dev</strong>: Testing frameworks, linters, and build tools</li>
+                        <li><strong>server</strong>: Web UI dependencies</li>
+                        <li><strong>display</strong>: Enhanced table formatting</li>
+                    </ul>
+                </div>
+
+                <div class="api-method">
+                    <div class="api-method-name">Step 4: Verify Installation</div>
+                    <div class="code-block">pytest  # Run all tests
+pytest -v  # Run with verbose output
+pytest tests/test_permissions.py  # Run specific test file</div>
+                </div>
+
+                <div class="alert alert-info" style="margin-top: 2rem;">
+                    <strong>💡 Pro Tip:</strong> We recommend using <code class="code-inline">uv</code> for faster dependency management:
+                    <div class="code-block" style="margin-top: 1rem;">pip install uv
+uv pip install -e ".[dev,server,display]"  # 10x faster than pip!</div>
+                </div>
+
+                <div class="grid grid-2" style="margin-top: 2rem;">
+                    <div class="card">
+                        <h3 class="card-title">📝 Contributing Guidelines</h3>
+                        <div class="card-content">
+                            <p>Ready to contribute? Check out our:</p>
+                            <ul style="margin-left: 1.5rem; margin-top: 1rem;">
+                                <li><a href="https://github.com/OpenMined/syft-perm/blob/main/CONTRIBUTING.md">Contributing Guide</a></li>
+                                <li><a href="https://github.com/OpenMined/syft-perm/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a></li>
+                                <li><a href="https://github.com/OpenMined/syft-perm/issues">Open Issues</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">🛠️ Development Tools</h3>
+                        <div class="card-content">
+                            <p>Useful commands for development:</p>
+                            <div class="code-block" style="margin-top: 1rem;">make lint     # Run code linters
+make format   # Auto-format code
+make test     # Run all tests
+make docs     # Build documentation</div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
