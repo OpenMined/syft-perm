@@ -1,4 +1,4 @@
-"""Comprehensive tests for doublestar (**) pattern matching according to old syftbox ACL behavior."""
+"""Tests for doublestar (**) pattern matching according to old syftbox ACL behavior."""
 
 import os
 import shutil
@@ -11,7 +11,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
+import syft_perm  # noqa: E402
 
 
 class TestDoublestarPatterns(unittest.TestCase):
@@ -83,7 +83,7 @@ class TestDoublestarPatterns(unittest.TestCase):
         for file_path in all_files:
             full_path = Path(self.test_dir) / file_path
             full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_text(f"content")
+            full_path.write_text("content")
 
         # Create syft.pub.yaml with **/*.py pattern
         yaml_file = Path(self.test_dir) / "syft.pub.yaml"
@@ -168,7 +168,6 @@ class TestDoublestarPatterns(unittest.TestCase):
         # In the implementation, folders check both "path" and "path/" against patterns
         # So docs/** will match the docs folder when checked as "docs/"
         # This is the actual behavior - documenting it
-        syft_docs_dir = syft_perm.open(docs_dir)
         # The implementation adds "/" to folder paths when checking, so "docs/" matches "docs/**"
         # This might be intentional to allow folder permissions
 
@@ -232,15 +231,6 @@ class TestDoublestarPatterns(unittest.TestCase):
             "src/docs/guide.md",  # docs/ followed by something
             "src/docs/examples/tutorial.py",  # docs/ followed by something
             "a/b/c/docs/d/e/f.txt",  # docs/ followed by something
-        ]
-
-        # Non-matching files
-        non_matching_files = [
-            "readme.md",  # No docs in path
-            "src/documentation/guide.md",  # Similar but not 'docs'
-            "src/main.py",  # No docs in path
-            "docs",  # Just the directory itself - no trailing content
-            "src/docs",  # Just the directory itself - no trailing content
         ]
 
         # Create only the actual files, not directories

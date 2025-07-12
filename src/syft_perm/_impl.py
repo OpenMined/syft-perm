@@ -1,17 +1,15 @@
 """Internal implementation of SyftFile and SyftFolder classes with ACL compatibility."""
 
 import shutil
-import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path, PurePath
-from typing import Any, Dict, Iterator, List, Literal, Optional, Union
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import yaml
 
 from ._utils import (
-    create_access_dict,
     format_users,
     is_datasite_email,
     read_syftpub_yaml,
@@ -110,7 +108,6 @@ def _acl_norm_path(path: str) -> str:
     This ensures consistent path handling across different operating systems
     and compatibility with glob pattern matching.
     """
-    import os
     from pathlib import PurePath
 
     # Convert to forward slashes using pathlib for proper path handling
@@ -565,7 +562,8 @@ class SyftFile:
                                         if self._size > max_file_size:
                                             continue  # Skip this rule if file exceeds size limit
 
-                                # Terminal rules: use first matching rule (most specific due to sorting)
+                                # Terminal rules: use first matching rule
+                                # (most specific due to sorting)
                                 result = {
                                     perm: format_users(access.get(perm, []))
                                     for perm in ["read", "create", "write", "admin"]
@@ -640,7 +638,6 @@ class SyftFile:
         # First add public if it exists
         if "*" in all_users:
             # Collect all reasons for public
-            all_reasons = set()
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons("*", "read")
@@ -725,7 +722,6 @@ class SyftFile:
         # Then add all other users
         for user in sorted(all_users):
             # Collect all reasons for this user
-            all_reasons = set()
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons(user, "read")
@@ -1135,7 +1131,6 @@ class SyftFile:
                             # Check if pattern matches our file path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path):
-                                terminal_pattern = pattern  # Track the matched pattern
                                 matched_pattern = pattern  # Also track in general matched pattern
                                 access = rule.get("access", {})
 
@@ -1264,7 +1259,6 @@ class SyftFile:
         all_perms = perm_data["permissions"]
         sources = perm_data["sources"]
         terminal = perm_data.get("terminal")
-        terminal_pattern = perm_data.get("terminal_pattern")
         matched_pattern = perm_data.get("matched_pattern")
 
         # If blocked by terminal
@@ -1543,7 +1537,6 @@ class SyftFolder:
                             if _glob_match(pattern, rel_path) or _glob_match(
                                 pattern, rel_path + "/"
                             ):
-                                terminal_pattern = pattern  # Track the matched pattern
                                 access = rule.get("access", {})
                                 # Check file limits if present
                                 limits = rule.get("limits", {})
@@ -1617,7 +1610,6 @@ class SyftFolder:
         # First add public if it exists
         if "*" in all_users:
             # Collect all reasons for public
-            all_reasons = set()
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons("*", "read")
@@ -1702,7 +1694,6 @@ class SyftFolder:
         # Then add all other users
         for user in sorted(all_users):
             # Collect all reasons for this user
-            all_reasons = set()
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons(user, "read")
@@ -2140,7 +2131,6 @@ class SyftFolder:
         all_perms = perm_data["permissions"]
         sources = perm_data["sources"]
         terminal = perm_data.get("terminal")
-        terminal_pattern = perm_data.get("terminal_pattern")
         matched_pattern = perm_data.get("matched_pattern")
 
         # If blocked by terminal
@@ -2273,7 +2263,6 @@ class SyftFolder:
                             if _glob_match(pattern, rel_path) or _glob_match(
                                 pattern, rel_path + "/"
                             ):
-                                terminal_pattern = pattern  # Track the matched pattern
                                 matched_pattern = pattern  # Also track in general matched pattern
                                 access = rule.get("access", {})
                                 # Terminal rules override everything - return immediately
@@ -2513,19 +2502,3 @@ class SyftFolder:
                         folder_obj._grant_access(user, permission)
 
         return new_folder
-
-
-# Utility function to clear the permission cache
-def clear_permission_cache() -> None:
-    """Clear the global permission cache."""
-    _permission_cache.clear()
-
-
-# Utility function to get cache statistics
-def get_cache_stats() -> Dict[str, Any]:
-    """Get statistics about the permission cache."""
-    return {
-        "size": len(_permission_cache.cache),
-        "max_size": _permission_cache.max_size,
-        "entries": list(_permission_cache.cache.keys()),
-    }

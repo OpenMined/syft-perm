@@ -7,7 +7,6 @@ NOTE: Some tests document differences between old ACL behavior and current imple
 4. Old ACL: Owners bypass all limits. Current: May depend on owner detection mechanism.
 """
 
-import os
 import shutil
 import sys
 import tempfile
@@ -16,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
+import syft_perm  # noqa: E402
 
 
 class TestFileLimitsAdvanced(unittest.TestCase):
@@ -343,7 +342,6 @@ class TestFileLimitsAdvanced(unittest.TestCase):
         )
 
         # Note: Default symlink behavior may vary - testing current implementation
-        syft_symlink = syft_perm.open(symlink)
         # The old system defaults to allow_symlinks=false, but current may differ
         # This test documents the expected behavior
 
@@ -446,9 +444,6 @@ rules:
         # Note: Pattern matching implementation may affect results
 
         # Root level .txt and .md files match first pattern (1MB limit)
-        syft_txt = syft_perm.open(files["readme.txt"])
-        syft_md = syft_perm.open(files["readme.md"])
-
         # These depend on how {txt,md} alternation is handled
         # Testing current implementation behavior
 

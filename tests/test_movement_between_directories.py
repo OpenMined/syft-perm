@@ -11,8 +11,8 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
-from syft_perm._impl import _permission_cache
+import syft_perm  # noqa: E402
+from syft_perm._impl import _permission_cache  # noqa: E402
 
 
 class TestMovementBetweenDirectories(unittest.TestCase):
@@ -403,7 +403,6 @@ class TestMovementBetweenDirectories(unittest.TestCase):
         self.assertFalse(syft_bin_before.has_read_access("bob@example.com"))
 
         # Get permissions data to check limits (implementation detail)
-        source_perms = syft_bin_before._get_all_permissions_with_sources()
         # Note: Actual limit enforcement happens in the ACL service, not in permission checking
 
         # Move file to destination with stricter limits

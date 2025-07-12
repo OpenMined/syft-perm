@@ -10,8 +10,8 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
-from syft_perm._impl import _permission_cache
+import syft_perm  # noqa: E402
+from syft_perm._impl import _permission_cache  # noqa: E402
 
 
 class TestCrossSiblingPatternInteractions(unittest.TestCase):

@@ -11,9 +11,8 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-import syft_perm
-from syft_perm._impl import _permission_cache, clear_permission_cache, get_cache_stats
+import syft_perm  # noqa: E402
+from syft_perm._impl import clear_permission_cache, get_cache_stats  # noqa: E402
 
 
 class TestBatchOperationsSiblings(unittest.TestCase):
@@ -75,7 +74,6 @@ class TestBatchOperationsSiblings(unittest.TestCase):
         batch_time = time.time() - start_time
 
         # Cache should be invalidated for modified files
-        cache_stats_after_grant = get_cache_stats()
         # In current implementation, invalidate clears by prefix, so all entries may be cleared
 
         # Verify permissions - siblings maintain independence

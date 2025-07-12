@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
+import syft_perm  # noqa: E402
 
 
 class TestCreatePermissions(unittest.TestCase):
@@ -256,8 +256,6 @@ class TestCreatePermissions(unittest.TestCase):
         self.assertFalse((alice_subdir / "syft.pub.yaml").exists())
 
         # Check permissions (owner detection might be mocked/simulated)
-        syft_file = syft_perm.open(alice_file)
-
         # Note: The actual implementation may need to detect owner
         # based on the path pattern datasites/{email}/...
         # This test documents expected behavior
@@ -462,7 +460,7 @@ rules:
     - alice@example.com
   limits:
     max_file_size: 1024  # 1KB limit
-- pattern: "*.log" 
+- pattern: "*.log"
   access:
     create:
     - bob@example.com

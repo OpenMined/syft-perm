@@ -1,7 +1,5 @@
 """SyftBox client integration for syft_perm."""
 
-from typing import Optional
-
 # Global variables for client state
 SYFTBOX_AVAILABLE = False
 client = None

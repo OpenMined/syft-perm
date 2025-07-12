@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
+import syft_perm  # noqa: E402
 
 
 class TestGlobPatterns(unittest.TestCase):

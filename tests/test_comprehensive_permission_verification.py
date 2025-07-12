@@ -3,7 +3,6 @@
 import shutil
 import sys
 import tempfile
-import time
 import unittest
 from pathlib import Path
 
@@ -11,8 +10,8 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
-from syft_perm._impl import clear_permission_cache, get_cache_stats
+import syft_perm  # noqa: E402
+from syft_perm._impl import clear_permission_cache, get_cache_stats  # noqa: E402
 
 
 class TestComprehensivePermissionVerification(unittest.TestCase):

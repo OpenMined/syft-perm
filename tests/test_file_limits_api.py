@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
+import syft_perm  # noqa: E402
 
 
 class TestFileLimitsAPI(unittest.TestCase):
@@ -172,7 +172,7 @@ class TestFileLimitsAPI(unittest.TestCase):
         self.assertTrue(yaml_file.exists())
 
         # Read and verify YAML content
-        import yaml
+        import yaml  # noqa: E402
 
         with open(yaml_file, "r") as f:
             content = yaml.safe_load(f)

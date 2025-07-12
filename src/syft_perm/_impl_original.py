@@ -1,13 +1,12 @@
 """Internal implementation of SyftFile and SyftFolder classes."""
 
 import shutil
-from pathlib import Path, PurePath
-from typing import Dict, Iterator, List, Literal, Optional, Union
+from pathlib import Path
+from typing import Dict, List, Literal, Union
 
 import yaml
 
 from ._utils import (
-    create_access_dict,
     format_users,
     is_datasite_email,
     read_syftpub_yaml,

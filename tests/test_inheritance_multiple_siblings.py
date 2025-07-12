@@ -1,4 +1,4 @@
-"""Test inheritance behavior with multiple siblings according to old syftbox nearest-node algorithm."""
+"""Test inheritance behavior with multiple siblings using nearest-node algorithm."""
 
 import os
 import shutil
@@ -11,7 +11,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import syft_perm
+import syft_perm  # noqa: E402
 
 
 class TestInheritanceMultipleSiblings(unittest.TestCase):
