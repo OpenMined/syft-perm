@@ -294,13 +294,22 @@ class SyftFile:
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
             
-            # Combine all unique reasons
-            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
-                all_reasons.update(reasons)
+            # Combine unique reasons only for permissions the user has
+            if read_has:
+                all_reasons.update(read_reasons)
+            if create_has:
+                all_reasons.update(create_reasons)
+            if write_has:
+                all_reasons.update(write_reasons)
+            if admin_has:
+                all_reasons.update(admin_reasons)
             
             # Format reasons for display - always show all reasons
             reason_list = sorted(list(all_reasons))
-            reason_text = "; ".join(reason_list)
+            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+                reason_text = "No permissions found"
+            else:
+                reason_text = "; ".join(reason_list)
             
             rows.append([
                 "public",
@@ -323,13 +332,22 @@ class SyftFile:
             write_has, write_reasons = self._check_permission_with_reasons(user, "write")
             admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
             
-            # Combine all unique reasons
-            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
-                all_reasons.update(reasons)
+            # Combine unique reasons only for permissions the user has
+            if read_has:
+                all_reasons.update(read_reasons)
+            if create_has:
+                all_reasons.update(create_reasons)
+            if write_has:
+                all_reasons.update(write_reasons)
+            if admin_has:
+                all_reasons.update(admin_reasons)
             
             # Format reasons for display - always show all reasons
             reason_list = sorted(list(all_reasons))
-            reason_text = "; ".join(reason_list)
+            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+                reason_text = "No permissions found"
+            else:
+                reason_text = "; ".join(reason_list)
             
             row = [
                 user,
@@ -959,13 +977,22 @@ class SyftFolder:
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
             
-            # Combine all unique reasons
-            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
-                all_reasons.update(reasons)
+            # Combine unique reasons only for permissions the user has
+            if read_has:
+                all_reasons.update(read_reasons)
+            if create_has:
+                all_reasons.update(create_reasons)
+            if write_has:
+                all_reasons.update(write_reasons)
+            if admin_has:
+                all_reasons.update(admin_reasons)
             
             # Format reasons for display - always show all reasons
             reason_list = sorted(list(all_reasons))
-            reason_text = "; ".join(reason_list)
+            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+                reason_text = "No permissions found"
+            else:
+                reason_text = "; ".join(reason_list)
             
             rows.append([
                 "public",
@@ -988,13 +1015,22 @@ class SyftFolder:
             write_has, write_reasons = self._check_permission_with_reasons(user, "write")
             admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
             
-            # Combine all unique reasons
-            for reasons in [read_reasons, create_reasons, write_reasons, admin_reasons]:
-                all_reasons.update(reasons)
+            # Combine unique reasons only for permissions the user has
+            if read_has:
+                all_reasons.update(read_reasons)
+            if create_has:
+                all_reasons.update(create_reasons)
+            if write_has:
+                all_reasons.update(write_reasons)
+            if admin_has:
+                all_reasons.update(admin_reasons)
             
             # Format reasons for display - always show all reasons
             reason_list = sorted(list(all_reasons))
-            reason_text = "; ".join(reason_list)
+            if not reason_list and not any([read_has, create_has, write_has, admin_has]):
+                reason_text = "No permissions found"
+            else:
+                reason_text = "; ".join(reason_list)
             
             row = [
                 user,
