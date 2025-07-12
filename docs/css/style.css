@@ -577,3 +577,26 @@ footer a {
 .api-section h2 {
     margin-bottom: var(--space-6);
 }
+
+/* ================================
+   Tutorials Page Styles
+   ================================ */
+.tutorials-hero {
+    padding: var(--space-10) 0;
+    text-align: center;
+    background: var(--color-light-gray);
+}
+
+.tutorials-section {
+    padding: var(--space-10) 0;
+}
+
+.learning-path {
+    padding: var(--space-10) 0;
+    background: var(--color-white);
+}
+
+.additional-resources {
+    padding: var(--space-10) 0;
+    background: var(--color-light-gray);
+}

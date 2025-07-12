@@ -3,378 +3,332 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tutorials - SyftPerm Documentation</title>
-    <meta name="description" content="Complete tutorial series for mastering SyftPerm and SyftBox file permission management.">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="../css/style.css">
-    
-    <!-- Favicon -->
+    <title>Tutorials - SyftPerm</title>
     <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .tutorial-card {
+            background: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+            transition: all 0.2s;
+        }
+        
+        .tutorial-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .tutorial-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: var(--color-primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-right: var(--space-2);
+        }
+        
+        .tutorial-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--space-2);
+        }
+        
+        .tutorial-title h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+        
+        .tutorial-topics {
+            list-style: none;
+            padding: 0;
+            margin: var(--space-2) 0;
+        }
+        
+        .tutorial-topics li {
+            padding: var(--space-1) 0;
+            padding-left: var(--space-3);
+            position: relative;
+        }
+        
+        .tutorial-topics li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--color-primary);
+        }
+        
+        .difficulty {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: var(--space-2);
+        }
+        
+        .difficulty-beginner {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .difficulty-intermediate {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .difficulty-advanced {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+        
+        .difficulty-expert {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+        
+        .launch-btn {
+            display: inline-block;
+            margin-top: var(--space-3);
+            padding: var(--space-2) var(--space-3);
+            background: var(--color-primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .launch-btn:hover {
+            background: var(--color-primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .quickstart-card {
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            color: white;
+            padding: var(--space-6);
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: var(--space-8);
+        }
+        
+        .quickstart-card h2 {
+            color: white;
+            margin-bottom: var(--space-2);
+        }
+        
+        .quickstart-card p {
+            font-size: 1.2rem;
+            margin-bottom: var(--space-4);
+        }
+        
+        .quickstart-card .launch-btn {
+            background: white;
+            color: var(--color-primary);
+        }
+        
+        .quickstart-card .launch-btn:hover {
+            background: #f5f5f5;
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
+    <header>
+        <nav>
+            <div class="nav-wrapper">
                 <a href="../index.html" class="logo">SyftPerm</a>
-                <nav class="nav">
-                    <a href="../index.html" class="nav-link">Home</a>
-                    <a href="../installation.html" class="nav-link">Installation</a>
-                    <a href="../quickstart.html" class="nav-link">Quick Start</a>
-                    <a href="index.html" class="nav-link active">Tutorials</a>
-                    <a href="../api/index.html" class="nav-link">API Reference</a>
-                    <a href="https://github.com/OpenMined/syft-perm" class="nav-link">GitHub</a>
-                </nav>
+                <div class="nav-links">
+                    <a href="../quickstart.html">Quick Start</a>
+                    <a href="../api/index.html">API</a>
+                    <a href="index.html" class="active">Tutorials</a>
+                    <a href="https://github.com/OpenMined/syft-perm" class="github-link">GitHub</a>
+                </div>
             </div>
-        </div>
+        </nav>
     </header>
 
-    <!-- Main Content -->
-    <main class="main">
+    <!-- Tutorials Hero -->
+    <section class="tutorials-hero">
         <div class="container">
-            <!-- Page Header -->
-            <section class="page-header">
-                <h1 class="page-title">Tutorial Series</h1>
-                <p class="page-subtitle">
-                    Master SyftBox permissions from fundamentals to advanced patterns. 
-                    Learn through hands-on examples and real-world scenarios.
-                </p>
-            </section>
-
-            <!-- Learning Path -->
-            <section style="margin-bottom: 3rem;">
-                <div class="alert alert-info">
-                    <strong>📚 Learning Path:</strong> Start with the 5-minute quickstart if you're new to SyftPerm, then work through the comprehensive series in order. Each tutorial builds on the previous one.
-                </div>
-            </section>
-
-            <!-- Quick Start -->
-            <section style="margin-bottom: 3rem;">
-                <h2>🚀 Quick Start (5 Minutes)</h2>
-                <div class="card">
-                    <h3 class="card-title">Essential SyftPerm in 5 Minutes</h3>
-                    <div class="card-content">
-                        <p><strong>Perfect for:</strong> Getting started quickly, understanding core concepts</p>
-                        <p>Learn the fundamental concepts you need to be productive with SyftPerm immediately. Covers basic permission granting, folder inheritance, and pattern matching.</p>
-                        
-                        <p><strong>What you'll learn:</strong></p>
-                        <ul style="margin-left: 1.5rem;">
-                            <li>Opening files and folders with SyftPerm</li>
-                            <li>The 4-level permission hierarchy</li>
-                            <li>Granting and checking permissions</li>
-                            <li>Folder-level permission management</li>
-                            <li>Basic glob patterns for file types</li>
-                        </ul>
-                    </div>
-                    <div class="card-footer flex gap-4">
-                        <a href="../quickstart.html" class="btn btn-primary">Start Quick Tutorial</a>
-                        <a href="quickstart-notebook.html" class="btn btn-outline">Jupyter Notebook Version</a>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Comprehensive Series -->
-            <section style="margin-bottom: 3rem;">
-                <h2>📖 Comprehensive Tutorial Series</h2>
-                <p>Deep-dive tutorials that cover every aspect of SyftBox permissions. Work through these in order for complete mastery.</p>
-
-                <div class="grid grid-2" style="margin-top: 2rem;">
-                    <!-- Part 1 -->
-                    <div class="card">
-                        <h3 class="card-title">Part 1: Fundamentals</h3>
-                        <div class="card-content">
-                            <p><strong>Duration:</strong> 15-20 minutes</p>
-                            <p><strong>Prerequisites:</strong> None (beginner-friendly)</p>
-                            
-                            <p>Master the foundational concepts that power SyftBox permissions:</p>
-                            <ul style="margin-left: 1.5rem; font-size: 0.9rem;">
-                                <li>Permission hierarchy (Read → Create → Write → Admin)</li>
-                                <li>YAML file structure and version control</li>
-                                <li>Multi-user permission management</li>
-                                <li>Public access with "*" user</li>
-                                <li>Folder inheritance principles</li>
-                                <li>The nearest-node algorithm</li>
-                                <li>Ownership detection and automatic permissions</li>
-                                <li>Debugging with explain_permissions()</li>
-                            </ul>
-                        </div>
-                        <div class="card-footer flex gap-4">
-                            <a href="fundamentals.html" class="btn btn-primary">Start Part 1</a>
-                            <a href="fundamentals-notebook.html" class="btn btn-outline">Notebook</a>
-                        </div>
-                    </div>
-
-                    <!-- Part 2 -->
-                    <div class="card">
-                        <h3 class="card-title">Part 2: Patterns & Matching</h3>
-                        <div class="card-content">
-                            <p><strong>Duration:</strong> 20-25 minutes</p>
-                            <p><strong>Prerequisites:</strong> Part 1 completed</p>
-                            
-                            <p>Unlock the full power of pattern-based permissions:</p>
-                            <ul style="margin-left: 1.5rem; font-size: 0.9rem;">
-                                <li>Glob pattern syntax (* and ? wildcards)</li>
-                                <li>Double asterisk (**) recursive matching</li>
-                                <li>Pattern specificity scoring system</li>
-                                <li>Conflict resolution (most specific wins)</li>
-                                <li>Advanced pattern combinations</li>
-                                <li>First-match-wins within directories</li>
-                                <li>Pattern debugging techniques</li>
-                                <li>Common pitfalls and solutions</li>
-                            </ul>
-                        </div>
-                        <div class="card-footer flex gap-4">
-                            <a href="patterns.html" class="btn btn-primary">Start Part 2</a>
-                            <a href="patterns-notebook.html" class="btn btn-outline">Notebook</a>
-                        </div>
-                    </div>
-
-                    <!-- Part 3 -->
-                    <div class="card">
-                        <h3 class="card-title">Part 3: Inheritance & Hierarchy</h3>
-                        <div class="card-content">
-                            <p><strong>Duration:</strong> 20-25 minutes</p>
-                            <p><strong>Prerequisites:</strong> Parts 1-2 completed</p>
-                            
-                            <p>Master complex inheritance patterns and multi-level scenarios:</p>
-                            <ul style="margin-left: 1.5rem; font-size: 0.9rem;">
-                                <li>Complex multi-level directory structures</li>
-                                <li>Nearest-node algorithm deep dive</li>
-                                <li>No permission accumulation principle</li>
-                                <li>Grandparent-parent-child scenarios</li>
-                                <li>Cross-sibling permission isolation</li>
-                                <li>File movement and permission updates</li>
-                                <li>Inheritance debugging strategies</li>
-                                <li>Performance considerations for deep trees</li>
-                            </ul>
-                        </div>
-                        <div class="card-footer flex gap-4">
-                            <a href="inheritance.html" class="btn btn-primary">Start Part 3</a>
-                            <a href="inheritance-notebook.html" class="btn btn-outline">Notebook</a>
-                        </div>
-                    </div>
-
-                    <!-- Part 4 -->
-                    <div class="card">
-                        <h3 class="card-title">Part 4: Terminal Nodes & Limits</h3>
-                        <div class="card-content">
-                            <p><strong>Duration:</strong> 15-20 minutes</p>
-                            <p><strong>Prerequisites:</strong> Parts 1-3 completed</p>
-                            
-                            <p>Advanced features for precise permission control:</p>
-                            <ul style="margin-left: 1.5rem; font-size: 0.9rem;">
-                                <li>Terminal nodes (blocking inheritance)</li>
-                                <li>When and why to use terminal: true</li>
-                                <li>File size limits and enforcement</li>
-                                <li>Directory and symlink restrictions</li>
-                                <li>Compliance checking and reporting</li>
-                                <li>Combining limits with permission levels</li>
-                                <li>Security best practices</li>
-                                <li>Troubleshooting limit conflicts</li>
-                            </ul>
-                        </div>
-                        <div class="card-footer flex gap-4">
-                            <a href="terminal-nodes.html" class="btn btn-primary">Start Part 4</a>
-                            <a href="terminal-nodes-notebook.html" class="btn btn-outline">Notebook</a>
-                        </div>
-                    </div>
-
-                    <!-- Part 5 -->
-                    <div class="card">
-                        <h3 class="card-title">Part 5: Mastery & Complex Scenarios</h3>
-                        <div class="card-content">
-                            <p><strong>Duration:</strong> 25-30 minutes</p>
-                            <p><strong>Prerequisites:</strong> Parts 1-4 completed</p>
-                            
-                            <p>Expert-level techniques and real-world edge cases:</p>
-                            <ul style="margin-left: 1.5rem; font-size: 0.9rem;">
-                                <li>Complex enterprise permission schemes</li>
-                                <li>Multi-tenant collaboration patterns</li>
-                                <li>Debugging mysterious permission issues</li>
-                                <li>Performance optimization for large projects</li>
-                                <li>Edge cases and corner scenarios</li>
-                                <li>Security auditing and compliance</li>
-                                <li>Advanced pattern optimization</li>
-                                <li>Custom permission workflows</li>
-                            </ul>
-                        </div>
-                        <div class="card-footer flex gap-4">
-                            <a href="mastery.html" class="btn btn-primary">Start Part 5</a>
-                            <a href="mastery-notebook.html" class="btn btn-outline">Notebook</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Tutorial Formats -->
-            <section style="margin-bottom: 3rem;">
-                <h2>📚 Tutorial Formats</h2>
-                <div class="grid grid-2">
-                    <div class="card">
-                        <h3 class="card-title">🌐 Web Tutorials</h3>
-                        <div class="card-content">
-                            <p>Read tutorials directly in your browser with syntax highlighting, interactive examples, and easy navigation.</p>
-                            <p><strong>Best for:</strong> Quick reading, easy sharing, mobile devices</p>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3 class="card-title">📓 Jupyter Notebooks</h3>
-                        <div class="card-content">
-                            <p>Download and run interactive notebooks locally. Experiment with the code, modify examples, and build your own test cases.</p>
-                            <p><strong>Best for:</strong> Hands-on learning, experimentation, taking notes</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="alert alert-info">
-                    <strong>💡 Recommendation:</strong> Use web tutorials for your first read-through, then download the notebooks to practice and experiment with the concepts.
-                </div>
-            </section>
-
-            <!-- Learning Tips -->
-            <section style="margin-bottom: 3rem;">
-                <h2>🎯 Learning Tips</h2>
-                <div class="grid grid-2">
-                    <div class="card">
-                        <h4 class="card-title">📝 Take Notes</h4>
-                        <div class="card-content">
-                            <p>Keep track of key concepts, especially the nearest-node algorithm and pattern specificity rules. These are the foundation of everything else.</p>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🧪 Experiment</h4>
-                        <div class="card-content">
-                            <p>Try variations of the examples. What happens if you change a pattern? How does inheritance work in your specific use case?</p>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🔍 Use Debugging Tools</h4>
-                        <div class="card-content">
-                            <p>Master <code class="code-inline">explain_permissions()</code> early. It will save you hours of confusion and help you understand the system deeply.</p>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🏗️ Build Real Projects</h4>
-                        <div class="card-content">
-                            <p>Apply concepts to your actual projects. Real-world practice is the best way to solidify your understanding.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Prerequisites -->
-            <section style="margin-bottom: 3rem;">
-                <h2>📋 Prerequisites</h2>
-                <div class="card">
-                    <div class="card-content">
-                        <h4>Required Knowledge</h4>
-                        <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                            <li><strong>Python:</strong> Basic Python syntax and imports</li>
-                            <li><strong>File Systems:</strong> Understanding of files, folders, and paths</li>
-                            <li><strong>Command Line:</strong> Basic terminal/command prompt usage</li>
-                        </ul>
-
-                        <h4>Helpful But Not Required</h4>
-                        <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
-                            <li><strong>YAML:</strong> Familiarity with YAML syntax</li>
-                            <li><strong>Glob Patterns:</strong> Experience with wildcards (* and ?)</li>
-                            <li><strong>Jupyter:</strong> For notebook versions of tutorials</li>
-                            <li><strong>Git:</strong> For version controlling permission files</li>
-                        </ul>
-
-                        <h4>Setup Requirements</h4>
-                        <ul style="margin-left: 1.5rem;">
-                            <li><strong>Python 3.9+</strong> installed on your system</li>
-                            <li><strong>SyftPerm</strong> installed: <code class="code-inline">pip install "syft-perm[display]"</code></li>
-                            <li><strong>Text Editor</strong> or Jupyter notebook environment</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Support -->
-            <section>
-                <h2>🆘 Need Help?</h2>
-                <p>If you get stuck or have questions while working through the tutorials:</p>
-                
-                <div class="grid grid-3" style="margin-top: 1rem;">
-                    <div class="card">
-                        <h4 class="card-title">📖 Check the API Reference</h4>
-                        <div class="card-content">
-                            <p>Complete documentation of every function and parameter.</p>
-                        </div>
-                        <div class="card-footer">
-                            <a href="../api/index.html" class="btn btn-outline">Browse API</a>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">🐛 Report Issues</h4>
-                        <div class="card-content">
-                            <p>Found a bug or unclear explanation? Let us know!</p>
-                        </div>
-                        <div class="card-footer">
-                            <a href="https://github.com/OpenMined/syft-perm/issues" class="btn btn-outline">Report Issue</a>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h4 class="card-title">💬 Community</h4>
-                        <div class="card-content">
-                            <p>Join the OpenMined community for help and discussion.</p>
-                        </div>
-                        <div class="card-footer">
-                            <a href="https://openmined.org/" class="btn btn-outline">Join Community</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <h1>Comprehensive Tutorials</h1>
+            <p class="hero-subtitle">From beginner to expert - master SyftBox permissions step by step.</p>
         </div>
-    </main>
+    </section>
+
+    <!-- Quick Start Tutorial -->
+    <section class="tutorials-section">
+        <div class="container">
+            <div class="quickstart-card">
+                <h2>⚡ Start Here: 5-Minute Quick Start</h2>
+                <p>New to SyftPerm? Get up and running in just 5 minutes with our interactive notebook.</p>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/syft-perm-5-minute-quickstart.ipynb" class="launch-btn">Launch Quick Start →</a>
+            </div>
+
+            <h2 style="margin-bottom: var(--space-6);">📚 Complete Tutorial Series</h2>
+            
+            <!-- Tutorial 1 -->
+            <div class="tutorial-card">
+                <div class="tutorial-title">
+                    <span class="tutorial-number">1</span>
+                    <h3>Permission Fundamentals</h3>
+                    <span class="difficulty difficulty-beginner">Beginner</span>
+                </div>
+                <p>Master the core concepts of SyftBox permissions from the ground up.</p>
+                <ul class="tutorial-topics">
+                    <li>The 4-level permission hierarchy (Read → Create → Write → Admin)</li>
+                    <li>Understanding syft.pub.yaml structure</li>
+                    <li>Managing multiple users with different access levels</li>
+                    <li>Public access patterns using wildcards</li>
+                    <li>Basic folder inheritance principles</li>
+                    <li>Permission debugging and reasoning</li>
+                    <li>Ownership and automatic permissions</li>
+                </ul>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/01-comprehensive-syftbox-permissions-fundamentals.ipynb" class="launch-btn">Start Tutorial →</a>
+            </div>
+
+            <!-- Tutorial 2 -->
+            <div class="tutorial-card">
+                <div class="tutorial-title">
+                    <span class="tutorial-number">2</span>
+                    <h3>Patterns and Matching</h3>
+                    <span class="difficulty difficulty-intermediate">Intermediate</span>
+                </div>
+                <p>Unlock the power of glob patterns to control permissions at scale.</p>
+                <ul class="tutorial-topics">
+                    <li>Basic glob patterns: *, ?, and character ranges</li>
+                    <li>Recursive matching with ** (double asterisk)</li>
+                    <li>Pattern specificity and conflict resolution</li>
+                    <li>Advanced double-star pattern techniques</li>
+                    <li>First-match-wins principle</li>
+                    <li>Pattern debugging strategies</li>
+                    <li>Common pitfalls and solutions</li>
+                </ul>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/02-patterns-and-matching.ipynb" class="launch-btn">Start Tutorial →</a>
+            </div>
+
+            <!-- Tutorial 3 -->
+            <div class="tutorial-card">
+                <div class="tutorial-title">
+                    <span class="tutorial-number">3</span>
+                    <h3>Inheritance and Hierarchy</h3>
+                    <span class="difficulty difficulty-intermediate">Intermediate</span>
+                </div>
+                <p>Learn how permissions flow through your directory structure.</p>
+                <ul class="tutorial-topics">
+                    <li>Deep dive into the nearest-node algorithm</li>
+                    <li>Pattern matching in inheritance contexts</li>
+                    <li>Complex multi-level permission scenarios</li>
+                    <li>The "no accumulation" principle explained</li>
+                    <li>Debugging inheritance issues effectively</li>
+                    <li>Real-world organizational hierarchies</li>
+                    <li>Advanced inheritance patterns</li>
+                </ul>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/03-inheritance-and-hierarchy.ipynb" class="launch-btn">Start Tutorial →</a>
+            </div>
+
+            <!-- Tutorial 4 -->
+            <div class="tutorial-card">
+                <div class="tutorial-title">
+                    <span class="tutorial-number">4</span>
+                    <h3>Terminal Nodes and Limits</h3>
+                    <span class="difficulty difficulty-advanced">Advanced</span>
+                </div>
+                <p>Advanced features for security and resource control.</p>
+                <ul class="tutorial-topics">
+                    <li>Terminal nodes that block inheritance completely</li>
+                    <li>Setting and enforcing file size limits</li>
+                    <li>Using the file limits API effectively</li>
+                    <li>Directory and symlink restrictions</li>
+                    <li>Advanced terminal node scenarios</li>
+                    <li>Combining limits with terminal nodes</li>
+                    <li>Real-world security patterns</li>
+                </ul>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/04-terminal-nodes-and-limits.ipynb" class="launch-btn">Start Tutorial →</a>
+            </div>
+
+            <!-- Tutorial 5 -->
+            <div class="tutorial-card">
+                <div class="tutorial-title">
+                    <span class="tutorial-number">5</span>
+                    <h3>Mastery: Complex Scenarios</h3>
+                    <span class="difficulty difficulty-expert">Expert</span>
+                </div>
+                <p>Expert-level techniques for real-world applications.</p>
+                <ul class="tutorial-topics">
+                    <li>Building a multi-tenant SaaS platform</li>
+                    <li>Advanced debugging techniques</li>
+                    <li>Performance optimization strategies</li>
+                    <li>Layered security patterns</li>
+                    <li>Content-based access control</li>
+                    <li>Master-level edge cases</li>
+                    <li>Final challenge: Design a research institution system</li>
+                </ul>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/05-mastery-complex-scenarios.ipynb" class="launch-btn">Start Tutorial →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Learning Path -->
+    <section class="learning-path">
+        <div class="container">
+            <h2>🎯 Your Learning Path</h2>
+            <div style="background: var(--color-light-gray); padding: var(--space-4); border-radius: 12px; margin-top: var(--space-4);">
+                <h3>Recommended Progression:</h3>
+                <ol style="font-size: 1.1rem; line-height: 2;">
+                    <li><strong>Start with the 5-minute quickstart</strong> - Get a taste of what's possible</li>
+                    <li><strong>Complete Tutorial 1</strong> - Build a solid foundation</li>
+                    <li><strong>Practice with Tutorial 2</strong> - Master pattern matching</li>
+                    <li><strong>Advance through Tutorials 3-4</strong> - Learn sophisticated techniques</li>
+                    <li><strong>Challenge yourself with Tutorial 5</strong> - Become a SyftPerm expert</li>
+                </ol>
+                
+                <p style="margin-top: var(--space-3);"><strong>Time Investment:</strong> Each tutorial takes 30-60 minutes. Complete the entire series in a weekend!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Additional Resources -->
+    <section class="additional-resources">
+        <div class="container">
+            <h2>📖 Additional Resources</h2>
+            <div class="next-links">
+                <div class="next-link">
+                    <h3>🔧 API Reference</h3>
+                    <p>Quick lookup for all methods and parameters.</p>
+                    <a href="../api/index.html" class="btn btn-secondary">View API Docs</a>
+                </div>
+                
+                <div class="next-link">
+                    <h3>💻 Example Code</h3>
+                    <p>Real-world examples and snippets.</p>
+                    <a href="https://github.com/OpenMined/syft-perm/tree/main/examples" class="btn btn-secondary">Browse Examples</a>
+                </div>
+                
+                <div class="next-link">
+                    <h3>💬 Get Help</h3>
+                    <p>Join our community for support.</p>
+                    <a href="https://openmined.org" class="btn btn-secondary">Community Forum</a>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer>
         <div class="container">
-            <div class="grid grid-3">
-                <div>
-                    <h4 style="margin-bottom: 1rem;">SyftPerm</h4>
-                    <p>File permission management for SyftBox made simple.</p>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 1rem;">Documentation</h4>
-                    <ul style="list-style: none;">
-                        <li style="margin-bottom: 0.5rem;"><a href="../installation.html">Installation</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="../quickstart.html">Quick Start</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="index.html">Tutorials</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="../api/index.html">API Reference</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 1rem;">Community</h4>
-                    <ul style="list-style: none;">
-                        <li style="margin-bottom: 0.5rem;"><a href="https://github.com/OpenMined/syft-perm">GitHub</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="https://openmined.org/">OpenMined</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="https://syftbox.net/">SyftBox</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #444;">
-                <p>&copy; 2024 OpenMined. Released under MIT License.</p>
-            </div>
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
         </div>
     </footer>
 
-    <!-- JavaScript -->
     <script src="../js/main.js"></script>
 </body>
 </html>
