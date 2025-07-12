@@ -707,7 +707,8 @@ class SyftFolder:
         # Count files for large folder warning
         file_count = sum(1 for _ in self._path.rglob("*"))
         if file_count > 100 and not _confirm_action(
-            f"⚠️  Warning: Moving large folder with {file_count} files. This may take a while. Continue?",
+            f"⚠️  Warning: Moving large folder with {file_count} files. "
+            f"This may take a while. Continue?",
             force=force,
         ):
             print("Operation cancelled.")

@@ -601,8 +601,10 @@ class SyftFile:
                                     if self._size > max_file_size:
                                         continue  # Skip this rule if file exceeds size limit
 
-                            # Found a matching rule - use the first matching rule since they're sorted by specificity
-                            # This becomes our nearest node (old syftbox: most specific matching rule wins)
+                            # Found a matching rule - use the first matching rule
+                            # since they're sorted by specificity
+                            # This becomes our nearest node
+                            # (old syftbox: most specific matching rule wins)
                             nearest_permissions = {
                                 perm: format_users(access.get(perm, []))
                                 for perm in ["read", "create", "write", "admin"]
@@ -624,7 +626,10 @@ class SyftFile:
         return nearest_permissions
 
     def _get_permission_table(self) -> List[List[str]]:
-        """Get permissions formatted as a table showing effective permissions with hierarchy and reasons."""
+        """Get permissions formatted as a table showing effective permissions.
+
+        Shows hierarchy and reasons.
+        """
         perms = self._get_all_permissions()
 
         # Get all unique users
@@ -825,7 +830,8 @@ class SyftFile:
             result.append("-" * 70)
             for row in rows:
                 result.append(
-                    f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5} {row[5] if len(row) > 5 else ''}"
+                    f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} "
+                    f"{row[4]:<5} {row[5] if len(row) > 5 else ''}"
                 )
             return "\n".join(result)
 
@@ -905,17 +911,46 @@ class SyftFile:
         file_type = "Directory" if is_dir else ("Symlink" if is_symlink else "Regular File")
         compliance_html = f"""<p><b>File Compliance Check:</b></p>
 <table border="1" style="border-collapse: collapse; margin: 10px 0;">
-<tr><th style="padding: 5px;">Property</th><th style="padding: 5px;">Current</th><th style="padding: 5px;">Limit/Setting</th><th style="padding: 5px;">Status</th></tr>
-<tr><td style="padding: 5px;">File Size</td><td style="padding: 5px;">{size_display}</td><td style="padding: 5px;">{limit_display}</td><td style="padding: 5px;">{size_status}</td></tr>
-<tr><td style="padding: 5px;">File Type</td><td style="padding: 5px;">{file_type}</td><td style="padding: 5px;">Dirs: {'✓' if limits['allow_dirs'] else '✗'} | Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td><td style="padding: 5px;">{type_status}</td></tr>
-<tr><td style="padding: 5px;"><b>Overall</b></td><td style="padding: 5px;" colspan="2"><b>File access compliance</b></td><td style="padding: 5px;"><b>{overall_status}</b></td></tr>
+<tr>
+<th style="padding: 5px;">Property</th>
+<th style="padding: 5px;">Current</th>
+<th style="padding: 5px;">Limit/Setting</th>
+<th style="padding: 5px;">Status</th>
+</tr>
+<tr>
+<td style="padding: 5px;">File Size</td>
+<td style="padding: 5px;">{size_display}</td>
+<td style="padding: 5px;">{limit_display}</td>
+<td style="padding: 5px;">{size_status}</td>
+</tr>
+<tr>
+<td style="padding: 5px;">File Type</td>
+<td style="padding: 5px;">{file_type}</td>
+<td style="padding: 5px;">Dirs: {'✓' if limits['allow_dirs'] else '✗'} | 
+Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
+<td style="padding: 5px;">{type_status}</td>
+</tr>
+<tr>
+<td style="padding: 5px;"><b>Overall</b></td>
+<td style="padding: 5px;" colspan="2"><b>File access compliance</b></td>
+<td style="padding: 5px;"><b>{overall_status}</b></td>
+</tr>
 </table>\n"""
 
         # Add editor link
-        editor_link = f'<p style="margin: 10px 0;"><a href="{editor_url}" target="_blank" style="background: #1976d2; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px;">🖊️ Edit Permissions</a></p>\n'
+        editor_link = (
+            f'<p style="margin: 10px 0;">'
+            f'<a href="{editor_url}" target="_blank" '
+            f'style="background: #1976d2; color: white; padding: 8px 16px; '
+            f'text-decoration: none; border-radius: 4px; font-size: 14px;">'
+            f"🖊️ Edit Permissions</a></p>\n"
+        )
 
         if not rows:
-            return f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n{editor_link}{compliance_html}"
+            return (
+                f"<p><b>SyftFile('{self._path}')</b> - No permissions set</p>\n"
+                f"{editor_link}{compliance_html}"
+            )
 
         try:
             from tabulate import tabulate
@@ -925,7 +960,9 @@ class SyftFile:
                 headers=["User", "Read", "Create", "Write", "Admin", "Reason"],
                 tablefmt="html",
             )
-            return f"<p><b>SyftFile('{self._path}')</b></p>\n{editor_link}{compliance_html}{table}"
+            return (
+                f"<p><b>SyftFile('{self._path}')</b></p>\n" f"{editor_link}{compliance_html}{table}"
+            )
         except ImportError:
             # Fallback to simple HTML table if tabulate not available
             result = [f"<p><b>SyftFile('{self._path}')</b></p>"]
@@ -937,7 +974,9 @@ class SyftFile:
             )
             for row in rows:
                 result.append(
-                    f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5] if len(row) > 5 else ''}</td></tr>"
+                    f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td>"
+                    f"<td>{row[3]}</td><td>{row[4]}</td>"
+                    f"<td>{row[5] if len(row) > 5 else ''}</td></tr>"
                 )
             result.append("</table>")
             return "\n".join(result)
@@ -1224,7 +1263,9 @@ class SyftFile:
                                         }
                                     ]
                             found_matching_rule = True
-                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                            # Stop at first matching rule
+                            # (rules should be sorted by specificity)
+                            break
 
                     # If we found a matching rule, this is our nearest node - stop searching
                     if found_matching_rule:
@@ -1532,7 +1573,8 @@ class SyftFolder:
                         sorted_rules = _sort_rules_by_specificity(rules)
                         for rule in sorted_rules:
                             pattern = rule.get("pattern", "")
-                            # Check if pattern matches our folder path relative to this directory
+                            # Check if pattern matches our folder path
+                            # relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path) or _glob_match(
                                 pattern, rel_path + "/"
@@ -1580,7 +1622,9 @@ class SyftFolder:
                                 for perm in ["read", "create", "write", "admin"]
                             }
                             found_matching_rule = True
-                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                            # Stop at first matching rule
+                            # (rules should be sorted by specificity)
+                            break
 
                     # If we found a matching rule, this is our nearest node - stop searching
                     if found_matching_rule:
@@ -1596,7 +1640,10 @@ class SyftFolder:
         return nearest_permissions
 
     def _get_permission_table(self) -> List[List[str]]:
-        """Get permissions formatted as a table showing effective permissions with hierarchy and reasons."""
+        """Get permissions formatted as a table showing effective permissions.
+
+        Shows hierarchy and reasons.
+        """
         perms = self._get_all_permissions()
 
         # Get all unique users
@@ -1797,7 +1844,8 @@ class SyftFolder:
             result.append("-" * 70)
             for row in rows:
                 result.append(
-                    f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} {row[4]:<5} {row[5] if len(row) > 5 else ''}"
+                    f"{row[0]:<20} {row[1]:<5} {row[2]:<7} {row[3]:<6} "
+                    f"{row[4]:<5} {row[5] if len(row) > 5 else ''}"
                 )
             return "\n".join(result)
 
@@ -1915,15 +1963,45 @@ class SyftFolder:
         # Build compliance table
         compliance_html = f"""<p><b>Folder Compliance Check:</b></p>
 <table border="1" style="border-collapse: collapse; margin: 10px 0;">
-<tr><th style="padding: 5px;">Property</th><th style="padding: 5px;">Current State</th><th style="padding: 5px;">Policy/Limit</th><th style="padding: 5px;">Status</th></tr>
-<tr><td style="padding: 5px;">Largest File</td><td style="padding: 5px;">{largest_display}</td><td style="padding: 5px;">{limit_display}</td><td style="padding: 5px;">{size_status}</td></tr>
-<tr><td style="padding: 5px;">Subdirectories</td><td style="padding: 5px;">{subdirs} subdirectories</td><td style="padding: 5px;">{'Allowed' if limits['allow_dirs'] else 'Blocked'}</td><td style="padding: 5px;">{dir_status}</td></tr>
-<tr><td style="padding: 5px;">Symlinks</td><td style="padding: 5px;">{symlinks} symlinks</td><td style="padding: 5px;">{'Allowed' if limits['allow_symlinks'] else 'Blocked'}</td><td style="padding: 5px;">{symlink_status}</td></tr>
-<tr><td style="padding: 5px;"><b>Overall</b></td><td style="padding: 5px;" colspan="2"><b>Folder access compliance</b></td><td style="padding: 5px;"><b>{overall_status}</b></td></tr>
+<tr>
+<th style="padding: 5px;">Property</th>
+<th style="padding: 5px;">Current State</th>
+<th style="padding: 5px;">Policy/Limit</th>
+<th style="padding: 5px;">Status</th>
+</tr>
+<tr>
+<td style="padding: 5px;">Largest File</td>
+<td style="padding: 5px;">{largest_display}</td>
+<td style="padding: 5px;">{limit_display}</td>
+<td style="padding: 5px;">{size_status}</td>
+</tr>
+<tr>
+<td style="padding: 5px;">Subdirectories</td>
+<td style="padding: 5px;">{subdirs} subdirectories</td>
+<td style="padding: 5px;">{'Allowed' if limits['allow_dirs'] else 'Blocked'}</td>
+<td style="padding: 5px;">{dir_status}</td>
+</tr>
+<tr>
+<td style="padding: 5px;">Symlinks</td>
+<td style="padding: 5px;">{symlinks} symlinks</td>
+<td style="padding: 5px;">{'Allowed' if limits['allow_symlinks'] else 'Blocked'}</td>
+<td style="padding: 5px;">{symlink_status}</td>
+</tr>
+<tr>
+<td style="padding: 5px;"><b>Overall</b></td>
+<td style="padding: 5px;" colspan="2"><b>Folder access compliance</b></td>
+<td style="padding: 5px;"><b>{overall_status}</b></td>
+</tr>
 </table>\n"""
 
         # Add editor link
-        editor_link = f'<p style="margin: 10px 0;"><a href="{editor_url}" target="_blank" style="background: #1976d2; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-size: 14px;">🖊️ Edit Permissions</a></p>'
+        editor_link = (
+            f'<p style="margin: 10px 0;">'
+            f'<a href="{editor_url}" target="_blank" '
+            f'style="background: #1976d2; color: white; padding: 8px 16px; '
+            f'text-decoration: none; border-radius: 4px; font-size: 14px;">'
+            f"🖊️ Edit Permissions</a></p>"
+        )
 
         # Build the HTML output
         result = [f"<p><b>SyftFolder('{self._path}')</b></p>", editor_link, compliance_html.strip()]
@@ -1952,7 +2030,9 @@ class SyftFolder:
             )
             for row in rows:
                 result.append(
-                    f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5] if len(row) > 5 else ''}</td></tr>"
+                    f"<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td>"
+                    f"<td>{row[3]}</td><td>{row[4]}</td>"
+                    f"<td>{row[5] if len(row) > 5 else ''}</td></tr>"
                 )
             result.append("</table>")
             return "\n".join(result)
@@ -2258,7 +2338,8 @@ class SyftFolder:
                         sorted_rules = _sort_rules_by_specificity(rules)
                         for rule in sorted_rules:
                             pattern = rule.get("pattern", "")
-                            # Check if pattern matches our folder path relative to this directory
+                            # Check if pattern matches our folder path
+                            # relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path) or _glob_match(
                                 pattern, rel_path + "/"
@@ -2321,7 +2402,9 @@ class SyftFolder:
                                         }
                                     ]
                             found_matching_rule = True
-                            break  # Stop at first matching rule (rules should be sorted by specificity)
+                            # Stop at first matching rule
+                            # (rules should be sorted by specificity)
+                            break
 
                     # If we found a matching rule, this is our nearest node - stop searching
                     if found_matching_rule:

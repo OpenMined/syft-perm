@@ -67,7 +67,10 @@ class TestEdgeCases(unittest.TestCase):
         self.assertTrue(syft_file.has_read_access("user_c@example.com"))  # Nearest matching rule
 
     def test_missing_intermediate_directories(self):
-        """Test permissions work correctly when intermediate directories don't exist or lack permissions."""
+        """Test permissions work correctly when intermediate directories.
+
+        Tests when they don't exist or lack permissions.
+        """
         # Create grandparent
         grandparent = Path(self.test_dir) / "grandparent"
         grandparent.mkdir()
@@ -131,8 +134,10 @@ class TestEdgeCases(unittest.TestCase):
         # Bob should have write from grandchild (nearest matching rule)
         self.assertTrue(syft_file.has_write_access("bob@example.com"))
 
-        # Alice should NOT have read because nearest-node algorithm uses grandchild rule only
-        # The corrupt child YAML is properly skipped, but grandchild rule is more specific than parent
+        # Alice should NOT have read because nearest-node algorithm
+        # uses grandchild rule only
+        # The corrupt child YAML is properly skipped, but grandchild rule
+        # is more specific than parent
         self.assertFalse(syft_file.has_read_access("alice@example.com"))
 
     def test_very_deep_nesting_10_plus_levels(self):

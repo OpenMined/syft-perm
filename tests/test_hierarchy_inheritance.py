@@ -310,7 +310,10 @@ class TestHierarchyInheritance(unittest.TestCase):
         self.assertTrue(any("uploads/**" in r for r in create_reasons))
 
     def test_grandparent_public_parent_specific_child_inherits(self):
-        """Test grandparent *, parent specific user, child nothing → child gets parent's user only."""
+        """Test grandparent *, parent specific user, child nothing.
+
+        Child gets parent's user only.
+        """
         # Create grandparent with public read
         grandparent_dir = Path(self.test_dir) / "grandparent"
         grandparent_dir.mkdir(parents=True)
@@ -414,7 +417,8 @@ class TestHierarchyInheritance(unittest.TestCase):
         self.assertFalse(gp_syft.has_read_access("bob@example.com"))
         self.assertFalse(gp_syft.has_read_access("alice@example.com"))
 
-        # Test parent level - bob has write/create/read, charlie and alice have NO access (nearest-node)
+        # Test parent level - bob has write/create/read
+        # charlie and alice have NO access (nearest-node)
         p_syft = syft_perm.open(parent_file)
         self.assertTrue(p_syft.has_write_access("bob@example.com"))
         self.assertTrue(p_syft.has_create_access("bob@example.com"))  # Via hierarchy

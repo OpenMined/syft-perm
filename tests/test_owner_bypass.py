@@ -26,7 +26,10 @@ class TestOwnerBypass(unittest.TestCase):
         shutil.rmtree(self.test_dir)
 
     def test_non_owner_follows_normal_rules(self):
-        """Test that users follow normal permission rules when accessing files not under their datasites path."""
+        """Test that users follow normal permission rules.
+
+        When accessing files not under their datasites path.
+        """
         # Create a file under alice's datasites path
         alice_dir = Path(self.test_dir) / "datasites" / "alice@example.com"
         alice_dir.mkdir(parents=True)
@@ -138,7 +141,8 @@ class TestOwnerBypass(unittest.TestCase):
 
     def test_simple_prefix_matching(self):
         """Test that paths starting with 'alice/' grant alice all permissions."""
-        # This test checks the current implementation's prefix matching behavior
+        # This test checks the current implementation's prefix matching
+        # behavior
         # The implementation checks if str(path).startswith(user + "/") or str(path).startswith("/" + user + "/")
         # For this to work with absolute paths, we need to check what the implementation actually does
 

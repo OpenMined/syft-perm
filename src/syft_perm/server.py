@@ -418,7 +418,8 @@ def get_editor_html(path: str) -> str:
                 <h2>Add User</h2>
                 <div class="add-user">
                     <div class="autocomplete">
-                        <input type="text" id="user-input" placeholder="Enter email or datasite..." autocomplete="off">
+                        <input type="text" id="user-input" 
+                               placeholder="Enter email or datasite..." autocomplete="off">
                         <div id="autocomplete-suggestions" class="autocomplete-suggestions"></div>
                     </div>
                     <select id="permission-select">
@@ -506,7 +507,8 @@ def get_editor_html(path: str) -> str:
             }});
 
             if (allUsers.size === 0) {{
-                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No permissions set</div>';
+                container.innerHTML = '<div style="padding: 20px; text-align: center; ' +
+                    'color: #666;">No permissions set</div>';
                 return;
             }}
 
@@ -529,13 +531,17 @@ def get_editor_html(path: str) -> str:
                         <div class="user-permissions">${{userPerms.join(', ')}}</div>
                     </div>
                     <div class="permission-controls">
-                        <span class="permission-badge ${{permissions.read && permissions.read.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge 
+                              ${{permissions.read && permissions.read.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'read')">Read</span>
-                        <span class="permission-badge ${{permissions.create && permissions.create.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge 
+                              ${{permissions.create && permissions.create.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'create')">Create</span>
-                        <span class="permission-badge ${{permissions.write && permissions.write.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge 
+                              ${{permissions.write && permissions.write.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'write')">Write</span>
-                        <span class="permission-badge ${{permissions.admin && permissions.admin.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge 
+                              ${{permissions.admin && permissions.admin.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'admin')">Admin</span>
                     </div>
                 `;
@@ -560,7 +566,8 @@ def get_editor_html(path: str) -> str:
                     const sizeText = compliance.size_compliant ? '✓ Within limit' : '✗ Exceeds limit';
                     html += `
                         <div class="compliance-item">
-                            <span>File Size: ${{formatFileSize(compliance.current_size)}} / ${{formatFileSize(compliance.max_file_size)}}</span>
+                            <span>File Size: ${{formatFileSize(compliance.current_size)}} / 
+                                  ${{formatFileSize(compliance.max_file_size)}}</span>
                             <span class="${{sizeStatus}}">${{sizeText}}</span>
                         </div>
                     `;
@@ -684,7 +691,7 @@ def get_editor_html(path: str) -> str:
 
                 if (filtered.length > 0) {{
                     suggestions.innerHTML = filtered.map(site =>
-                        `<div class="autocomplete-suggestion" onclick="selectSuggestion('${{site}}')">${{site}}</div>`
+                        `<div class="autocomplete-suggestion" \n                              onclick="selectSuggestion('${{site}}')">${{site}}</div>`
                     ).join('');
                     suggestions.style.display = 'block';
                 }} else {{
@@ -730,7 +737,8 @@ _server_port = 8765
 
 def start_server(port: int = 8765, host: str = "127.0.0.1"):
     """Start the FastAPI server in a background thread."""
-    global _server_thread, _server_port
+    global _server_thread
+    global _server_port
 
     if _server_thread and _server_thread.is_alive():
         return f"http://{host}:{_server_port}"
@@ -751,7 +759,8 @@ def start_server(port: int = 8765, host: str = "127.0.0.1"):
 
 def get_server_url() -> Optional[str]:
     """Get the URL of the running server, if any."""
-    global _server_thread, _server_port
+    global _server_thread
+    global _server_port
 
     if _server_thread and _server_thread.is_alive():
         return f"http://127.0.0.1:{_server_port}"

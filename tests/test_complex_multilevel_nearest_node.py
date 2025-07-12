@@ -131,7 +131,8 @@ class TestComplexMultiLevelNearestNode(unittest.TestCase):
         )  # Terminal blocks parent's *.txt rule
         self.assertFalse(syft_folder1_data.has_read_access("random@example.com"))
 
-        # Test folder1/subfolder/nested.txt - uses folder1 rules (terminal doesn't block subdirectories)
+        # Test folder1/subfolder/nested.txt - uses folder1 rules
+        # (terminal doesn't block subdirectories)
         syft_folder1_nested = syft_perm.open(folder1_subfolder / "nested.txt")
         self.assertTrue(syft_folder1_nested.has_admin_access("user1@example.com"))
         self.assertTrue(syft_folder1_nested.has_write_access("user1@example.com"))

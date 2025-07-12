@@ -375,7 +375,8 @@ class TestBatchOperationsSiblings(unittest.TestCase):
         # Clear cache
         clear_permission_cache()
 
-        # Verify permissions are granted (limits are structural, not runtime enforced in permission checks)
+        # Verify permissions are granted
+        # (limits are structural, not runtime enforced in permission checks)
         for dat_file in large_files:
             syft_file = syft_perm.open(dat_file)
             self.assertTrue(syft_file.has_write_access("alice@example.com"))
