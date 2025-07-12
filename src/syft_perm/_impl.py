@@ -998,6 +998,8 @@ class SyftFile:
         effective_perms = {"read": [], "create": [], "write": [], "admin": []}
         source_info = {"read": [], "create": [], "write": [], "admin": []}
         terminal_path = None
+        terminal_pattern = None  # Track the pattern that was matched in terminal
+        matched_pattern = None  # Track any pattern that was matched (terminal or non-terminal)
         
         # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
@@ -1021,6 +1023,8 @@ class SyftFile:
                             # Check if pattern matches our file path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path):
+                                terminal_pattern = pattern  # Track the matched pattern
+                                matched_pattern = pattern  # Also track in general matched pattern
                                 access = rule.get("access", {})
                                 
                                 # Check file limits if present
@@ -1051,9 +1055,9 @@ class SyftFile:
                                             "terminal": True,
                                             "inherited": False
                                         }]
-                                return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                                return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path, "terminal_pattern": terminal_pattern, "matched_pattern": matched_pattern}
                         # If no match in terminal, stop inheritance with empty permissions
-                        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path, "terminal_pattern": terminal_pattern, "matched_pattern": matched_pattern}
                     
                     # Process rules for non-terminal nodes (sort by specificity first)
                     rules = content.get("rules", [])
@@ -1084,6 +1088,7 @@ class SyftFile:
                                         continue  # Skip this rule if file exceeds size limit
                             
                             # Found a matching rule - this becomes our nearest node
+                            matched_pattern = pattern  # Track the matched pattern
                             # Use this node's permissions (not accumulate)
                             for perm in ["read", "create", "write", "admin"]:
                                 users = format_users(access.get(perm, []))
@@ -1107,7 +1112,7 @@ class SyftFile:
             
             current_path = parent_dir
         
-        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path, "terminal_pattern": terminal_pattern, "matched_pattern": matched_pattern}
     
     def _check_permission_with_reasons(self, user: str, permission: Literal["read", "create", "write", "admin"]) -> tuple[bool, List[str]]:
         """Check if a user has a specific permission and return reasons why."""
@@ -1123,6 +1128,8 @@ class SyftFile:
         all_perms = perm_data["permissions"]
         sources = perm_data["sources"]
         terminal = perm_data.get("terminal")
+        terminal_pattern = perm_data.get("terminal_pattern")
+        matched_pattern = perm_data.get("matched_pattern")
         
         # If blocked by terminal
         if terminal and not any(all_perms.values()):
@@ -1202,6 +1209,12 @@ class SyftFile:
                     if f"Pattern '{src['pattern']}' matched" not in reasons:
                         reasons.append(f"Pattern '{src['pattern']}' matched")
                     break
+        
+        # If we don't have permission but a pattern was matched (terminal or non-terminal),
+        # it means the rule was evaluated but didn't grant this permission
+        elif matched_pattern and not has_permission:
+            if f"Pattern '{matched_pattern}' matched" not in reasons:
+                reasons.append(f"Pattern '{matched_pattern}' matched")
         
         # Check for public access
         if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):
@@ -1386,6 +1399,7 @@ class SyftFolder:
                             # Check if pattern matches our folder path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
+                                terminal_pattern = pattern  # Track the matched pattern
                                 access = rule.get("access", {})
                                 # Check file limits if present
                                 limits = rule.get("limits", {})
@@ -1833,6 +1847,8 @@ class SyftFolder:
         all_perms = perm_data["permissions"]
         sources = perm_data["sources"]
         terminal = perm_data.get("terminal")
+        terminal_pattern = perm_data.get("terminal_pattern")
+        matched_pattern = perm_data.get("matched_pattern")
         
         # If blocked by terminal
         if terminal and not any(all_perms.values()):
@@ -1913,6 +1929,12 @@ class SyftFolder:
                         reasons.append(f"Pattern '{src['pattern']}' matched")
                     break
         
+        # If we don't have permission but a pattern was matched (terminal or non-terminal),
+        # it means the rule was evaluated but didn't grant this permission
+        elif matched_pattern and not has_permission:
+            if f"Pattern '{matched_pattern}' matched" not in reasons:
+                reasons.append(f"Pattern '{matched_pattern}' matched")
+        
         # Check for public access
         if "*" in all_perms.get(permission, []) or (has_permission and "*" in [admin_users, write_users, create_users, read_users]):
             if "Public access (*)" not in reasons:
@@ -1929,6 +1951,8 @@ class SyftFolder:
         effective_perms = {"read": [], "create": [], "write": [], "admin": []}
         source_info = {"read": [], "create": [], "write": [], "admin": []}
         terminal_path = None
+        terminal_pattern = None  # Track the pattern that was matched in terminal
+        matched_pattern = None  # Track any pattern that was matched (terminal or non-terminal)
         
         # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
@@ -1952,6 +1976,8 @@ class SyftFolder:
                             # Check if pattern matches our folder path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
+                                terminal_pattern = pattern  # Track the matched pattern
+                                matched_pattern = pattern  # Also track in general matched pattern
                                 access = rule.get("access", {})
                                 # Terminal rules override everything - return immediately
                                 for perm in ["read", "create", "write", "admin"]:
@@ -1964,9 +1990,9 @@ class SyftFolder:
                                             "terminal": True,
                                             "inherited": False
                                         }]
-                                return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                                return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path, "terminal_pattern": terminal_pattern, "matched_pattern": matched_pattern}
                         # If no match in terminal, stop inheritance with empty permissions
-                        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+                        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path, "terminal_pattern": terminal_pattern, "matched_pattern": matched_pattern}
                     
                     # Process rules for non-terminal nodes (sort by specificity first)
                     rules = content.get("rules", [])
@@ -1977,6 +2003,7 @@ class SyftFolder:
                         # Check if pattern matches our folder path relative to this directory
                         rel_path = str(self._path.relative_to(parent_dir))
                         if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
+                            matched_pattern = pattern  # Track the matched pattern
                             access = rule.get("access", {})
                             # Found a matching rule - this becomes our nearest node
                             # Use this node's permissions (not accumulate)
@@ -2003,7 +2030,7 @@ class SyftFolder:
             
             current_path = parent_dir
         
-        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path}
+        return {"permissions": effective_perms, "sources": source_info, "terminal": terminal_path, "terminal_pattern": terminal_pattern, "matched_pattern": matched_pattern}
     
     def explain_permissions(self, user: str) -> str:
         """Provide detailed explanation of why user has/lacks permissions."""
