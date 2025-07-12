@@ -34,34 +34,64 @@ document.addEventListener('DOMContentLoaded', function() {
     const codeBlocks = document.querySelectorAll('code.language-python');
     
     codeBlocks.forEach(block => {
-        // Get the text content first to avoid HTML entity issues
+        // Get the raw text content
         let text = block.textContent || '';
         
-        // Escape HTML special characters
-        text = text.replace(/&/g, '&amp;')
-                   .replace(/</g, '&lt;')
-                   .replace(/>/g, '&gt;');
-        
-        // Apply syntax highlighting
-        // Comments first (to avoid highlighting # in strings)
-        text = text.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
-        
-        // Strings (do this before keywords to avoid highlighting keywords in strings)
-        text = text.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
-        text = text.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
-        
-        // Functions (match function names including underscores)
-        text = text.replace(/([a-zA-Z_]\w*)\s*\(/g, '<span class="function">$1</span>(');
-        
-        // Keywords (do this after functions to avoid conflicts)
-        const keywords = ['import', 'from', 'if', 'else', 'elif', 'def', 'class', 'return', 'for', 'while', 'in', 'or', 'and', 'not', 'True', 'False', 'None', 'print'];
-        keywords.forEach(keyword => {
-            const regex = new RegExp(`\\b${keyword}\\b(?![^<]*>)`, 'g');
-            text = text.replace(regex, `<span class="keyword">${keyword}</span>`);
+        // Store original text for processing
+        const lines = text.split('\n');
+        const processedLines = lines.map(line => {
+            // First escape HTML
+            let processedLine = line
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Check if this line has a comment
+            const commentIndex = processedLine.indexOf('#');
+            let beforeComment = processedLine;
+            let commentPart = '';
+            
+            if (commentIndex !== -1) {
+                // Check if # is inside a string
+                const beforeHash = processedLine.substring(0, commentIndex);
+                const singleQuotes = (beforeHash.match(/'/g) || []).length;
+                const doubleQuotes = (beforeHash.match(/"/g) || []).length;
+                
+                // If both are even, # is not in a string
+                if (singleQuotes % 2 === 0 && doubleQuotes % 2 === 0) {
+                    beforeComment = processedLine.substring(0, commentIndex);
+                    commentPart = processedLine.substring(commentIndex);
+                }
+            }
+            
+            // Process the non-comment part
+            // Handle strings first
+            beforeComment = beforeComment.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
+            beforeComment = beforeComment.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+            
+            // Handle functions
+            beforeComment = beforeComment.replace(/\b([a-zA-Z_]\w*)\s*\(/g, '<span class="function">$1</span>(');
+            
+            // Handle keywords - only if not already inside a span
+            const keywords = ['import', 'from', 'if', 'else', 'elif', 'def', 'class', 'return', 
+                            'for', 'while', 'in', 'or', 'and', 'not', 'True', 'False', 'None', 'print'];
+            
+            keywords.forEach(keyword => {
+                // More precise regex that won't match inside tags
+                const regex = new RegExp(`\\b(${keyword})\\b(?![^<]*>|[^<]*</span>)`, 'g');
+                beforeComment = beforeComment.replace(regex, '<span class="keyword">$1</span>');
+            });
+            
+            // Add comment part with styling if it exists
+            if (commentPart) {
+                commentPart = '<span class="comment">' + commentPart + '</span>';
+            }
+            
+            return beforeComment + commentPart;
         });
         
-        // Set the HTML with highlighting
-        block.innerHTML = text;
+        // Join lines and set the HTML
+        block.innerHTML = processedLines.join('\n');
     });
     
     // ================================
@@ -70,30 +100,57 @@ document.addEventListener('DOMContentLoaded', function() {
     const yamlBlocks = document.querySelectorAll('code.language-yaml');
     
     yamlBlocks.forEach(block => {
-        // Get the text content to ensure we're working with plain text
+        // Get the raw text content
         let text = block.textContent || '';
         
-        // Escape HTML special characters
-        text = text.replace(/&/g, '&amp;')
-                   .replace(/</g, '&lt;')
-                   .replace(/>/g, '&gt;');
+        // Process line by line
+        const lines = text.split('\n');
+        const processedLines = lines.map(line => {
+            // First escape HTML
+            let processedLine = line
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Check if this line has a comment
+            const commentIndex = processedLine.indexOf('#');
+            let beforeComment = processedLine;
+            let commentPart = '';
+            
+            if (commentIndex !== -1) {
+                // Check if # is inside a string
+                const beforeHash = processedLine.substring(0, commentIndex);
+                const singleQuotes = (beforeHash.match(/'/g) || []).length;
+                const doubleQuotes = (beforeHash.match(/"/g) || []).length;
+                
+                // If both are even, # is not in a string
+                if (singleQuotes % 2 === 0 && doubleQuotes % 2 === 0) {
+                    beforeComment = processedLine.substring(0, commentIndex);
+                    commentPart = processedLine.substring(commentIndex);
+                }
+            }
+            
+            // Process the non-comment part
+            // Handle strings first
+            beforeComment = beforeComment.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
+            beforeComment = beforeComment.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+            
+            // Handle list items (dash)
+            beforeComment = beforeComment.replace(/^(\s*)(-)(\s+)/, '$1<span class="keyword">$2</span>$3');
+            
+            // Handle keys (before colon) - only if not inside a string span
+            beforeComment = beforeComment.replace(/^(\s*)([a-zA-Z_-]+)(?=:)/, '$1<span class="keyword">$2</span>');
+            
+            // Add comment part with styling if it exists
+            if (commentPart) {
+                commentPart = '<span class="comment">' + commentPart + '</span>';
+            }
+            
+            return beforeComment + commentPart;
+        });
         
-        // Apply YAML syntax highlighting
-        // Comments (must be done first)
-        text = text.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
-        
-        // Strings in quotes
-        text = text.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
-        text = text.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
-        
-        // Keys (before colon) - make sure not to match inside strings
-        text = text.replace(/^(\s*)([a-zA-Z_-]+)(?=:)/gm, '$1<span class="keyword">$2</span>');
-        
-        // List items
-        text = text.replace(/^(\s*)(-)(\s+)/gm, '$1<span class="keyword">$2</span>$3');
-        
-        // Set the final HTML
-        block.innerHTML = text;
+        // Join lines and set the HTML
+        block.innerHTML = processedLines.join('\n');
     });
     
     // ================================
