@@ -262,35 +262,25 @@ class SyftFile:
         
         # First add public if it exists
         if "*" in all_users:
-            # Check effective permissions for public
-            has_admin = "*" in perms.get("admin", [])
-            has_write = has_admin or "*" in perms.get("write", [])
-            has_create = has_write or "*" in perms.get("create", [])
-            has_read = has_create or "*" in perms.get("read", [])
-            
+            # Use the actual permission checking methods for consistency
             rows.append([
                 "public",
-                "✓" if has_read else "",
-                "✓" if has_create else "",
-                "✓" if has_write else "",
-                "✓" if has_admin else ""
+                "✓" if self.has_read_access("*") else "",
+                "✓" if self.has_create_access("*") else "",
+                "✓" if self.has_write_access("*") else "",
+                "✓" if self.has_admin_access("*") else ""
             ])
             all_users.remove("*")  # Remove so we don't process it again
         
         # Then add all other users
         for user in sorted(all_users):
-            # Check effective permissions with hierarchy
-            has_admin = user in perms.get("admin", [])
-            has_write = has_admin or user in perms.get("write", [])
-            has_create = has_write or user in perms.get("create", [])
-            has_read = has_create or user in perms.get("read", [])
-            
+            # Use the actual permission checking methods to ensure consistency
             row = [
                 user,
-                "✓" if has_read else "",
-                "✓" if has_create else "",
-                "✓" if has_write else "",
-                "✓" if has_admin else ""
+                "✓" if self.has_read_access(user) else "",
+                "✓" if self.has_create_access(user) else "",
+                "✓" if self.has_write_access(user) else "",
+                "✓" if self.has_admin_access(user) else ""
             ]
             rows.append(row)
         
@@ -681,35 +671,25 @@ class SyftFolder:
         
         # First add public if it exists
         if "*" in all_users:
-            # Check effective permissions for public
-            has_admin = "*" in perms.get("admin", [])
-            has_write = has_admin or "*" in perms.get("write", [])
-            has_create = has_write or "*" in perms.get("create", [])
-            has_read = has_create or "*" in perms.get("read", [])
-            
+            # Use the actual permission checking methods for consistency
             rows.append([
                 "public",
-                "✓" if has_read else "",
-                "✓" if has_create else "",
-                "✓" if has_write else "",
-                "✓" if has_admin else ""
+                "✓" if self.has_read_access("*") else "",
+                "✓" if self.has_create_access("*") else "",
+                "✓" if self.has_write_access("*") else "",
+                "✓" if self.has_admin_access("*") else ""
             ])
             all_users.remove("*")  # Remove so we don't process it again
         
         # Then add all other users
         for user in sorted(all_users):
-            # Check effective permissions with hierarchy
-            has_admin = user in perms.get("admin", [])
-            has_write = has_admin or user in perms.get("write", [])
-            has_create = has_write or user in perms.get("create", [])
-            has_read = has_create or user in perms.get("read", [])
-            
+            # Use the actual permission checking methods to ensure consistency
             row = [
                 user,
-                "✓" if has_read else "",
-                "✓" if has_create else "",
-                "✓" if has_write else "",
-                "✓" if has_admin else ""
+                "✓" if self.has_read_access(user) else "",
+                "✓" if self.has_create_access(user) else "",
+                "✓" if self.has_write_access(user) else "",
+                "✓" if self.has_admin_access(user) else ""
             ]
             rows.append(row)
         
