@@ -202,7 +202,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate</div>
                     <div class="code-block">pip install -e ".[dev,server,display]"</div>
                     <p>This installs SyftPerm in editable mode with all development dependencies including:</p>
                     <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                        <li><strong>dev</strong>: Testing frameworks, linters, and build tools</li>
+                        <li><strong>dev</strong>: Testing frameworks, linters, build tools, and notebook testing tools (nbformat, nbconvert, ipykernel)</li>
                         <li><strong>server</strong>: Web UI dependencies</li>
                         <li><strong>display</strong>: Enhanced table formatting</li>
                     </ul>
@@ -212,7 +212,12 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate</div>
                     <div class="api-method-name">Step 4: Verify Installation</div>
                     <div class="code-block">pytest  # Run all tests
 pytest -v  # Run with verbose output
-pytest tests/test_permissions.py  # Run specific test file</div>
+pytest tests/test_permissions.py  # Run specific test file
+pytest tests/test_notebooks.py  # Run notebook tests</div>
+                </div>
+
+                <div class="alert alert-info" style="margin-top: 2rem;">
+                    <strong>💡 Pro Tip:</strong> The test suite includes automated testing of tutorial notebooks to ensure they stay up-to-date and functional. Make sure you have the required dependencies installed (<code class="code-inline">nbformat</code>, <code class="code-inline">nbconvert</code>, and <code class="code-inline">ipykernel</code>) before running notebook tests.
                 </div>
 
                 <div class="alert alert-info" style="margin-top: 2rem;">
