@@ -36,22 +36,55 @@ document.addEventListener('DOMContentLoaded', function() {
     codeBlocks.forEach(block => {
         let html = block.innerHTML;
         
-        // Keywords
-        const keywords = ['import', 'from', 'if', 'else', 'elif', 'def', 'class', 'return', 'for', 'while', 'in', 'or', 'and', 'not', 'True', 'False', 'None'];
-        keywords.forEach(keyword => {
-            const regex = new RegExp(`\\b${keyword}\\b`, 'g');
-            html = html.replace(regex, `<span class="keyword">${keyword}</span>`);
-        });
+        // Comments first (to avoid highlighting # in strings)
+        html = html.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
         
-        // Strings (simple version)
+        // Strings (do this before keywords to avoid highlighting keywords in strings)
         html = html.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
         html = html.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+        
+        // Functions (match function names including underscores)
+        html = html.replace(/([a-zA-Z_]\w*)\s*\(/g, '<span class="function">$1</span>(');
+        
+        // Keywords (do this after functions to avoid conflicts)
+        const keywords = ['import', 'from', 'if', 'else', 'elif', 'def', 'class', 'return', 'for', 'while', 'in', 'or', 'and', 'not', 'True', 'False', 'None', 'print'];
+        keywords.forEach(keyword => {
+            // Simple word boundary check
+            const regex = new RegExp(`\\b${keyword}\\b`, 'g');
+            html = html.replace(regex, (match, offset, string) => {
+                // Check if we're inside a tag or already highlighted
+                const before = string.substring(Math.max(0, offset - 20), offset);
+                const after = string.substring(offset, offset + 20);
+                if (before.includes('<span') || before.includes('class=') || after.includes('</span>')) {
+                    return match;
+                }
+                return `<span class="keyword">${match}</span>`;
+            });
+        });
+        
+        block.innerHTML = html;
+    });
+    
+    // ================================
+    // YAML Syntax Highlighting
+    // ================================
+    const yamlBlocks = document.querySelectorAll('code.language-yaml');
+    
+    yamlBlocks.forEach(block => {
+        let html = block.innerHTML;
         
         // Comments
         html = html.replace(/(#.*$)/gm, '<span class="comment">$1</span>');
         
-        // Functions (simple version)
-        html = html.replace(/(\w+)\(/g, '<span class="function">$1</span>(');
+        // Keys (before colon)
+        html = html.replace(/^(\s*)([a-zA-Z_-]+):/gm, '$1<span class="keyword">$2</span>:');
+        
+        // Strings in quotes
+        html = html.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
+        html = html.replace(/'([^']*)'/g, '<span class="string">\'$1\'</span>');
+        
+        // List items
+        html = html.replace(/^(\s*)-\s+/gm, '$1<span class="keyword">-</span> ');
         
         block.innerHTML = html;
     });

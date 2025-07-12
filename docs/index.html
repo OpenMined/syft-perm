@@ -31,20 +31,27 @@
             <!-- Before/After Code Example -->
             <div class="code-comparison">
                 <div class="code-before">
-                    <div class="code-label">❌ Before: Permission Hell</div>
-                    <pre><code class="language-python"># Is Alice allowed to read this file? Who knows...
-if user in admins or (user in writers and file.owner == user) or \
-   (user in readers and file.shared) or file.public or \
-   (user in file.collaborators and file.permissions[user] >= 'read'):
-    allow_access()</code></pre>
+                    <div class="code-label">❌ Before: Manual YAML Editing</div>
+                    <pre><code class="language-yaml"># Edit syft.pub.yaml by hand... hope you get it right!
+rules:
+  - pattern: 'data.csv'
+    access:
+      read:
+        - 'alice@example.com'
+        - 'bob@company.com'
+      write:
+        - 'admin@org.com'</code></pre>
                 </div>
                 
                 <div class="code-arrow">→</div>
                 
                 <div class="code-after">
-                    <div class="code-label">✅ After: Crystal Clear</div>
-                    <pre><code class="language-python"># Just say what you mean
-file.grant_read_access("alice@example.com")</code></pre>
+                    <div class="code-label">✅ After: Python API</div>
+                    <pre><code class="language-python"># Let Python handle the YAML for you
+file = syft_perm.open("data.csv")
+file.grant_read_access("alice@example.com")
+file.grant_read_access("bob@company.com")
+file.grant_write_access("admin@org.com")</code></pre>
                 </div>
             </div>
 
@@ -118,20 +125,26 @@ file.grant_admin_access("admin@org.com")</code></pre>
     <!-- Real Example -->
     <section class="real-example">
         <div class="container">
-            <h2>Real Example: Research Collaboration</h2>
-            <pre><code class="language-python"># Set up a research project
-project = syft_perm.open("cancer_research/")
-
-# Reviewers can read everything
+            <h2>How It Works: Managing syft.pub.yaml</h2>
+            <p style="text-align: center; margin-bottom: var(--space-6);">SyftPerm automatically creates and updates your permission files:</p>
+            <pre><code class="language-python"># Your Python code:
+project = syft_perm.open("research_data/")
 project.grant_read_access("reviewer@journal.org")
+project.grant_write_access("team@university.edu")
 
-# Collaborators can edit data
-project.grant_write_access("collaborator@university.edu")
+# Creates this syft.pub.yaml:
+"""
+rules:
+  - pattern: '**/*'
+    access:
+      read:
+        - 'reviewer@journal.org'
+        - 'team@university.edu'
+      write:
+        - 'team@university.edu'
+"""
 
-# PI has full control
-project.grant_admin_access("pi@institution.org")
-
-# That's it. Everyone has exactly the access they need.</code></pre>
+# No manual YAML editing needed!</code></pre>
         </div>
     </section>
 

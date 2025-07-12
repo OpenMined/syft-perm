@@ -41,18 +41,18 @@ rm -rf *.egg-info/
 # Run tests
 echo "🧪 Running tests..."
 if command -v pytest &> /dev/null; then
-    python -m pytest tests/ -v
+    python3 -m pytest tests/ -v
 else
     echo "⚠️  pytest not found, skipping tests"
 fi
 
 # Build the package
 echo "📦 Building package..."
-python -m build
+python3 -m build
 
 # Check the built package
 echo "🔍 Checking package..."
-python -m twine check dist/*
+python3 -m twine check dist/*
 
 # List what we built
 echo "📋 Built files:"
@@ -68,14 +68,14 @@ read -p "Upload to PyPI? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "📤 Uploading to PyPI..."
-    python -m twine upload dist/*
+    python3 -m twine upload dist/*
     echo "✅ Package uploaded successfully!"
     
     # Get the version for the success message
-    VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])" 2>/dev/null || echo "latest")
+    VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])" 2>/dev/null || echo "latest")
     echo "🎉 syft-perm $VERSION is now available on PyPI!"
     echo "   Install with: pip install syft-perm"
 else
     echo "❌ Upload cancelled"
-    echo "💡 To upload later, run: python -m twine upload dist/*"
+    echo "💡 To upload later, run: python3 -m twine upload dist/*"
 fi 
