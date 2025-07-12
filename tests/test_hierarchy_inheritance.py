@@ -432,7 +432,8 @@ class TestHierarchyInheritance(unittest.TestCase):
         # Alice still has no permissions at parent level
         self.assertFalse(p_syft.has_read_access("alice@example.com"))
 
-        # Test child level - alice has read only, bob and charlie have NO access (nearest-node: child rule)
+        # Test child level - alice has read only, bob and charlie have NO access
+        # (nearest-node: child rule)
         c_syft = syft_perm.open(child_file)
         self.assertTrue(c_syft.has_read_access("alice@example.com"))
         self.assertFalse(c_syft.has_create_access("alice@example.com"))
@@ -555,7 +556,8 @@ class TestHierarchyInheritance(unittest.TestCase):
         )  # Parent pattern doesn't match
 
     def test_complex_patterns_at_each_level(self):
-        """Test complex ** patterns at each level (e.g., **/*.txt → docs/**/*.txt → docs/api/**/*.txt)."""
+        """Test complex ** patterns at each level
+        (e.g., **/*.txt → docs/**/*.txt → docs/api/**/*.txt)."""
         # Create grandparent with broad pattern
         grandparent_dir = Path(self.test_dir) / "complex_patterns"
         grandparent_dir.mkdir(parents=True)
@@ -629,7 +631,8 @@ class TestHierarchyInheritance(unittest.TestCase):
         self.assertTrue(root_syft.has_read_access("bob@example.com"))
         self.assertFalse(root_syft.has_write_access("alice@example.com"))
 
-        # Test docs level - alice has write/read, bob has NO access (nearest-node: only docs rule applies)
+        # Test docs level - alice has write/read, bob has NO access
+        # (nearest-node: only docs rule applies)
         docs_syft = syft_perm.open(docs_txt)
         self.assertTrue(docs_syft.has_write_access("alice@example.com"))
         self.assertTrue(docs_syft.has_read_access("alice@example.com"))  # Via hierarchy
@@ -642,7 +645,8 @@ class TestHierarchyInheritance(unittest.TestCase):
         self.assertFalse(api_syft.has_read_access("bob@example.com"))  # No access from docs rule
         self.assertFalse(api_syft.has_admin_access("bob@example.com"))  # Pattern doesn't match
 
-        # Test api/v2/spec.txt - bob has admin/write/read, alice and charlie have NO access (child rule only)
+        # Test api/v2/spec.txt - bob has admin/write/read, alice and charlie
+        # have NO access (child rule only)
         v2_syft = syft_perm.open(v2_txt)
         self.assertTrue(v2_syft.has_admin_access("bob@example.com"))  # From child rule
         self.assertTrue(v2_syft.has_write_access("bob@example.com"))  # Via hierarchy
@@ -655,7 +659,8 @@ class TestHierarchyInheritance(unittest.TestCase):
         )  # Child rule doesn't grant public access
 
     def test_three_levels_different_users_accumulate(self):
-        """Test all three levels have different users → child uses nearest-node (child rule only)."""
+        """Test all three levels have different users → child uses
+        nearest-node (child rule only)."""
         # Create grandparent with charlie having read
         grandparent_dir = Path(self.test_dir) / "accumulate"
         grandparent_dir.mkdir(parents=True)

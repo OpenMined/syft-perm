@@ -143,8 +143,10 @@ class TestOwnerBypass(unittest.TestCase):
         """Test that paths starting with 'alice/' grant alice all permissions."""
         # This test checks the current implementation's prefix matching
         # behavior
-        # The implementation checks if str(path).startswith(user + "/") or str(path).startswith("/" + user + "/")
-        # For this to work with absolute paths, we need to check what the implementation actually does
+        # The implementation checks if str(path).startswith(user + "/") or
+        # str(path).startswith("/" + user + "/")
+        # For this to work with absolute paths, we need to check what the
+        # implementation actually does
 
         # Create a file and check the current behavior
         alice_dir = Path(self.test_dir) / "alice"

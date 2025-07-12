@@ -31,7 +31,8 @@ class TestPermissionResolutionOrder(unittest.TestCase):
         shutil.rmtree(self.test_dir)
 
     def test_pattern_specificity_resolution_order(self):
-        """Test resolution order: ** < */** < specific/path/** < specific/path/file.txt < **/*.py patterns."""
+        """Test resolution order: ** < */** < specific/path/** <
+        specific/path/file.txt < **/*.py patterns."""
         # Create directory structure
         test_dir = Path(self.test_dir) / "resolution_test"
         specific_dir = test_dir / "specific" / "path"
@@ -94,7 +95,8 @@ class TestPermissionResolutionOrder(unittest.TestCase):
             generic_syft.has_create_access("user4@example.com")
         )  # **/*.py doesn't match
 
-        # Test nested file (docs/guide.md) - matches ** and docs/** patterns, docs/** wins (more specific)
+        # Test nested file (docs/guide.md) - matches ** and docs/** patterns,
+        # docs/** wins (more specific)
         nested_syft = syft_perm.open(files["nested_file"])
         self.assertFalse(nested_syft.has_read_access("user1@example.com"))  # ** is less specific
         self.assertTrue(
@@ -149,7 +151,8 @@ class TestPermissionResolutionOrder(unittest.TestCase):
         self.assertTrue(python_syft.has_create_access("user4@example.com"))  # **/*.py wins
         self.assertTrue(python_syft.has_read_access("user4@example.com"))  # Via hierarchy
 
-        # Test specific Python file (specific/path/module.py) - multiple patterns match, most specific wins
+        # Test specific Python file (specific/path/module.py) - multiple
+        # patterns match, most specific wins
         # Patterns that match: **, */** (via specific/path), specific/path/**, **/*.py
         # specific/path/** should be more specific than **/*.py based on old syftbox scoring
         specific_python_syft = syft_perm.open(files["specific_python"])

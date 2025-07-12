@@ -926,7 +926,7 @@ class SyftFile:
 <tr>
 <td style="padding: 5px;">File Type</td>
 <td style="padding: 5px;">{file_type}</td>
-<td style="padding: 5px;">Dirs: {'✓' if limits['allow_dirs'] else '✗'} | 
+<td style="padding: 5px;">Dirs: {'✓' if limits['allow_dirs'] else '✗'} |
 Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
 <td style="padding: 5px;">{type_status}</td>
 </tr>
@@ -970,7 +970,8 @@ Symlinks: {'✓' if limits['allow_symlinks'] else '✗'}</td>
             result.append(compliance_html.strip())
             result.append("<table>")
             result.append(
-                "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>"
+                "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th>"
+                "<th>Admin</th><th>Reason</th></tr>"
             )
             for row in rows:
                 result.append(
@@ -2026,7 +2027,8 @@ class SyftFolder:
             # Fallback to simple HTML table if tabulate not available
             result.append("<table>")
             result.append(
-                "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th><th>Reason</th></tr>"
+                "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th>"
+                "<th>Admin</th><th>Reason</th></tr>"
             )
             for row in rows:
                 result.append(
@@ -2538,7 +2540,8 @@ class SyftFolder:
         # Count files for large folder warning
         file_count = sum(1 for _ in self._path.rglob("*"))
         if file_count > 100 and not _confirm_action(
-            f"⚠️  Warning: Moving large folder with {file_count} files. This may take a while. Continue?",
+            f"⚠️  Warning: Moving large folder with {file_count} files. "
+            f"This may take a while. Continue?",
             force=force,
         ):
             print("Operation cancelled.")

@@ -30,45 +30,44 @@ except ImportError:
 from . import open as syft_open
 from ._utils import get_syftbox_datasites
 
+# Only create the FastAPI app if server dependencies are available
+if _SERVER_AVAILABLE:
 
-class PermissionUpdate(BaseModel):
-    """Model for permission update requests."""
+    class PermissionUpdate(BaseModel):
+        """Model for permission update requests."""
 
-    path: str
-    user: str
-    permission: str  # read, create, write, admin
-    action: str  # grant, revoke
+        path: str
+        user: str
+        permission: str  # read, create, write, admin
+        action: str  # grant, revoke
 
+    class PermissionResponse(BaseModel):
+        """Model for permission response."""
 
-class PermissionResponse(BaseModel):
-    """Model for permission response."""
+        path: str
+        permissions: Dict[str, List[str]]
+        compliance: Dict[str, Any]
+        datasites: List[str]
 
-    path: str
-    permissions: Dict[str, List[str]]
-    compliance: Dict[str, Any]
-    datasites: List[str]
+    app = FastAPI(
+        title="SyftPerm Permission Editor",
+        description="Google Drive-style permission editor for SyftBox",
+        version="1.0.0",
+    )
 
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-app = FastAPI(
-    title="SyftPerm Permission Editor",
-    description="Google Drive-style permission editor for SyftBox",
-    version="1.0.0",
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.get("/")
-async def root():
-    """Root endpoint with basic info."""
-    return {"message": "SyftPerm Permission Editor", "docs": "/docs"}
+    @app.get("/")
+    async def root():
+        """Root endpoint with basic info."""
+        return {"message": "SyftPerm Permission Editor", "docs": "/docs"}
 
 
 @app.get("/permissions/{path:path}", response_model=PermissionResponse)
@@ -434,7 +433,7 @@ def get_editor_html(path: str) -> str:
                 <h2>Add User</h2>
                 <div class="add-user">
                     <div class="autocomplete">
-                        <input type="text" id="user-input" 
+                        <input type="text" id="user-input"
                                placeholder="Enter email or datasite..." autocomplete="off">
                         <div id="autocomplete-suggestions" class="autocomplete-suggestions"></div>
                     </div>
@@ -537,7 +536,9 @@ def get_editor_html(path: str) -> str:
 
                 const userPerms = [];
                 if (permissions.read && permissions.read.includes(user)) userPerms.push('Read');
-                if (permissions.create && permissions.create.includes(user)) userPerms.push('Create');
+                if (permissions.create && permissions.create.includes(user)) {{
+                    userPerms.push('Create');
+                }}
                 if (permissions.write && permissions.write.includes(user)) userPerms.push('Write');
                 if (permissions.admin && permissions.admin.includes(user)) userPerms.push('Admin');
 
@@ -547,17 +548,17 @@ def get_editor_html(path: str) -> str:
                         <div class="user-permissions">${{userPerms.join(', ')}}</div>
                     </div>
                     <div class="permission-controls">
-                        <span class="permission-badge 
-                              ${{permissions.read && permissions.read.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{permissions.read && \
+permissions.read.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'read')">Read</span>
-                        <span class="permission-badge 
-                              ${{permissions.create && permissions.create.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{permissions.create && \
+permissions.create.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'create')">Create</span>
-                        <span class="permission-badge 
-                              ${{permissions.write && permissions.write.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{permissions.write && \
+permissions.write.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'write')">Write</span>
-                        <span class="permission-badge 
-                              ${{permissions.admin && permissions.admin.includes(user) ? 'active' : 'inactive'}}"
+                        <span class="permission-badge ${{permissions.admin && \
+permissions.admin.includes(user) ? 'active' : 'inactive'}}"
                               onclick="togglePermission('${{user}}', 'admin')">Admin</span>
                     </div>
                 `;
@@ -582,7 +583,7 @@ def get_editor_html(path: str) -> str:
                     const sizeText = compliance.size_compliant ? '✓ Within limit' : '✗ Exceeds limit';
                     html += `
                         <div class="compliance-item">
-                            <span>File Size: ${{formatFileSize(compliance.current_size)}} / 
+                            <span>File Size: ${{formatFileSize(compliance.current_size)}} /
                                   ${{formatFileSize(compliance.max_file_size)}}</span>
                             <span class="${{sizeStatus}}">${{sizeText}}</span>
                         </div>

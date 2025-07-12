@@ -30,32 +30,33 @@
     <section class="hero">
         <div class="container">
             <h1 class="hero-title">Stop Fighting File Permissions</h1>
-            <p class="hero-subtitle">Just say who can do what. In plain English.</p>
+            <p class="hero-subtitle">See who can do what. Change who should do what. In plain English.</p>
             
-            <!-- Before/After Code Example -->
+            <!-- Problem/Solution Split -->
             <div class="code-comparison">
                 <div class="code-before">
-                    <div class="code-label">❌ Before: Manual YAML Editing</div>
-                    <pre><code class="language-yaml"># Edit syft.pub.yaml by hand... hope you get it right!
-rules:
-  - pattern: 'data.csv'
-    access:
-      read:
-        - 'alice@example.com'
-        - 'bob@company.com'
-      write:
-        - 'admin@org.com'</code></pre>
+                    <div class="code-label">🔍 SEE permissions clearly</div>
+                    <pre><code class="language-python"># In Jupyter notebooks - rich permission tables
+file = syft_perm.open("data.csv")
+file  # Shows HTML table with current permissions
+
+# User              Read  Write  Admin  Reason
+# alice@example.com  ✓     ✗      ✗     Explicitly granted read
+# bob@company.com    ✓     ✓      ✗     Inherited from /data/
+# *                  ✗     ✗      ✗     No permission found</code></pre>
                 </div>
                 
-                <div class="code-arrow">→</div>
+                <div class="code-arrow">+</div>
                 
                 <div class="code-after">
-                    <div class="code-label">✅ After: Python API</div>
-                    <pre><code class="language-python"># Let Python handle the YAML for you
+                    <div class="code-label">🎯 SET permissions simply</div>
+                    <pre><code class="language-python"># Simple API instead of YAML wrestling
 file = syft_perm.open("data.csv")
 file.grant_read_access("alice@example.com")
-file.grant_read_access("bob@company.com")
-file.grant_write_access("admin@org.com")</code></pre>
+file.grant_write_access("bob@company.com")
+
+# Automatically creates/updates syft.pub.yaml
+# No manual YAML editing needed!</code></pre>
                 </div>
             </div>
 
@@ -75,19 +76,19 @@ file.grant_write_access("admin@org.com")</code></pre>
         <div class="container">
             <div class="benefit-grid">
                 <div class="benefit">
-                    <div class="benefit-icon">🎯</div>
-                    <h3>Direct & Obvious</h3>
-                    <p>No more permission matrices or role hierarchies. Just grant access to who needs it.</p>
+                    <div class="benefit-icon">👁️</div>
+                    <h3>Permission Visibility</h3>
+                    <p>Rich HTML tables show exactly who has access and why - inheritance, explicit grants, pattern matches.</p>
                 </div>
                 <div class="benefit">
-                    <div class="benefit-icon">⚡</div>
-                    <h3>Instant Understanding</h3>
-                    <p>New team members understand permissions in seconds, not hours.</p>
+                    <div class="benefit-icon">🎯</div>
+                    <h3>Simple Editing</h3>
+                    <p>No more YAML wrestling. Grant access with plain English: <code>file.grant_read_access("alice@example.com")</code></p>
                 </div>
                 <div class="benefit">
                     <div class="benefit-icon">🛡️</div>
                     <h3>Secure by Default</h3>
-                    <p>Built for SyftBox's privacy-first architecture. No accidental oversharing.</p>
+                    <p>Built for SyftBox's privacy-first architecture. Compliance checking prevents accidental oversharing.</p>
                 </div>
             </div>
         </div>
@@ -113,9 +114,10 @@ file.grant_admin_access("admin@org.com")</code></pre>
                 </div>
                 
                 <div class="api-example">
-                    <h3>Check permissions</h3>
-                    <pre><code class="language-python">if file.has_read_access("user@example.com"):
-    data = file.read()</code></pre>
+                    <h3>See current permissions</h3>
+                    <pre><code class="language-python"># In Jupyter notebooks - automatic HTML tables
+file  # Shows who has access and why
+folder.show_permissions()  # Rich inheritance view</code></pre>
                 </div>
                 
                 <div class="api-example">
