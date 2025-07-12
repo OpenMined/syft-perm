@@ -18,7 +18,8 @@
       "Bash(find:*)",
       "Bash(uv sync:*)",
       "Bash(python -m mypy:*)",
-      "Bash(uv add:*)"
+      "Bash(uv add:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

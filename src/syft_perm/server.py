@@ -757,7 +757,7 @@ def get_editor_html(path: str) -> str:
 
 
 # Server management
-_server_thread = None
+_server_thread: Optional[threading.Thread] = None
 _server_port = 8765
 
 

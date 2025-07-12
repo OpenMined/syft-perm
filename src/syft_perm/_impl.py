@@ -522,7 +522,12 @@ class SyftFile:
             return cached
 
         # Find the nearest node with matching rules (old syftbox algorithm)
-        nearest_permissions = {"read": [], "create": [], "write": [], "admin": []}
+        nearest_permissions: Dict[str, List[str]] = {
+            "read": [],
+            "create": [],
+            "write": [],
+            "admin": [],
+        }
 
         # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
