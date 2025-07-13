@@ -1045,34 +1045,33 @@ class SyftFile:
         # Get current user (file owner)
         current_user = os.path.basename(os.path.expanduser("~"))
 
-        # Create Jupyter-friendly permissions interface
+        # Create hybrid interface with syft-objects styling and Google Drive layout
         html = f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                    background: white; border: 1px solid #e1e4e8;
-                    border-radius: 6px; margin: 8px 0; overflow: hidden;">
-
-            <!-- Header -->
-            <div style="background: #f6f8fa; padding: 12px 16px; border-bottom: 1px solid #e1e4e8;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-size: 0.75rem; background: #ffffff; border: 1px solid #e5e7eb;
+                    border-radius: 0.25rem; margin: 8px 0; height: 200px;
+                    display: flex; flex-direction: column;">
+            <div style="background: #f8f9fa; padding: 0.375rem 0.5rem;
+                        border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
+                        position: sticky; top: 0; z-index: 10;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 16px;">📄</span>
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="font-size: 0.875rem;">📄</span>
                         <div>
-                            <div style="font-size: 14px; font-weight: 600; color: #24292e;">
+                            <div style="font-size: 0.875rem; font-weight: 500; color: #374151;">
                                 {self._path.name}
                             </div>
-                            <div style="font-size: 12px; color: #586069;">
+                            <div style="font-size: 0.75rem; color: #6b7280;">
                                 Owner: {current_user}
                             </div>
                         </div>
                     </div>
-                    <div style="font-size: 12px; color: #586069; font-weight: 600;">
+                    <div style="font-size: 0.75rem; color: #6b7280; font-weight: 500;">
                         PERMISSIONS
                     </div>
                 </div>
             </div>
-
-            <!-- Permissions list -->
-            <div style="padding: 8px;">
+            <div style="flex: 1; overflow-y: auto; padding: 0;">
         """
 
         # Add each user
@@ -1084,32 +1083,42 @@ class SyftFile:
 
             # Determine if this is public access
             display_name = "Anyone with the link" if user == "*" else user
-            
+
             # Get permission reasons for this user
             has_permission, reasons = self._check_permission_with_reasons(user, role.lower())
-            reason_text = "; ".join(reasons[:2]) if reasons else "Direct permission"  # Limit to 2 reasons
+            reason_text = (
+                "; ".join(reasons[:2]) if reasons else "Direct permission"
+            )  # Limit to 2 reasons
 
             html += f"""
-                <div style="display: flex; align-items: center; padding: 6px 8px; gap: 10px;
-                            border-bottom: 1px solid #f6f8fa;">
-                    <div style="width: 28px; height: 28px; border-radius: 50%; background: {color};
-                                display: flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 12px; font-weight: 600;">{initials}</span>
+                <div style="display: flex; align-items: center; padding: 0.375rem 0.5rem;
+                            gap: 0.5rem; border-bottom: 1px solid #f3f4f6;
+                            transition: background-color 0.15s; cursor: pointer;"
+                     onmouseover="this.style.background='rgba(0, 0, 0, 0.03)'"
+                     onmouseout="this.style.background='transparent'">
+                    <div style="width: 1.25rem; height: 1.25rem; border-radius: 50%;
+                                background: {color}; display: flex; align-items: center;
+                                justify-content: center; flex-shrink: 0;">
+                        <span style="color: white; font-size: 0.625rem; font-weight: 500;">
+                            {initials}
+                        </span>
                     </div>
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 13px; color: #24292e; font-weight: 500;">
+                        <div style="font-size: 0.75rem; color: #374151; font-weight: 500;
+                                    overflow: hidden; text-overflow: ellipsis;
+                                    white-space: nowrap;">
                             {display_name}
                         </div>
-                        <div style="font-size: 11px; color: #586069;">
-                            {user if user != "*" else "Public access"}
-                        </div>
-                        <div style="font-size: 10px; color: #6a737d; margin-top: 2px;">
+                        <div style="font-size: 0.625rem; color: #6b7280; line-height: 1.2;
+                                    margin-top: 0.125rem;">
                             {reason_text}
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="background: #f1f3f4; color: #24292e; padding: 2px 6px;
-                                     border-radius: 3px; font-size: 11px; font-weight: 600;">
+                    <div style="margin-left: 0.5rem;">
+                        <span style="display: inline-flex; align-items: center;
+                                     padding: 0.125rem 0.375rem; border-radius: 0.25rem;
+                                     font-size: 0.625rem; font-weight: 500;
+                                     background: #f3f4f6; color: #374151;">
                             {role.upper()}
                         </span>
                     </div>
@@ -1119,9 +1128,9 @@ class SyftFile:
         # If no users have access
         if not user_permissions:
             html += """
-                <div style="text-align: center; padding: 16px 8px; color: #586069;">
-                    <div style="font-size: 13px; font-weight: 500;">No permissions set</div>
-                    <div style="font-size: 11px; margin-top: 2px;">
+                <div style="text-align: center; padding: 1rem; color: #6b7280;">
+                    <div style="font-size: 0.75rem; font-weight: 500;">No permissions set</div>
+                    <div style="font-size: 0.75rem; margin-top: 0.125rem;">
                         Only the owner has access
                     </div>
                 </div>
@@ -2213,30 +2222,33 @@ class SyftFolder:
         # Get current user (folder owner)
         current_user = os.path.basename(os.path.expanduser("~"))
 
-        # Create Jupyter-friendly permissions interface
+        # Create hybrid interface with syft-objects styling and Google Drive layout
         html = f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                    background: white; border: 1px solid #e1e4e8;
-                    border-radius: 6px; margin: 8px 0; overflow: hidden;">
-            <div style="background: #f6f8fa; padding: 12px 16px; border-bottom: 1px solid #e1e4e8;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-size: 0.75rem; background: #ffffff; border: 1px solid #e5e7eb;
+                    border-radius: 0.25rem; margin: 8px 0; height: 200px;
+                    display: flex; flex-direction: column;">
+            <div style="background: #f8f9fa; padding: 0.375rem 0.5rem;
+                        border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
+                        position: sticky; top: 0; z-index: 10;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 16px;">📁</span>
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="font-size: 0.875rem;">📁</span>
                         <div>
-                            <div style="font-size: 14px; font-weight: 600; color: #24292e;">
+                            <div style="font-size: 0.875rem; font-weight: 500; color: #374151;">
                                 {self._path.name or 'Root Folder'}
                             </div>
-                            <div style="font-size: 12px; color: #586069;">
+                            <div style="font-size: 0.75rem; color: #6b7280;">
                                 Owner: {current_user}
                             </div>
                         </div>
                     </div>
-                    <div style="font-size: 12px; color: #586069; font-weight: 600;">
+                    <div style="font-size: 0.75rem; color: #6b7280; font-weight: 500;">
                         PERMISSIONS
                     </div>
                 </div>
             </div>
-            <div style="padding: 8px;">
+            <div style="flex: 1; overflow-y: auto; padding: 0;">
         """
 
         # Add each user
@@ -2248,32 +2260,42 @@ class SyftFolder:
 
             # Determine if this is public access
             display_name = "Anyone with the link" if user == "*" else user
-            
+
             # Get permission reasons for this user
             has_permission, reasons = self._check_permission_with_reasons(user, role.lower())
-            reason_text = "; ".join(reasons[:2]) if reasons else "Direct permission"  # Limit to 2 reasons
+            reason_text = (
+                "; ".join(reasons[:2]) if reasons else "Direct permission"
+            )  # Limit to 2 reasons
 
             html += f"""
-                <div style="display: flex; align-items: center; padding: 6px 8px; gap: 10px;
-                            border-bottom: 1px solid #f6f8fa;">
-                    <div style="width: 28px; height: 28px; border-radius: 50%; background: {color};
-                                display: flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 12px; font-weight: 600;">{initials}</span>
+                <div style="display: flex; align-items: center; padding: 0.375rem 0.5rem;
+                            gap: 0.5rem; border-bottom: 1px solid #f3f4f6;
+                            transition: background-color 0.15s; cursor: pointer;"
+                     onmouseover="this.style.background='rgba(0, 0, 0, 0.03)'"
+                     onmouseout="this.style.background='transparent'">
+                    <div style="width: 1.25rem; height: 1.25rem; border-radius: 50%;
+                                background: {color}; display: flex; align-items: center;
+                                justify-content: center; flex-shrink: 0;">
+                        <span style="color: white; font-size: 0.625rem; font-weight: 500;">
+                            {initials}
+                        </span>
                     </div>
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 13px; color: #24292e; font-weight: 500;">
+                        <div style="font-size: 0.75rem; color: #374151; font-weight: 500;
+                                    overflow: hidden; text-overflow: ellipsis;
+                                    white-space: nowrap;">
                             {display_name}
                         </div>
-                        <div style="font-size: 11px; color: #586069;">
-                            {user if user != "*" else "Public access"}
-                        </div>
-                        <div style="font-size: 10px; color: #6a737d; margin-top: 2px;">
+                        <div style="font-size: 0.625rem; color: #6b7280; line-height: 1.2;
+                                    margin-top: 0.125rem;">
                             {reason_text}
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="background: #f1f3f4; color: #24292e; padding: 2px 6px;
-                                     border-radius: 3px; font-size: 11px; font-weight: 600;">
+                    <div style="margin-left: 0.5rem;">
+                        <span style="display: inline-flex; align-items: center;
+                                     padding: 0.125rem 0.375rem; border-radius: 0.25rem;
+                                     font-size: 0.625rem; font-weight: 500;
+                                     background: #f3f4f6; color: #374151;">
                             {role.upper()}
                         </span>
                     </div>
@@ -2283,9 +2305,9 @@ class SyftFolder:
         # If no users have access
         if not user_permissions:
             html += """
-                <div style="text-align: center; padding: 16px 8px; color: #586069;">
-                    <div style="font-size: 13px; font-weight: 500;">No permissions set</div>
-                    <div style="font-size: 11px; margin-top: 2px;">
+                <div style="text-align: center; padding: 1rem; color: #6b7280;">
+                    <div style="font-size: 0.75rem; font-weight: 500;">No permissions set</div>
+                    <div style="font-size: 0.75rem; margin-top: 0.125rem;">
                         Only the owner has access
                     </div>
                 </div>

@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.24"
+__version__ = "0.3.28"
 
 __all__ = [
     "open",
@@ -201,63 +201,11 @@ class Files:
             return "<Files: Not connected>"
 
     def _repr_html_(self) -> str:
-        """HTML representation for Jupyter notebooks."""
-        try:
-            # Get first 10 files for preview
-            data = self.get(limit=10)
-            total = data["total_count"]
-            files = data["files"]
-
-            html = f"""
-            <div style="font-family: monospace;">
-                <h3>📁 SyftBox Files ({total} total)</h3>
-                <p style="color: #666;">Path: {data['syftbox_path']}</p>
-                <table style="border-collapse: collapse; width: 100%;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #ddd;">
-                            <th style="text-align: left; padding: 8px;">Name</th>
-                            <th style="text-align: left; padding: 8px;">Type</th>
-                            <th style="text-align: left; padding: 8px;">Permissions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            """
-
-            for file in files:
-                file_type = "📁 dir" if file["is_dir"] else "📄 file"
-                perms = []
-                for perm, users in file["permissions"].items():
-                    if users:
-                        perms.append(f"{perm}: {len(users)}")
-                perm_str = ", ".join(perms) if perms else "No permissions"
-
-                html += f"""
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 8px;">{file['name']}</td>
-                            <td style="padding: 8px;">{file_type}</td>
-                            <td style="padding: 8px; color: #666;">{perm_str}</td>
-                        </tr>
-                """
-
-            if total > 10:
-                html += f"""
-                        <tr>
-                            <td colspan="3" style="padding: 8px; text-align: center; color: #666;">
-                                ... and {total - 10} more files
-                            </td>
-                        </tr>
-                """
-
-            html += """
-                    </tbody>
-                </table>
-            </div>
-            """
-
-            return html
-
-        except Exception as e:
-            return f"<div style='color: red;'>Error loading files: {str(e)}</div>"
+        """Static HTML representation for Jupyter notebooks."""
+        return (
+            "<div>SyftBox Files Interface - use sp.files.all(), "
+            "sp.files.get(), or sp.files.search()</div>"
+        )
 
 
 # Create singleton instance
