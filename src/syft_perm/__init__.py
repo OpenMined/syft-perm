@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.88"
+__version__ = "0.3.89"
 
 __all__ = [
     "open",
@@ -1456,8 +1456,13 @@ class Files:
                     
                     switch(column) {{
                         case 'index':
-                            aVal = allFiles.indexOf(a);
-                            bVal = allFiles.indexOf(b);
+                            // Sort by modified timestamp for chronological order (newest first)
+                            aVal = a.modified || 0;
+                            bVal = b.modified || 0;
+                            // Reverse the values so newest (higher timestamp) comes first
+                            var temp = aVal;
+                            aVal = -bVal;
+                            bVal = -temp;
                             break;
                         case 'name':
                             aVal = a.name.toLowerCase();
