@@ -325,10 +325,31 @@ if _SERVER_AVAILABLE:
         return get_editor_html(path)
     
     @app.get("/files-widget", response_class=HTMLResponse)  # type: ignore[misc]
-    async def files_widget() -> str:
-        """Serve the files widget interface."""
-        # Generate the widget HTML directly for web serving
-        return get_files_widget_html()
+    async def files_widget(
+        search: Optional[str] = Query(None, description="Search term for file names"),
+        admin: Optional[str] = Query(None, description="Filter by admin email"),
+        folders: Optional[str] = Query(None, description="Comma-separated folder paths"),
+        page: int = Query(1, ge=1, description="Page number (1-based)"),
+        items_per_page: int = Query(50, ge=1, le=1000, description="Items per page"),
+        start: Optional[int] = Query(None, ge=0, description="Start index for slicing"),
+        end: Optional[int] = Query(None, ge=0, description="End index for slicing"),
+    ) -> str:
+        """Serve the files widget interface with filtering support."""
+        # Parse folders if provided
+        folder_list = None
+        if folders:
+            folder_list = [f.strip() for f in folders.split(",") if f.strip()]
+        
+        # Generate the widget HTML with parameters
+        return get_files_widget_html(
+            search=search,
+            admin=admin,
+            folders=folder_list,
+            page=page,
+            items_per_page=items_per_page,
+            start=start,
+            end=end
+        )
     
     @app.get("/api/scan-progress")  # type: ignore[misc]
     async def get_scan_progress() -> Dict[str, Any]:
@@ -336,8 +357,14 @@ if _SERVER_AVAILABLE:
         return scan_progress.copy()
     
     @app.get("/api/files-data")  # type: ignore[misc]
-    async def get_files_data() -> Dict[str, Any]:
-        """Get files data for the widget."""
+    async def get_files_data(
+        search: Optional[str] = Query(None),
+        admin: Optional[str] = Query(None),
+        folders: Optional[str] = Query(None),
+        start: Optional[int] = Query(None),
+        end: Optional[int] = Query(None),
+    ) -> Dict[str, Any]:
+        """Get files data for the widget with filtering support."""
         import asyncio
         from . import files as sp_files
         
@@ -384,10 +411,45 @@ if _SERVER_AVAILABLE:
         scan_progress["status"] = "complete"
         scan_progress["message"] = "Scan complete"
         
+        # Apply filters if provided
+        filtered_files = all_files
+        
+        # Apply search filter
+        if search:
+            search_terms = sp_files._parse_search_terms(search)
+            filtered_files = [
+                f for f in filtered_files
+                if sp_files._matches_search_terms(f, search_terms)
+            ]
+        
+        # Apply admin filter
+        if admin:
+            filtered_files = [
+                f for f in filtered_files
+                if f.get("datasite_owner", "").lower() == admin.lower()
+            ]
+        
+        # Apply folder filter
+        if folders:
+            folder_list = [f.strip() for f in folders.split(",") if f.strip()]
+            filtered_files = sp_files._apply_folder_filter(filtered_files, folder_list)
+        
+        # Apply slicing if provided
+        if start is not None or end is not None:
+            # Sort by modified date (newest first) for chronological slicing
+            sorted_files = sorted(filtered_files, key=lambda x: x.get("modified", 0), reverse=True)
+            
+            # Convert to 0-based indexing if needed
+            slice_start = (start - 1) if start is not None and start > 0 else start
+            slice_end = (end - 1) if end is not None and end > 0 else end
+            
+            filtered_files = sorted_files[slice(slice_start, slice_end)]
+        
         # Return the data as JSON
         return {
-            "files": all_files,
-            "total": len(all_files)
+            "files": filtered_files,
+            "total": len(filtered_files),
+            "total_unfiltered": len(all_files)
         }
 
 
@@ -958,7 +1020,15 @@ def get_editor_html(path: str) -> str:
     """
 
 
-def get_files_widget_html() -> str:
+def get_files_widget_html(
+    search: Optional[str] = None,
+    admin: Optional[str] = None,
+    folders: Optional[List[str]] = None,
+    page: int = 1,
+    items_per_page: int = 50,
+    start: Optional[int] = None,
+    end: Optional[int] = None
+) -> str:
     """Generate the files widget HTML for web serving."""
     import html as html_module
     import json
@@ -1481,8 +1551,19 @@ def get_files_widget_html() -> str:
                 // Initial progress
                 updateProgress(10, 'Finding SyftBox directory...');
                 
+                // Get current URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const apiParams = new URLSearchParams();
+                
+                // Pass through relevant parameters
+                if (urlParams.has('search')) apiParams.set('search', urlParams.get('search'));
+                if (urlParams.has('admin')) apiParams.set('admin', urlParams.get('admin'));
+                if (urlParams.has('folders')) apiParams.set('folders', urlParams.get('folders'));
+                if (urlParams.has('start')) apiParams.set('start', urlParams.get('start'));
+                if (urlParams.has('end')) apiParams.set('end', urlParams.get('end'));
+                
                 // Start fetching files data (this will trigger the scan)
-                const filesPromise = fetch('/api/files-data');
+                const filesPromise = fetch('/api/files-data' + (apiParams.toString() ? '?' + apiParams.toString() : ''));
                 
                 // Poll for progress updates
                 let progressInterval = setInterval(async () => {{

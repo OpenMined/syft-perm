@@ -14,6 +14,7 @@ __all__ = [
     "get_files_widget_url",
     "files",
     "is_dark",
+    "FastAPIFiles",
 ]
 
 
@@ -2813,6 +2814,113 @@ class FilteredFiles(Files):
             output.append(f"Use FilteredFiles in Jupyter for interactive view of all {total_files} results")
         
         return "\n".join(output)
+
+
+class FastAPIFiles(Files):
+    """FastAPI version of Files that generates URLs with query parameters"""
+    
+    def __init__(self, server_url: str = "http://localhost:8005"):
+        super().__init__()
+        self.server_url = server_url.rstrip('/')
+    
+    def search(self, files: _Union[str, None] = None, admin: _Union[str, None] = None, limit: int = 50, offset: int = 0) -> "FastAPIFiles":
+        """
+        Generate URL for search filters.
+        
+        Args:
+            files: Search term for file names
+            admin: Filter by admin email
+            limit: Number of items per page
+            offset: Starting index
+            
+        Returns:
+            FastAPIFiles instance with URL
+        """
+        params = []
+        if files:
+            params.append(f"search={files}")
+        if admin:
+            params.append(f"admin={admin}")
+        
+        url = f"{self.server_url}/files-widget"
+        if params:
+            url += "?" + "&".join(params)
+            
+        # Return a new instance that will display as URL
+        result = FastAPIFiles(self.server_url)
+        result._url = url
+        return result
+    
+    def filter(self, folders: _Union[list, None] = None) -> "FastAPIFiles":
+        """
+        Generate URL for folder filter.
+        
+        Args:
+            folders: List of file or folder paths to include
+            
+        Returns:
+            FastAPIFiles instance with URL
+        """
+        if not folders:
+            return self
+            
+        # Convert folders list to comma-separated string
+        folders_str = ",".join(str(f) for f in folders)
+        url = f"{self.server_url}/files-widget?folders={folders_str}"
+        
+        result = FastAPIFiles(self.server_url)
+        result._url = url
+        return result
+    
+    def page(self, page_number: int, items_per_page: int = 50) -> "FastAPIFiles":
+        """
+        Generate URL for pagination.
+        
+        Args:
+            page_number: Page number (1-based)
+            items_per_page: Items per page
+            
+        Returns:
+            FastAPIFiles instance with URL
+        """
+        url = f"{self.server_url}/files-widget?page={page_number}&items_per_page={items_per_page}"
+        
+        result = FastAPIFiles(self.server_url)
+        result._url = url
+        return result
+    
+    def all(self) -> "FastAPIFiles":
+        """Return URL for all files."""
+        url = f"{self.server_url}/files-widget"
+        result = FastAPIFiles(self.server_url)
+        result._url = url
+        return result
+    
+    def __repr__(self) -> str:
+        """Return the URL when printed."""
+        if hasattr(self, '_url'):
+            return f"FastAPI Files Widget: {self._url}"
+        return f"FastAPI Files Widget: {self.server_url}/files-widget"
+    
+    def _repr_html_(self) -> str:
+        """Display as iframe in Jupyter."""
+        url = getattr(self, '_url', f"{self.server_url}/files-widget")
+        is_dark_mode = is_dark()
+        border_color = "#3e3e42" if is_dark_mode else "#ddd"
+        
+        return f"""
+        <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 8px; overflow: hidden;">
+            <iframe 
+                src="{url}" 
+                width="100%" 
+                height="100%" 
+                frameborder="0"
+                style="border: none;"
+                allow="clipboard-read; clipboard-write">
+            </iframe>
+        </div>
+        """
+    
 
 
 # Create singleton instance
