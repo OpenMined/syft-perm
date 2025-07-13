@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.83"
+__version__ = "0.3.84"
 
 __all__ = [
     "open",
@@ -151,9 +151,10 @@ class Files:
                         all_paths.add(root_path / file_name)
             
             processed_datasites += 1
-
-        if progress_callback:
-            progress_callback(total_datasites, total_datasites, "Processing files...")
+            
+            # Update progress after each datasite is fully processed
+            if progress_callback:
+                progress_callback(processed_datasites, total_datasites, f"Completed {datasite_dir.name}")
 
         # Second pass: process all paths and create entries
         for path in sorted(all_paths):
@@ -176,19 +177,9 @@ class Files:
 
                 # Get permissions for this folder
                 permissions_summary = []
-                limits_info = {
-                    "max_file_size": None,
-                    "allow_dirs": True,
-                    "allow_symlinks": True,
-                    "has_limits": False,
-                }
                 try:
                     syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
-
-                    # Get limits info
-                    if hasattr(syft_obj, "get_file_limits"):
-                        limits_info = syft_obj.get_file_limits()
 
                     # Build permissions summary
                     user_highest_perm = {}
@@ -237,10 +228,6 @@ class Files:
                         "extension": "folder",
                         "datasite_owner": datasite_owner,
                         "permissions_summary": permissions_summary,
-                        "max_file_size": limits_info.get("max_file_size"),
-                        "allow_dirs": limits_info.get("allow_dirs", True),
-                        "allow_symlinks": limits_info.get("allow_symlinks", True),
-                        "has_limits": limits_info.get("has_limits", False),
                     }
                 )
             else:
@@ -254,19 +241,9 @@ class Files:
                 # Get permissions for this file
                 has_yaml = False
                 permissions_summary = []
-                limits_info = {
-                    "max_file_size": None,
-                    "allow_dirs": True,
-                    "allow_symlinks": True,
-                    "has_limits": False,
-                }
                 try:
                     syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
-
-                    # Get limits info
-                    if hasattr(syft_obj, "get_file_limits"):
-                        limits_info = syft_obj.get_file_limits()
 
                     if hasattr(syft_obj, "has_yaml"):
                         has_yaml = syft_obj.has_yaml
@@ -316,10 +293,6 @@ class Files:
                         "extension": file_ext,
                         "datasite_owner": datasite_owner,
                         "permissions_summary": permissions_summary,
-                        "max_file_size": limits_info.get("max_file_size"),
-                        "allow_dirs": limits_info.get("allow_dirs", True),
-                        "allow_symlinks": limits_info.get("allow_symlinks", True),
-                        "has_limits": limits_info.get("has_limits", False),
                     }
                 )
 
@@ -821,10 +794,6 @@ class Files:
                             <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
                             <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
                             <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
-                            <th style="width: 3rem; cursor: pointer;" onclick="sortTable_{container_id}('max_file_size')">Max ↕</th>
-                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('allow_dirs')">D? ↕</th>
-                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('allow_symlinks')">S? ↕</th>
-                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('has_limits')">L? ↕</th>
                             <th style="width: 15rem;">Actions</th>
                         </tr>
                     </thead>
@@ -841,10 +810,6 @@ class Files:
             file_ext = file.get("extension", ".txt")
             size = file.get("size", 0)
             is_dir = file.get("is_dir", False)
-            max_file_size = file.get("max_file_size")
-            allow_dirs = file.get("allow_dirs", True)
-            allow_symlinks = file.get("allow_symlinks", True)
-            has_limits = file.get("has_limits", False)
 
             # Format size
             if size > 1024 * 1024:
@@ -854,16 +819,6 @@ class Files:
             else:
                 size_str = f"{size} B"
 
-            # Format max file size
-            if max_file_size:
-                if max_file_size > 1024 * 1024:
-                    max_size_str = f"{max_file_size / (1024 * 1024):.1f} MB"
-                elif max_file_size > 1024:
-                    max_size_str = f"{max_file_size / 1024:.1f} KB"
-                else:
-                    max_size_str = f"{max_file_size} B"
-            else:
-                max_size_str = "-"
 
             html += f"""
                     <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
@@ -911,10 +866,6 @@ class Files:
             html += f"""
                             </div>
                         </td>
-                        <td><span style="font-size: 0.5rem; color: #6b7280;">{max_size_str}</span></td>
-                        <td><span style="font-size: 0.625rem; color: {'#059669' if allow_dirs else '#dc2626'};">{'✓' if allow_dirs else '✗'}</span></td>
-                        <td><span style="font-size: 0.625rem; color: {'#059669' if allow_symlinks else '#dc2626'};">{'✓' if allow_symlinks else '✗'}</span></td>
-                        <td><span style="font-size: 0.625rem; color: {'#dc2626' if has_limits else '#6b7280'};">{'✓' if has_limits else '-'}</span></td>
                         <td>
                             <div style="display: flex; gap: 0.125rem;">
                                 <button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}('{html_module.escape(file_path)}')" title="Open in editor">File</button>
@@ -1048,7 +999,7 @@ class Files:
                 document.getElementById('{container_id}-page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
                 
                 if (totalFiles === 0) {{
-                    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px;">No files found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No files found</td></tr>';
                     return;
                 }}
                 
@@ -1068,10 +1019,6 @@ class Files:
                     var fileExt = file.extension || '.txt';
                     var sizeStr = formatSize(file.size || 0);
                     var isDir = file.is_dir || false;
-                    var maxFileSize = file.max_file_size;
-                    var allowDirs = file.allow_dirs !== false;
-                    var allowSymlinks = file.allow_symlinks !== false;
-                    var hasLimits = file.has_limits || false;
                     
                     html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                         '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
@@ -1117,10 +1064,6 @@ class Files:
                     
                     html += '</div>' +
                         '</td>' +
-                        '<td><span style="font-size: 0.5rem; color: #6b7280;">' + formatSize(maxFileSize) + '</span></td>' +
-                        '<td><span style="font-size: 0.625rem; color: ' + (allowDirs ? '#059669' : '#dc2626') + ';">' + (allowDirs ? '✓' : '✗') + '</span></td>' +
-                        '<td><span style="font-size: 0.625rem; color: ' + (allowSymlinks ? '#059669' : '#dc2626') + ';">' + (allowSymlinks ? '✓' : '✗') + '</span></td>' +
-                        '<td><span style="font-size: 0.625rem; color: ' + (hasLimits ? '#dc2626' : '#6b7280') + ';">' + (hasLimits ? '✓' : '-') + '</span></td>' +
                         '<td>' +
                             '<div style="display: flex; gap: 0.125rem;">' +
                                 '<button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="Open in editor">File</button>' +
@@ -1148,8 +1091,43 @@ class Files:
                 var searchTerm = document.getElementById('{container_id}-search').value.toLowerCase();
                 var adminFilter = document.getElementById('{container_id}-admin-filter').value.toLowerCase();
                 
-                // Split search term by spaces for multi-term search
-                var searchTerms = searchTerm.split(' ').filter(function(term) {{ return term.length > 0; }});
+                // Parse search terms to handle quoted phrases
+                var searchTerms = [];
+                var currentTerm = '';
+                var inQuotes = false;
+                var quoteChar = '';
+                
+                for (var i = 0; i < searchTerm.length; i++) {{
+                    var char = searchTerm[i];
+                    
+                    if ((char === '"' || char === "'") && !inQuotes) {{
+                        // Start of quoted string
+                        inQuotes = true;
+                        quoteChar = char;
+                    }} else if (char === quoteChar && inQuotes) {{
+                        // End of quoted string
+                        inQuotes = false;
+                        if (currentTerm.length > 0) {{
+                            searchTerms.push(currentTerm);
+                            currentTerm = '';
+                        }}
+                        quoteChar = '';
+                    }} else if (char === ' ' && !inQuotes) {{
+                        // Space outside quotes - end current term
+                        if (currentTerm.length > 0) {{
+                            searchTerms.push(currentTerm);
+                            currentTerm = '';
+                        }}
+                    }} else {{
+                        // Regular character - add to current term
+                        currentTerm += char;
+                    }}
+                }}
+                
+                // Add final term if exists
+                if (currentTerm.length > 0) {{
+                    searchTerms.push(currentTerm);
+                }}
                 
                 filteredFiles = allFiles.filter(function(file) {{
                     // Admin filter
@@ -1169,11 +1147,7 @@ class Files:
                             formatSize(file.size || 0),
                             formatDate(file.modified || 0),
                             file.is_dir ? 'folder' : 'file',
-                            (file.permissions_summary || []).join(' '),
-                            formatSize(file.max_file_size || 0),
-                            file.allow_dirs !== false ? 'dirs' : '',
-                            file.allow_symlinks !== false ? 'symlinks' : '',
-                            file.has_limits ? 'limits' : ''
+                            (file.permissions_summary || []).join(' ')
                         ].join(' ').toLowerCase();
                         
                         return searchableContent.includes(term);
@@ -1338,22 +1312,6 @@ class Files:
                         case 'permissions':
                             aVal = (a.permissions_summary || []).length;
                             bVal = (b.permissions_summary || []).length;
-                            break;
-                        case 'max_file_size':
-                            aVal = a.max_file_size || 0;
-                            bVal = b.max_file_size || 0;
-                            break;
-                        case 'allow_dirs':
-                            aVal = a.allow_dirs !== false ? 1 : 0;
-                            bVal = b.allow_dirs !== false ? 1 : 0;
-                            break;
-                        case 'allow_symlinks':
-                            aVal = a.allow_symlinks !== false ? 1 : 0;
-                            bVal = b.allow_symlinks !== false ? 1 : 0;
-                            break;
-                        case 'has_limits':
-                            aVal = a.has_limits ? 1 : 0;
-                            bVal = b.has_limits ? 1 : 0;
                             break;
                         default:
                             return 0;
