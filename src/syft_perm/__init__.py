@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.62"
+__version__ = "0.3.63"
 
 __all__ = [
     "open",
@@ -571,6 +571,7 @@ class Files:
                             <th style="width: 7rem;">Modified</th>
                             <th style="width: 2.5rem;">Type</th>
                             <th style="width: 3rem;">Size</th>
+                            <th style="width: 10rem;">Permissions</th>
                             <th style="width: 15rem;">Actions</th>
                         </tr>
                     </thead>
@@ -623,6 +624,12 @@ class Files:
                         </td>
                         <td><span class="type-badge">{file_ext}</span></td>
                         <td><span style="color: #6b7280;">{size_str}</span></td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 0.125rem;">
+                                <span style="font-weight: 500; color: #059669;">{file.get('user_permission', 'none').upper()}</span>
+                                <span style="font-size: 0.625rem; color: #6b7280;">{html_module.escape(file.get('permission_reason', 'No permission'))}</span>
+                            </div>
+                        </td>
                         <td>
                             <div style="display: flex; gap: 0.125rem;">
                                 <button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}('{html_module.escape(file_path)}')" title="Open in editor">File</button>
@@ -760,6 +767,12 @@ class Files:
                         '</td>' +
                         '<td><span class="type-badge">' + fileExt + '</span></td>' +
                         '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
+                        '<td>' +
+                            '<div style="display: flex; flex-direction: column; gap: 0.125rem;">' +
+                                '<span style="font-weight: 500; color: #059669;">' + (file.user_permission || 'none').toUpperCase() + '</span>' +
+                                '<span style="font-size: 0.625rem; color: #6b7280;">' + escapeHtml(file.permission_reason || 'No permission') + '</span>' +
+                            '</div>' +
+                        '</td>' +
                         '<td>' +
                             '<div style="display: flex; gap: 0.125rem;">' +
                                 '<button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="Open in editor">File</button>' +
