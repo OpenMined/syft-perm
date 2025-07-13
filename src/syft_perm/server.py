@@ -901,12 +901,12 @@ def get_files_widget_html() -> str:
     
     # Import needed functions
     from . import files as sp_files
+    from . import is_dark
     
     container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
     
-    # For web context, default to light mode
-    # You could add a query parameter to support dark mode
-    is_dark_mode = False
+    # Check if Jupyter is in dark mode
+    is_dark_mode = is_dark()
     
     # Non-obvious tips for users
     tips = [
@@ -1036,6 +1036,30 @@ def get_files_widget_html() -> str:
         </tr>
         """
     
+    # Generate CSS based on theme
+    if is_dark_mode:
+        # Dark mode colors
+        bg_color = "#1e1e1e"
+        text_color = "#d4d4d4"
+        border_color = "#3e3e3e"
+        controls_bg = "#252526"
+        input_bg = "#3c3c3c"
+        input_border = "#464647"
+        table_header_bg = "#252526"
+        hover_bg = "rgba(255, 255, 255, 0.05)"
+        row_border = "#2a2a2a"
+    else:
+        # Light mode colors
+        bg_color = "#ffffff"
+        text_color = "#000000"
+        border_color = "#e5e7eb"
+        controls_bg = "#f8f9fa"
+        input_bg = "#ffffff"
+        input_border = "#d1d5db"
+        table_header_bg = "#f8f9fa"
+        hover_bg = "rgba(0, 0, 0, 0.03)"
+        row_border = "#f3f4f6"
+    
     # Generate complete HTML with the widget
     return f"""
 <!DOCTYPE html>
@@ -1045,6 +1069,14 @@ def get_files_widget_html() -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyftBox Files</title>
     <style>
+    body {{
+        background-color: {bg_color};
+        color: {text_color};
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }}
+    
     #{container_id} * {{
         margin: 0;
         padding: 0;
@@ -1054,13 +1086,14 @@ def get_files_widget_html() -> str:
     #{container_id} {{
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         font-size: 12px;
-        background: #ffffff;
+        background: {bg_color};
+        color: {text_color};
         overflow: hidden;
         display: flex;
         flex-direction: column;
         width: 100%;
         margin: 0;
-        border: 1px solid #e5e7eb;
+        border: 1px solid {border_color};
         border-radius: 8px;
     }}
 
@@ -1069,8 +1102,8 @@ def get_files_widget_html() -> str:
         gap: 0.5rem;
         flex-wrap: wrap;
         padding: 0.75rem;
-        background: #f8f9fa;
-        border-bottom: 1px solid #e5e7eb;
+        background: {controls_bg};
+        border-bottom: 1px solid {border_color};
         flex-shrink: 0;
     }}
 
@@ -1078,17 +1111,18 @@ def get_files_widget_html() -> str:
         flex: 1;
         min-width: 200px;
         padding: 0.5rem;
-        border: 1px solid #d1d5db;
+        border: 1px solid {input_border};
         border-radius: 0.25rem;
         font-size: 0.875rem;
-        background: #ffffff;
+        background: {input_bg};
+        color: {text_color};
     }}
 
     #{container_id} .table-container {{
         flex: 1;
         overflow-y: auto;
         overflow-x: auto;
-        background: #ffffff;
+        background: {bg_color};
         min-height: 0;
         max-height: 600px;
     }}
@@ -1100,8 +1134,8 @@ def get_files_widget_html() -> str:
     }}
 
     #{container_id} thead {{
-        background: #f8f9fa;
-        border-bottom: 1px solid #e5e7eb;
+        background: {table_header_bg};
+        border-bottom: 1px solid {border_color};
     }}
 
     #{container_id} th {{
@@ -1109,19 +1143,21 @@ def get_files_widget_html() -> str:
         padding: 0.375rem 0.25rem;
         font-weight: 500;
         font-size: 0.75rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid {border_color};
         position: sticky;
         top: 0;
-        background: #f8f9fa;
+        background: {table_header_bg};
         z-index: 10;
+        color: {text_color};
     }}
 
     #{container_id} td {{
         padding: 0.375rem 0.25rem;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid {row_border};
         vertical-align: top;
         font-size: 0.75rem;
         text-align: left;
+        color: {text_color};
     }}
 
     #{container_id} tbody tr {{
@@ -1130,7 +1166,7 @@ def get_files_widget_html() -> str:
     }}
 
     #{container_id} tbody tr:hover {{
-        background: rgba(0, 0, 0, 0.03);
+        background: {hover_bg};
     }}
 
     @keyframes rainbow {{
@@ -1144,8 +1180,19 @@ def get_files_widget_html() -> str:
         100% {{ background-color: #ffe9ec; }}
     }}
 
+    @keyframes rainbow-dark {{
+        0% {{ background-color: #3d2c2e; }}
+        14.28% {{ background-color: #3d352c; }}
+        28.57% {{ background-color: #3d3d2c; }}
+        42.86% {{ background-color: #2c3d31; }}
+        57.14% {{ background-color: #2c363d; }}
+        71.43% {{ background-color: #352c3d; }}
+        85.71% {{ background-color: #3d2c3d; }}
+        100% {{ background-color: #3d2c2e; }}
+    }}
+
     #{container_id} .rainbow-flash {{
-        animation: rainbow 0.8s ease-in-out;
+        animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out;
     }}
 
     #{container_id} .pagination {{
@@ -1153,8 +1200,8 @@ def get_files_widget_html() -> str:
         justify-content: space-between;
         align-items: center;
         padding: 0.5rem;
-        border-top: 1px solid #e5e7eb;
-        background: rgba(0, 0, 0, 0.02);
+        border-top: 1px solid {border_color};
+        background: {'rgba(255, 255, 255, 0.02)' if is_dark_mode else 'rgba(0, 0, 0, 0.02)'};
         flex-shrink: 0;
     }}
 
@@ -1162,14 +1209,15 @@ def get_files_widget_html() -> str:
         padding: 0.25rem 0.5rem;
         border-radius: 0.25rem;
         font-size: 0.75rem;
-        border: 1px solid #e5e7eb;
-        background: white;
+        border: 1px solid {border_color};
+        background: {input_bg};
+        color: {text_color};
         cursor: pointer;
         transition: all 0.15s;
     }}
 
     #{container_id} .pagination button:hover:not(:disabled) {{
-        background: #f3f4f6;
+        background: {hover_bg};
     }}
 
     #{container_id} .pagination button:disabled {{
@@ -1179,12 +1227,12 @@ def get_files_widget_html() -> str:
 
     #{container_id} .pagination .page-info {{
         font-size: 0.75rem;
-        color: #6b7280;
+        color: {'#9ca3af' if is_dark_mode else '#6b7280'};
     }}
 
     #{container_id} .pagination .status {{
         font-size: 0.75rem;
-        color: #9ca3af;
+        color: {'#6b7280' if is_dark_mode else '#9ca3af'};
         font-style: italic;
         opacity: 0.8;
         text-align: center;
@@ -1221,28 +1269,28 @@ def get_files_widget_html() -> str:
     }}
 
     #{container_id} .btn-blue {{
-        background: #dbeafe;
-        color: #3b82f6;
+        background: {'#1e3a5f' if is_dark_mode else '#dbeafe'};
+        color: {'#60a5fa' if is_dark_mode else '#3b82f6'};
     }}
 
     #{container_id} .btn-purple {{
-        background: #e9d5ff;
-        color: #a855f7;
+        background: {'#3b2e4d' if is_dark_mode else '#e9d5ff'};
+        color: {'#c084fc' if is_dark_mode else '#a855f7'};
     }}
 
     #{container_id} .btn-red {{
-        background: #fee2e2;
-        color: #ef4444;
+        background: {'#4c1d1d' if is_dark_mode else '#fee2e2'};
+        color: {'#f87171' if is_dark_mode else '#ef4444'};
     }}
 
     #{container_id} .btn-green {{
-        background: #d1fae5;
-        color: #10b981;
+        background: {'#1e3a2e' if is_dark_mode else '#d1fae5'};
+        color: {'#34d399' if is_dark_mode else '#10b981'};
     }}
 
     #{container_id} .btn-gray {{
-        background: #f3f4f6;
-        color: #6b7280;
+        background: {'#374151' if is_dark_mode else '#f3f4f6'};
+        color: {'#9ca3af' if is_dark_mode else '#6b7280'};
     }}
 
     #{container_id} .icon {{
@@ -1252,10 +1300,10 @@ def get_files_widget_html() -> str:
     
     #{container_id} .autocomplete-dropdown {{
         position: absolute;
-        background: white;
-        border: 1px solid #e5e7eb;
+        background: {input_bg};
+        border: 1px solid {border_color};
         border-radius: 0.25rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px {'rgba(0, 0, 0, 0.3)' if is_dark_mode else 'rgba(0, 0, 0, 0.1)'};
         max-height: 200px;
         overflow-y: auto;
         z-index: 1000;
@@ -1270,11 +1318,12 @@ def get_files_widget_html() -> str:
         padding: 0.5rem;
         cursor: pointer;
         font-size: 0.875rem;
+        color: {text_color};
     }}
     
     #{container_id} .autocomplete-option:hover,
     #{container_id} .autocomplete-option.selected {{
-        background: #f3f4f6;
+        background: {hover_bg};
     }}
 
     #{container_id} .type-badge {{
@@ -1283,8 +1332,8 @@ def get_files_widget_html() -> str:
         border-radius: 0.25rem;
         font-size: 0.75rem;
         font-weight: 500;
-        background: #ffffff;
-        color: #374151;
+        background: {table_header_bg};
+        color: {'#d1d5db' if is_dark_mode else '#374151'};
         text-align: center;
         white-space: nowrap;
     }}
@@ -1295,7 +1344,7 @@ def get_files_widget_html() -> str:
         gap: 0.25rem;
         font-family: monospace;
         font-size: 0.75rem;
-        color: #374151;
+        color: {'#d1d5db' if is_dark_mode else '#374151'};
     }}
 
     #{container_id} .date-text {{
@@ -1303,11 +1352,11 @@ def get_files_widget_html() -> str:
         align-items: center;
         gap: 0.25rem;
         font-size: 0.75rem;
-        color: #4b5563;
+        color: {'#9ca3af' if is_dark_mode else '#4b5563'};
     }}
     </style>
 </head>
-<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+<body>
     <div id="{container_id}">
         <div class="search-controls">
             <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
