@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.89"
+__version__ = "0.3.90"
 
 __all__ = [
     "open",
@@ -95,6 +95,48 @@ class Files:
         self._initial_page = 1  # Default to first page
         self._items_per_page = 50  # Default items per page
         self._show_ascii_progress = True  # Whether to show ASCII progress in __repr__
+    
+    def _check_server(self) -> _Union[str, None]:
+        """Check if syft-perm server is available. Returns server URL or None."""
+        try:
+            import urllib.request
+            import json
+            from pathlib import Path
+            
+            # First check config file for port
+            config_path = Path.home() / ".syftperm" / "config.json"
+            ports_to_check = []
+            
+            if config_path.exists():
+                try:
+                    with open(config_path, 'r') as f:
+                        config = json.load(f)
+                        port = config.get('port')
+                        if port:
+                            ports_to_check.append(port)
+                except:
+                    pass
+            
+            # Also check default port
+            if 8005 not in ports_to_check:
+                ports_to_check.append(8005)
+            
+            # Try each port with very short timeout
+            for port in ports_to_check:
+                try:
+                    url = f"http://localhost:{port}"
+                    with urllib.request.urlopen(url, timeout=0.2) as response:
+                        if response.status == 200:
+                            content = response.read().decode('utf-8')
+                            if "SyftPerm" in content:
+                                return url
+                except:
+                    continue
+                    
+        except:
+            pass
+        
+        return None
 
     def _scan_files(self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False) -> list:
         """Scan SyftBox directory for files with permissions."""
@@ -406,7 +448,38 @@ class Files:
         Returns:
             New Files instance with filtered results
         """
-        # Get all files first
+        # Check if server is available
+        server_url = self._check_server()
+        if server_url:
+            # Server is available, use it
+            try:
+                import urllib.request
+                import urllib.parse
+                import json
+                
+                # Build URL with parameters
+                params = {}
+                if files:
+                    params['search'] = files
+                if admin:
+                    params['admin'] = admin
+                
+                url = f"{server_url}/api/files-data"
+                if params:
+                    url += "?" + urllib.parse.urlencode(params)
+                
+                # Fetch from server with 1 second timeout
+                with urllib.request.urlopen(url, timeout=1) as response:
+                    data = json.loads(response.read().decode('utf-8'))
+                    server_files = data.get('files', [])
+                    
+                    # Return FilteredFiles with server data
+                    return FilteredFiles(server_files, limit=limit, offset=offset)
+            except:
+                # If server fails, fall back to local
+                pass
+        
+        # Fall back to local scanning
         all_files = self._scan_files()
         
         # Apply filters

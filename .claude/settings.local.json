@@ -31,7 +31,9 @@
       "Bash(cat:*)",
       "Bash(uv pip install:*)",
       "Bash(mv:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(kill:*)"
     ],
     "deny": []
   }
