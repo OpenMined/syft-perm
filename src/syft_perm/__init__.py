@@ -754,18 +754,22 @@ class Files:
             
             # First, try to read port from config file
             config_path = Path.home() / ".syftperm" / "config.json"
+            print(f"Config path: {config_path}, exists: {config_path.exists()}")
             if config_path.exists():
                 try:
                     with open(config_path, 'r') as f:
                         config = json.load(f)
                         configured_port = config.get('port')
+                        print(f"Config port: {configured_port}")
                         if configured_port:
                             tried_ports.append(configured_port)
-                            if check_server(configured_port):
+                            server_found = check_server(configured_port)
+                            print(f"Server check result for port {configured_port}: {server_found}")
+                            if server_found:
                                 server_available = True
                                 server_port = configured_port
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error reading config: {e}")
             
             # If not found via config, fall back to scanning ports 8000-8100
             if not server_available:
