@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.77"
+__version__ = "0.3.76"
 
 __all__ = [
     "open",
@@ -161,28 +161,9 @@ class Files:
                 
                 # Get permissions for this folder
                 permissions_summary = []
-                limits_info = {
-                    "max_file_size": None,
-                    "allow_dirs": True,
-                    "allow_symlinks": True,
-                    "has_limits": False
-                }
                 try:
                     syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
-                    
-                    # Try to get limits info if available
-                    if hasattr(syft_obj, "get_active_limits"):
-                        limits_info = syft_obj.get_active_limits()
-                    elif hasattr(syft_obj, "_get_active_rule_limits"):
-                        rule_limits = syft_obj._get_active_rule_limits()
-                        if rule_limits:
-                            limits_info = {
-                                "max_file_size": rule_limits.get("max_file_size"),
-                                "allow_dirs": rule_limits.get("allow_dirs", True),
-                                "allow_symlinks": rule_limits.get("allow_symlinks", True),
-                                "has_limits": True
-                            }
                     
                     # Build permissions summary
                     user_highest_perm = {}
@@ -231,10 +212,6 @@ class Files:
                         "extension": "folder",
                         "datasite_owner": datasite_owner,
                         "permissions_summary": permissions_summary,
-                        "max_file_size": limits_info["max_file_size"],
-                        "allow_dirs": limits_info["allow_dirs"],
-                        "allow_symlinks": limits_info["allow_symlinks"],
-                        "has_limits": limits_info["has_limits"],
                     }
                 )
             else:
@@ -248,28 +225,9 @@ class Files:
                 # Get permissions for this file
                 has_yaml = False
                 permissions_summary = []
-                limits_info = {
-                    "max_file_size": None,
-                    "allow_dirs": True,
-                    "allow_symlinks": True,
-                    "has_limits": False
-                }
                 try:
                     syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
-                    
-                    # Try to get limits info if available
-                    if hasattr(syft_obj, "get_active_limits"):
-                        limits_info = syft_obj.get_active_limits()
-                    elif hasattr(syft_obj, "_get_active_rule_limits"):
-                        rule_limits = syft_obj._get_active_rule_limits()
-                        if rule_limits:
-                            limits_info = {
-                                "max_file_size": rule_limits.get("max_file_size"),
-                                "allow_dirs": rule_limits.get("allow_dirs", True),
-                                "allow_symlinks": rule_limits.get("allow_symlinks", True),
-                                "has_limits": True
-                            }
                     
                     if hasattr(syft_obj, "has_yaml"):
                         has_yaml = syft_obj.has_yaml
@@ -319,10 +277,6 @@ class Files:
                         "extension": file_ext,
                         "datasite_owner": datasite_owner,
                         "permissions_summary": permissions_summary,
-                        "max_file_size": limits_info["max_file_size"],
-                        "allow_dirs": limits_info["allow_dirs"],
-                        "allow_symlinks": limits_info["allow_symlinks"],
-                        "has_limits": limits_info["has_limits"],
                     }
                 )
         
@@ -716,10 +670,6 @@ class Files:
             file_ext = file.get("extension", ".txt")
             size = file.get("size", 0)
             is_dir = file.get("is_dir", False)
-            max_file_size = file.get("max_file_size")
-            allow_dirs = file.get("allow_dirs", True)
-            allow_symlinks = file.get("allow_symlinks", True)
-            has_limits = file.get("has_limits", False)
 
             # Format size
             if size > 1024 * 1024:
@@ -728,17 +678,6 @@ class Files:
                 size_str = f"{size / 1024:.1f} KB"
             else:
                 size_str = f"{size} B"
-                
-            # Format max file size
-            if max_file_size:
-                if max_file_size > 1024 * 1024:
-                    max_size_str = f"{max_file_size / (1024 * 1024):.1f} MB"
-                elif max_file_size > 1024:
-                    max_size_str = f"{max_file_size / 1024:.1f} KB"
-                else:
-                    max_size_str = f"{max_file_size} B"
-            else:
-                max_size_str = "-"
 
             html += f"""
                     <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
@@ -781,13 +720,9 @@ class Files:
             else:
                 html += '                                <span style="color: #9ca3af;">No permissions</span>\n'
                 
-            html += f"""
+            html += """
                             </div>
                         </td>
-                        <td><span style="font-size: 0.625rem; color: #6b7280;">{max_size_str}</span></td>
-                        <td><span style="font-size: 0.625rem; color: {'#059669' if allow_dirs else '#dc2626'};">{'✓' if allow_dirs else '✗'}</span></td>
-                        <td><span style="font-size: 0.625rem; color: {'#059669' if allow_symlinks else '#dc2626'};">{'✓' if allow_symlinks else '✗'}</span></td>
-                        <td><span style="font-size: 0.625rem; color: {'#dc2626' if has_limits else '#6b7280'};">{'✓' if has_limits else '-'}</span></td>
                         <td>
                             <div style="display: flex; gap: 0.125rem;">
                                 <button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}('{html_module.escape(file_path)}')" title="Open in editor">File</button>
@@ -919,7 +854,7 @@ class Files:
                 document.getElementById('{container_id}-page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
                 
                 if (totalFiles === 0) {{
-                    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px;">No files found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No files found</td></tr>';
                     return;
                 }}
                 
@@ -939,10 +874,6 @@ class Files:
                     var fileExt = file.extension || '.txt';
                     var sizeStr = formatSize(file.size || 0);
                     var isDir = file.is_dir || false;
-                    var maxFileSize = file.max_file_size;
-                    var allowDirs = file.allow_dirs !== false;
-                    var allowSymlinks = file.allow_symlinks !== false;
-                    var hasLimits = file.has_limits || false;
                     
                     html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                         '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
@@ -988,10 +919,6 @@ class Files:
                     
                     html += '</div>' +
                         '</td>' +
-                        '<td><span style="font-size: 0.625rem; color: #6b7280;">' + formatSize(maxFileSize) + '</span></td>' +
-                        '<td><span style="font-size: 0.625rem; color: ' + (allowDirs ? '#059669' : '#dc2626') + ';">' + (allowDirs ? '✓' : '✗') + '</span></td>' +
-                        '<td><span style="font-size: 0.625rem; color: ' + (allowSymlinks ? '#059669' : '#dc2626') + ';">' + (allowSymlinks ? '✓' : '✗') + '</span></td>' +
-                        '<td><span style="font-size: 0.625rem; color: ' + (hasLimits ? '#dc2626' : '#6b7280') + ';">' + (hasLimits ? '✓' : '-') + '</span></td>' +
                         '<td>' +
                             '<div style="display: flex; gap: 0.125rem;">' +
                                 '<button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="Open in editor">File</button>' +
@@ -1019,36 +946,10 @@ class Files:
                 var searchTerm = document.getElementById('{container_id}-search').value.toLowerCase();
                 var adminFilter = document.getElementById('{container_id}-admin-filter').value.toLowerCase();
                 
-                // Split search term by spaces for multi-term search
-                var searchTerms = searchTerm.split(' ').filter(function(term) {{ return term.length > 0; }});
-                
                 filteredFiles = allFiles.filter(function(file) {{
-                    // Admin filter
+                    var nameMatch = file.name.toLowerCase().includes(searchTerm);
                     var adminMatch = adminFilter === '' || (file.datasite_owner || '').toLowerCase().includes(adminFilter);
-                    if (!adminMatch) return false;
-                    
-                    // If no search terms, show all (that match admin filter)
-                    if (searchTerms.length === 0) return true;
-                    
-                    // Check if all search terms match somewhere in the file data
-                    return searchTerms.every(function(term) {{
-                        // Create searchable string from all file properties
-                        var searchableContent = [
-                            file.name,
-                            file.datasite_owner || '',
-                            file.extension || '',
-                            formatSize(file.size || 0),
-                            formatDate(file.modified || 0),
-                            file.is_dir ? 'folder' : 'file',
-                            (file.permissions_summary || []).join(' '),
-                            formatSize(file.max_file_size || 0),
-                            file.allow_dirs !== false ? 'dirs' : '',
-                            file.allow_symlinks !== false ? 'symlinks' : '',
-                            file.has_limits ? 'limits' : ''
-                        ].join(' ').toLowerCase();
-                        
-                        return searchableContent.includes(term);
-                    }});
+                    return (searchTerm === '' || nameMatch) && adminMatch;
                 }});
                 
                 currentPage = 1;
@@ -1209,22 +1110,6 @@ class Files:
                         case 'permissions':
                             aVal = (a.permissions_summary || []).length;
                             bVal = (b.permissions_summary || []).length;
-                            break;
-                        case 'max_file_size':
-                            aVal = a.max_file_size || 0;
-                            bVal = b.max_file_size || 0;
-                            break;
-                        case 'allow_dirs':
-                            aVal = a.allow_dirs !== false ? 1 : 0;
-                            bVal = b.allow_dirs !== false ? 1 : 0;
-                            break;
-                        case 'allow_symlinks':
-                            aVal = a.allow_symlinks !== false ? 1 : 0;
-                            bVal = b.allow_symlinks !== false ? 1 : 0;
-                            break;
-                        case 'has_limits':
-                            aVal = a.has_limits ? 1 : 0;
-                            bVal = b.has_limits ? 1 : 0;
                             break;
                         default:
                             return 0;
