@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.61"
+__version__ = "0.3.62"
 
 __all__ = [
     "open",
@@ -154,6 +154,8 @@ class Files:
 
                 # Get permissions for this file using sp.open()
                 has_yaml = False
+                user_permission = None
+                permission_reason = ""
                 try:
                     # Use open() to get the file object with all permissions
                     syft_obj = open(file_path)
@@ -167,9 +169,38 @@ class Files:
                     elif any(users for users in permissions.values()):
                         has_yaml = True
 
+                    # Determine current user's highest permission level
+                    # Check permissions in order of hierarchy: admin > write > create > read
+                    if user_email:
+                        for perm_level in ["admin", "write", "create", "read"]:
+                            if hasattr(syft_obj, f"has_{perm_level}_access"):
+                                has_access = getattr(syft_obj, f"has_{perm_level}_access")(
+                                    user_email
+                                )
+                                if has_access:
+                                    user_permission = perm_level
+                                    # Try to get the reason
+                                    if hasattr(syft_obj, "_check_permission_with_reasons"):
+                                        _, reasons = syft_obj._check_permission_with_reasons(
+                                            user_email, perm_level
+                                        )
+                                        permission_reason = reasons[0] if reasons else "Granted"
+                                    else:
+                                        permission_reason = (
+                                            f"{perm_level.capitalize()} access granted"
+                                        )
+                                    break
+
+                    # If no permission found but file exists, user might have implicit read
+                    if not user_permission and file_path.exists():
+                        user_permission = "read"
+                        permission_reason = "Implicit read access"
+
                 except Exception:
                     permissions = {}
                     has_yaml = False
+                    user_permission = None
+                    permission_reason = "Permission check failed"
 
                 # Get file extension
                 file_ext = file_path.suffix if file_path.suffix else ".txt"
@@ -191,6 +222,8 @@ class Files:
                         "modified": file_path.stat().st_mtime if file_path.exists() else 0,
                         "extension": file_ext,
                         "datasite_owner": datasite_owner,
+                        "user_permission": user_permission,
+                        "permission_reason": permission_reason,
                     }
                 )
 

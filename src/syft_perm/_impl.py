@@ -553,26 +553,26 @@ class SyftFile:
         yaml_files = []
         current_path = self._path
         terminal_found_at = None
-        
+
         while current_path.parent != current_path:  # Stop at root
             parent_dir = current_path.parent
             syftpub_path = parent_dir / "syft.pub.yaml"
-            
+
             if syftpub_path.exists():
                 try:
                     with open(syftpub_path, "r") as f:
                         content = yaml.safe_load(f) or {"rules": []}
-                    
+
                     yaml_files.append((parent_dir, content))
-                    
+
                     # If this is a terminal node, remember it and stop collecting
                     if content.get("terminal", False) and terminal_found_at is None:
                         terminal_found_at = parent_dir
                         break
-                        
+
                 except Exception:
                     pass
-                    
+
             current_path = parent_dir
 
         # Second pass: process yaml files from the terminal node (or root) down
@@ -618,17 +618,18 @@ class SyftFile:
                             break
                     break
         else:
-            # No terminal node found, use the old algorithm (nearest matching node)
-            for parent_dir, content in reversed(yaml_files):  # Process from root down
+            # No terminal node found, use nearest-node algorithm
+            # Process from the file up, and use the FIRST matching rule found
+            for parent_dir, content in yaml_files:  # yaml_files is already in order from file up
                 rules = content.get("rules", [])
                 sorted_rules = _sort_rules_by_specificity(rules)
+                found_match = False
+
                 for rule in sorted_rules:
                     pattern = rule.get("pattern", "")
                     # Check if pattern matches our file path relative to this directory
                     rel_path = (
-                        str(self._path.relative_to(parent_dir))
-                        if self._path is not None
-                        else ""
+                        str(self._path.relative_to(parent_dir)) if self._path is not None else ""
                     )
                     if _glob_match(pattern, rel_path):
                         access = rule.get("access", {})
@@ -649,16 +650,16 @@ class SyftFile:
                                 if self._size > max_file_size:
                                     continue  # Skip this rule if file exceeds size limit
 
-                        # Found a matching rule
+                        # Found the nearest matching rule
                         nearest_permissions = {
                             perm: format_users(access.get(perm, []))
                             for perm in ["read", "create", "write", "admin"]
                         }
-                        # Stop searching after finding the first match
+                        found_match = True
                         break
-                
-                # If we found a match, stop processing other yaml files
-                if any(users for users in nearest_permissions.values()):
+
+                # If we found a match in this yaml file, stop searching
+                if found_match:
                     break
 
         # Add owner permissions: datasite owner gets full admin access
