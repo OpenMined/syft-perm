@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.32"
+__version__ = "0.3.34"
 
 __all__ = [
     "open",
@@ -308,6 +308,102 @@ class Files:
                     </div>
                 </div>
             </div>
+            
+            <script>
+            (function() {{
+                // Get all files for this widget
+                const allFiles = {str(data["files"] + self._scan_files()[len(data["files"]):][:1000])};  // Get more files for search
+                let currentPage = 1;
+                let currentSearch = "";
+                
+                window.searchFiles_{widget_id} = function(searchTerm) {{
+                    currentSearch = searchTerm.toLowerCase();
+                    currentPage = 1;
+                    updateTable();
+                }};
+                
+                window.changePage_{widget_id} = function(direction) {{
+                    const filteredFiles = allFiles.filter(f => 
+                        f.name.toLowerCase().includes(currentSearch)
+                    );
+                    const totalPages = Math.max(1, Math.ceil(filteredFiles.length / 20));
+                    const newPage = currentPage + direction;
+                    
+                    if (newPage >= 1 && newPage <= totalPages) {{
+                        currentPage = newPage;
+                        updateTable();
+                    }}
+                }};
+                
+                function updateTable() {{
+                    const filteredFiles = allFiles.filter(f => 
+                        f.name.toLowerCase().includes(currentSearch)
+                    );
+                    const totalPages = Math.max(1, Math.ceil(filteredFiles.length / 20));
+                    const startIdx = (currentPage - 1) * 20;
+                    const endIdx = Math.min(startIdx + 20, filteredFiles.length);
+                    const pageFiles = filteredFiles.slice(startIdx, endIdx);
+                    
+                    // Update table body
+                    const tbody = document.getElementById('{widget_id}_tbody');
+                    if (!tbody) return;
+                    
+                    tbody.innerHTML = pageFiles.map(file => {{
+                        const size = file.size || 0;
+                        let sizeStr;
+                        if (size > 1024 * 1024) {{
+                            sizeStr = (size / (1024 * 1024)).toFixed(1) + ' MB';
+                        }} else if (size > 1024) {{
+                            sizeStr = (size / 1024).toFixed(1) + ' KB';
+                        }} else {{
+                            sizeStr = size + ' B';
+                        }}
+                        
+                        const perms = file.permissions || {{}};
+                        const permItems = [];
+                        for (const [permType, users] of Object.entries(perms)) {{
+                            if (users && users.length > 0) {{
+                                let userStr;
+                                if (users.length > 3) {{
+                                    userStr = users.slice(0, 3).join(', ') + '... (+' + (users.length - 3) + ')';
+                                }} else {{
+                                    userStr = users.join(', ');
+                                }}
+                                permItems.push('<strong>' + permType + ':</strong> ' + userStr);
+                            }}
+                        }}
+                        const permStr = permItems.length > 0 ? permItems.join('<br>') : '<em>No permissions</em>';
+                        
+                        return `
+                            <tr>
+                                <td style="padding: 12px; font-family: 'SF Mono', Monaco, monospace; font-size: 13px; 
+                                           text-align: left; word-break: break-all;">${{file.name}}</td>
+                                <td style="padding: 12px; color: #586069; text-align: left;">${{sizeStr}}</td>
+                                <td style="padding: 12px; font-size: 12px; line-height: 1.4; text-align: left;">${{permStr}}</td>
+                            </tr>
+                        `;
+                    }}).join('');
+                    
+                    // Update counters
+                    const countEl = document.getElementById('{widget_id}_count');
+                    const totalEl = document.getElementById('{widget_id}_total');
+                    const pageEl = document.getElementById('{widget_id}_page');
+                    const pagesEl = document.getElementById('{widget_id}_pages');
+                    
+                    if (countEl) countEl.textContent = pageFiles.length;
+                    if (totalEl) totalEl.textContent = filteredFiles.length;
+                    if (pageEl) pageEl.textContent = currentPage;
+                    if (pagesEl) pagesEl.textContent = totalPages;
+                    
+                    // Update pagination buttons
+                    const prevBtn = document.getElementById('{widget_id}_prev');
+                    const nextBtn = document.getElementById('{widget_id}_next');
+                    
+                    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+                    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+                }}
+            }})();
+            </script>
             """
 
             return html
