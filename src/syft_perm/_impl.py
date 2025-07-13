@@ -975,197 +975,179 @@ class SyftFile:
         """
 
     def _repr_html_(self) -> str:
-        """Return static HTML representation for Jupyter notebooks."""
-        import datetime
+        """Return Google Drive-style permissions interface for Jupyter notebooks."""
+        import hashlib
         import os
 
-        # Get file metadata
-        stat = self._path.stat()
-        file_size = self._size
-        modified_time = datetime.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-
-        # Format file size
-        if file_size >= 1024 * 1024 * 1024:
-            size_display = f"{file_size / (1024 * 1024 * 1024):.2f} GB"
-        elif file_size >= 1024 * 1024:
-            size_display = f"{file_size / (1024 * 1024):.2f} MB"
-        elif file_size >= 1024:
-            size_display = f"{file_size / 1024:.2f} KB"
-        else:
-            size_display = f"{file_size} bytes"
-
         # Get permission data
-        rows = self._get_permission_table()
         permissions_data = self._get_all_permissions()
 
-        # Get file limits
-        limits = self.get_file_limits()
+        # Function to generate consistent avatar colors based on email hash
+        def get_avatar_color(email):
+            colors = [
+                "#1976d2",
+                "#388e3c",
+                "#f57c00",
+                "#d32f2f",
+                "#7b1fa2",
+                "#303f9f",
+                "#0288d1",
+                "#0097a7",
+                "#00796b",
+                "#689f38",
+                "#afb42b",
+                "#fbc02d",
+                "#ffa000",
+                "#f57c00",
+                "#e64a19",
+                "#5d4037",
+                "#616161",
+                "#455a64",
+            ]
+            hash_obj = hashlib.md5(email.encode())
+            return colors[int(hash_obj.hexdigest(), 16) % len(colors)]
 
-        # Build permissions summary
-        permission_counts = {
-            "read": len(permissions_data.get("read", [])),
-            "create": len(permissions_data.get("create", [])),
-            "write": len(permissions_data.get("write", [])),
-            "admin": len(permissions_data.get("admin", [])),
-        }
+        # Function to get initials from email
+        def get_initials(email):
+            if email == "*":
+                return "PU"  # Public
+            parts = email.split("@")[0].split(".")
+            if len(parts) >= 2:
+                return (parts[0][0] + parts[1][0]).upper()
+            return email[0:2].upper()
 
-        # Check compliance
-        is_dir = self._path.is_dir()
-        is_symlink = self._is_symlink
-        file_type = "Directory" if is_dir else ("Symlink" if is_symlink else "Regular File")
+        # Function to map syft permissions to Google Drive roles
+        def get_drive_role(permissions):
+            if "admin" in permissions:
+                return "Owner"
+            elif "write" in permissions:
+                return "Editor"
+            elif "create" in permissions:
+                return "Commenter"
+            elif "read" in permissions:
+                return "Viewer"
+            return "No access"
 
-        size_compliant = limits["max_file_size"] is None or file_size <= limits["max_file_size"]
-        type_compliant = True
-        if is_dir and not limits["allow_dirs"]:
-            type_compliant = False
-        elif is_symlink and not limits["allow_symlinks"]:
-            type_compliant = False
+        # Collect all users with their permissions
+        all_users = set()
+        for perm_type, users in permissions_data.items():
+            all_users.update(users)
 
-        # Create static HTML
+        # Build user list with their highest permission level
+        user_permissions = {}
+        for user in all_users:
+            user_perms = []
+            for perm_type, users in permissions_data.items():
+                if user in users:
+                    user_perms.append(perm_type)
+            user_permissions[user] = user_perms
+
+        # Get current user (file owner)
+        current_user = os.path.basename(os.path.expanduser("~"))
+
+        # Create Google Drive style HTML
         html = f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    max-width: 800px; margin: 20px 0;">
-
+        <div style="font-family: 'Google Sans', 'Segoe UI', Tahoma, sans-serif; 
+                    max-width: 480px; background: white; border-radius: 8px; 
+                    box-shadow: 0 1px 3px rgba(60,64,67,.3); margin: 16px 0;">
+            
             <!-- Header -->
-            <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-                        color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                <h2 style="margin: 0; font-size: 24px; font-weight: 600;">
-                    📄 {self._path.name}
-                </h2>
-                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">
-                    {self._path.parent}
-                </p>
-            </div>
-
-            <!-- Metadata Section -->
-            <div style="background: white; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">File Information</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));  # noqa: E501
-                            gap: 15px; font-size: 14px;">
-                    <div>
-                        <span style="color: #666;">Type:</span>
-                        <strong>{file_type}</strong>
-                    </div>
-                    <div>
-                        <span style="color: #666;">Size:</span>
-                        <strong>{size_display}</strong>
-                    </div>
-                    <div>
-                        <span style="color: #666;">Modified:</span>
-                        <strong>{modified_time}</strong>
-                    </div>
-                    <div>
-                        <span style="color: #666;">Owner:</span>
-                        <strong>{os.path.basename(os.path.expanduser('~'))}</strong>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Permissions Summary -->
-            <div style="background: #f8f9fa; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Permissions Summary</h3>  # noqa: E501
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Read</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #2196f3;">
-                            {permission_counts['read']}
+            <div style="padding: 20px 24px 16px; border-bottom: 1px solid #e8eaed;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 24px; height: 24px; background: #4285f4; border-radius: 3px;
+                                    display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-size: 14px; font-weight: 500;">📄</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 16px; font-weight: 500; color: #3c4043;">
+                                {self._path.name}
+                            </div>
+                            <div style="font-size: 12px; color: #5f6368; margin-top: 2px;">
+                                {current_user} • Owner
+                            </div>
                         </div>
                     </div>
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Create</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #ff9800;">
-                            {permission_counts['create']}
-                        </div>
-                    </div>
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Write</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #f44336;">
-                            {permission_counts['write']}
-                        </div>
-                    </div>
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Admin</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #9c27b0;">
-                            {permission_counts['admin']}
-                        </div>
-                    </div>
+                    <button style="background: #1a73e8; color: white; border: none; padding: 8px 16px;
+                                   border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                        Share
+                    </button>
                 </div>
             </div>
-
-            <!-- Compliance Status -->
-            <div style="background: white; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Compliance Status</h3>
-                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 14px;">Size Limit:</span>
-                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
-                                background: {'#4caf50' if size_compliant else '#f44336'}; color: white;">  # noqa: E501
-                        {'✓ COMPLIANT' if size_compliant else '✗ EXCEEDS LIMIT'}
-                    </span>
-                    {f'<span style="color: #666; font-size: 12px;">({size_display} / {limits["max_file_size"] / (1024 * 1024):.2f} MB)</span>' if limits["max_file_size"] else ''}  # noqa: E501
+            
+            <!-- People with access section -->
+            <div style="padding: 16px 24px;">
+                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 16px;">
+                    People with access
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <span style="font-size: 14px;">Type Allowed:</span>
-                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
-                                background: {'#4caf50' if type_compliant else '#f44336'}; color: white;">  # noqa: E501
-                        {'✓ ALLOWED' if type_compliant else '✗ BLOCKED'}
-                    </span>
-                </div>
-            </div>
-
-            <!-- Detailed Permissions Table -->
-            <div style="background: white; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Detailed Permissions</h3>  # noqa: E501
         """
 
-        if rows:
-            html += """
-                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                    <thead>
-                        <tr style="background: #f5f5f5;">
-                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">User</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Read</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Create</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Write</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Admin</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Reason</th>  # noqa: E501
-                        </tr>
-                    </thead>
-                    <tbody>
+        # Add each user
+        for user in sorted(user_permissions.keys()):
+            permissions = user_permissions[user]
+            role = get_drive_role(permissions)
+            initials = get_initials(user)
+            color = get_avatar_color(user)
+
+            # Determine if this is public access
+            display_name = "Anyone with the link" if user == "*" else user
+
+            html += f"""
+                <div style="display: flex; align-items: center; padding: 8px 0; gap: 12px;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: {color};
+                                display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 14px; font-weight: 500;">{initials}</span>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 14px; color: #3c4043; font-weight: 400;">
+                            {display_name}
+                        </div>
+                        <div style="font-size: 12px; color: #5f6368;">
+                            {user if user != "*" else "Public access"}
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: #f8f9fa; color: #3c4043; padding: 4px 8px;
+                                     border-radius: 4px; font-size: 12px; border: 1px solid #e8eaed;">
+                            {role}
+                        </span>
+                    </div>
+                </div>
             """
 
-            for i, row in enumerate(rows):
-                bg_color = "#ffffff" if i % 2 == 0 else "#f9f9f9"
-                html += f"""
-                        <tr style="background: {bg_color};">
-                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{row[0]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[1]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[2]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[3]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[4]}</td>  # noqa: E501
-                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #666; font-size: 12px;">  # noqa: E501
-                                {row[5] if len(row) > 5 else ''}
-                            </td>
-                        </tr>
-                """
-
+        # If no users have access
+        if not user_permissions:
             html += """
-                    </tbody>
-                </table>
-            """
-        else:
-            html += """
-                <p style="color: #666; font-style: italic;">No permissions set for this file.</p>
+                <div style="text-align: center; padding: 24px; color: #5f6368;">
+                    <div style="font-size: 14px;">Only you have access</div>
+                    <div style="font-size: 12px; margin-top: 4px;">
+                        Share to give others access
+                    </div>
+                </div>
             """
 
-        html += """
+        # General access section
+        html += f"""
+            </div>
+            
+            <!-- General access -->
+            <div style="padding: 0 24px 20px;">
+                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 12px;">
+                    General access
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; 
+                            background: #f8f9fa; border-radius: 8px; border: 1px solid #e8eaed;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #5f6368;
+                                display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 12px;">🔒</span>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; color: #3c4043;">Restricted</div>
+                        <div style="font-size: 12px; color: #5f6368;">
+                            Only people with access can open with the link
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         """
@@ -2181,280 +2163,179 @@ class SyftFolder:
         """
 
     def _repr_html_(self) -> str:
-        """Return static HTML representation for Jupyter notebooks."""
-        import datetime
+        """Return Google Drive-style permissions interface for Jupyter notebooks."""
+        import hashlib
         import os
 
-        # Get folder metadata
-        rows = self._get_permission_table()
+        # Get permission data
         permissions_data = self._get_all_permissions()
-        limits = self.get_file_limits()
 
-        # Analyze folder contents
-        total_files = 0
-        oversized_files = 0
-        largest_file_size = 0
-        largest_file_name = ""
-        subdirs = 0
-        symlinks = 0
+        # Function to generate consistent avatar colors based on email hash
+        def get_avatar_color(email):
+            colors = [
+                "#1976d2",
+                "#388e3c",
+                "#f57c00",
+                "#d32f2f",
+                "#7b1fa2",
+                "#303f9f",
+                "#0288d1",
+                "#0097a7",
+                "#00796b",
+                "#689f38",
+                "#afb42b",
+                "#fbc02d",
+                "#ffa000",
+                "#f57c00",
+                "#e64a19",
+                "#5d4037",
+                "#616161",
+                "#455a64",
+            ]
+            hash_obj = hashlib.md5(email.encode())
+            return colors[int(hash_obj.hexdigest(), 16) % len(colors)]
 
-        try:
-            for item in self._path.rglob("*"):
-                if item.is_file():
-                    total_files += 1
-                    file_size = item.stat().st_size
-                    if file_size > largest_file_size:
-                        largest_file_size = file_size
-                        largest_file_name = item.name
-                    if limits["max_file_size"] is not None:
-                        if file_size > limits["max_file_size"]:
-                            oversized_files += 1
-                elif item.is_dir() and item != self._path:
-                    subdirs += 1
-                elif item.is_symlink():
-                    symlinks += 1
-        except (OSError, PermissionError):
-            pass
+        # Function to get initials from email
+        def get_initials(email):
+            if email == "*":
+                return "PU"  # Public
+            parts = email.split("@")[0].split(".")
+            if len(parts) >= 2:
+                return (parts[0][0] + parts[1][0]).upper()
+            return email[0:2].upper()
 
-        # Format largest file size
-        if largest_file_size >= 1024 * 1024:
-            largest_display = f"{largest_file_size / (1024 * 1024):.2f} MB ({largest_file_name})"
-        elif largest_file_size >= 1024:
-            largest_display = f"{largest_file_size / 1024:.2f} KB ({largest_file_name})"
-        else:
-            largest_display = (
-                f"{largest_file_size} bytes ({largest_file_name})"
-                if largest_file_name
-                else "No files"
-            )
+        # Function to map syft permissions to Google Drive roles
+        def get_drive_role(permissions):
+            if "admin" in permissions:
+                return "Owner"
+            elif "write" in permissions:
+                return "Editor"
+            elif "create" in permissions:
+                return "Commenter"
+            elif "read" in permissions:
+                return "Viewer"
+            return "No access"
 
-        # Size limit comparison
-        if limits["max_file_size"] is not None:
-            if limits["max_file_size"] >= 1024 * 1024:
-                limit_display = f"{limits['max_file_size'] / (1024 * 1024):.2f} MB"
-            elif limits["max_file_size"] >= 1024:
-                limit_display = f"{limits['max_file_size'] / 1024:.2f} KB"
-            else:
-                limit_display = f"{limits['max_file_size']} bytes"
+        # Collect all users with their permissions
+        all_users = set()
+        for perm_type, users in permissions_data.items():
+            all_users.update(users)
 
-            if oversized_files > 0:
-                size_status = f"✗ {oversized_files}/{total_files} files exceed limit"
-            else:
-                size_status = f"✓ All {total_files} files within limit"
-        else:
-            limit_display = "No limit"
-            size_status = f"✓ All {total_files} files OK"
+        # Build user list with their highest permission level
+        user_permissions = {}
+        for user in all_users:
+            user_perms = []
+            for perm_type, users in permissions_data.items():
+                if user in users:
+                    user_perms.append(perm_type)
+            user_permissions[user] = user_perms
 
-        # Directory policy status
-        if subdirs == 0:
-            dir_status = "✓ No subdirectories"
-        elif limits["allow_dirs"]:
-            dir_status = f"✓ {subdirs} subdirectories allowed"
-        else:
-            dir_status = f"✗ {subdirs} subdirectories would be blocked"
+        # Get current user (folder owner)
+        current_user = os.path.basename(os.path.expanduser("~"))
 
-        # Symlink policy status
-        if symlinks == 0:
-            symlink_status = "✓ No symlinks"
-        elif limits["allow_symlinks"]:
-            symlink_status = f"✓ {symlinks} symlinks allowed"
-        else:
-            symlink_status = f"✗ {symlinks} symlinks would be blocked"
-
-        # Overall compliance
-        size_ok = oversized_files == 0
-        dirs_ok = limits["allow_dirs"] or subdirs == 0
-        symlinks_ok = limits["allow_symlinks"] or symlinks == 0
-        all_ok = size_ok and dirs_ok and symlinks_ok
-        overall_status = "✓ COMPLIANT" if all_ok else "✗ NON-COMPLIANT"
-
-        # Build permissions summary
-        permission_counts = {
-            "read": len(permissions_data.get("read", [])),
-            "create": len(permissions_data.get("create", [])),
-            "write": len(permissions_data.get("write", [])),
-            "admin": len(permissions_data.get("admin", [])),
-        }
-
-        # Get folder metadata
-        try:
-            stat = self._path.stat()
-            modified_time = datetime.datetime.fromtimestamp(stat.st_mtime).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-        except Exception:
-            modified_time = "Unknown"
-
-        # Create static HTML
+        # Create Google Drive style HTML
         html = f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    max-width: 800px; margin: 20px 0;">
-
+        <div style="font-family: 'Google Sans', 'Segoe UI', Tahoma, sans-serif; 
+                    max-width: 480px; background: white; border-radius: 8px; 
+                    box-shadow: 0 1px 3px rgba(60,64,67,.3); margin: 16px 0;">
+            
             <!-- Header -->
-            <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-                        color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                <h2 style="margin: 0; font-size: 24px; font-weight: 600;">
-                    📁 {self._path.name or 'Root Folder'}
-                </h2>
-                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">
-                    {self._path}
-                </p>
-            </div>
-
-            <!-- Folder Statistics -->
-            <div style="background: white; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Folder Statistics</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));  # noqa: E501
-                            gap: 15px; font-size: 14px;">
-                    <div>
-                        <span style="color: #666;">Files:</span>
-                        <strong>{total_files}</strong>
+            <div style="padding: 20px 24px 16px; border-bottom: 1px solid #e8eaed;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 24px; height: 24px; background: #4285f4; border-radius: 3px;
+                                    display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-size: 14px; font-weight: 500;">📁</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 16px; font-weight: 500; color: #3c4043;">
+                                {self._path.name or 'Root Folder'}
+                            </div>
+                            <div style="font-size: 12px; color: #5f6368; margin-top: 2px;">
+                                {current_user} • Owner
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <span style="color: #666;">Subdirectories:</span>
-                        <strong>{subdirs}</strong>
-                    </div>
-                    <div>
-                        <span style="color: #666;">Symlinks:</span>
-                        <strong>{symlinks}</strong>
-                    </div>
-                    <div>
-                        <span style="color: #666;">Largest File:</span>
-                        <strong>{largest_display}</strong>
-                    </div>
-                    <div>
-                        <span style="color: #666;">Modified:</span>
-                        <strong>{modified_time}</strong>
-                    </div>
-                    <div>
-                        <span style="color: #666;">Owner:</span>
-                        <strong>{os.path.basename(os.path.expanduser('~'))}</strong>
-                    </div>
+                    <button style="background: #1a73e8; color: white; border: none; padding: 8px 16px;
+                                   border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                        Share
+                    </button>
                 </div>
             </div>
-
-            <!-- Permissions Summary -->
-            <div style="background: #f8f9fa; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Permissions Summary</h3>  # noqa: E501
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Read</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #2196f3;">
-                            {permission_counts['read']}
-                        </div>
-                    </div>
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Create</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #ff9800;">
-                            {permission_counts['create']}
-                        </div>
-                    </div>
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Write</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #f44336;">
-                            {permission_counts['write']}
-                        </div>
-                    </div>
-                    <div style="background: white; padding: 15px; border-radius: 6px;
-                                border: 1px solid #e0e0e0; flex: 1; min-width: 120px;">
-                        <div style="color: #666; font-size: 12px; text-transform: uppercase;">Admin</div>  # noqa: E501
-                        <div style="font-size: 24px; font-weight: bold; color: #9c27b0;">
-                            {permission_counts['admin']}
-                        </div>
-                    </div>
+            
+            <!-- People with access section -->
+            <div style="padding: 16px 24px;">
+                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 16px;">
+                    People with access
                 </div>
-            </div>
-
-            <!-- Compliance Status -->
-            <div style="background: white; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Compliance Status</h3>
-                <div style="margin-bottom: 10px;">
-                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 14px; min-width: 120px;">File Size Limit:</span>
-                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
-                                    background: {'#4caf50' if size_ok else '#f44336'}; color: white;">  # noqa: E501
-                            {size_status}
-                        </span>
-                        <span style="color: #666; font-size: 12px;">({limit_display})</span>
-                    </div>
-                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 14px; min-width: 120px;">Directories:</span>
-                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
-                                    background: {'#4caf50' if dirs_ok else '#f44336'}; color: white;">  # noqa: E501
-                            {dir_status}
-                        </span>
-                    </div>
-                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 14px; min-width: 120px;">Symlinks:</span>
-                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px;
-                                    background: {'#4caf50' if symlinks_ok else '#f44336'}; color: white;">  # noqa: E501
-                            {symlink_status}
-                        </span>
-                    </div>
-                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;
-                                padding-top: 10px; border-top: 1px solid #e0e0e0;">
-                        <span style="font-size: 14px; min-width: 120px;"><strong>Overall:</strong></span>  # noqa: E501
-                        <span style="padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: bold;  # noqa: E501
-                                    background: {'#4caf50' if all_ok else '#f44336'}; color: white;">  # noqa: E501
-                            {overall_status}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Detailed Permissions Table -->
-            <div style="background: white; border: 1px solid #e0e0e0;
-                        border-top: none; padding: 20px; border-radius: 0 0 8px 8px;">
-                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Detailed Permissions</h3>  # noqa: E501
         """
 
-        if rows:
-            html += """
-                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                    <thead>
-                        <tr style="background: #f5f5f5;">
-                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">User</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Read</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Create</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Write</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: center; border-bottom: 2px solid #e0e0e0;">Admin</th>  # noqa: E501
-                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Reason</th>  # noqa: E501
-                        </tr>
-                    </thead>
-                    <tbody>
+        # Add each user
+        for user in sorted(user_permissions.keys()):
+            permissions = user_permissions[user]
+            role = get_drive_role(permissions)
+            initials = get_initials(user)
+            color = get_avatar_color(user)
+
+            # Determine if this is public access
+            display_name = "Anyone with the link" if user == "*" else user
+
+            html += f"""
+                <div style="display: flex; align-items: center; padding: 8px 0; gap: 12px;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: {color};
+                                display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 14px; font-weight: 500;">{initials}</span>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 14px; color: #3c4043; font-weight: 400;">
+                            {display_name}
+                        </div>
+                        <div style="font-size: 12px; color: #5f6368;">
+                            {user if user != "*" else "Public access"}
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: #f8f9fa; color: #3c4043; padding: 4px 8px;
+                                     border-radius: 4px; font-size: 12px; border: 1px solid #e8eaed;">
+                            {role}
+                        </span>
+                    </div>
+                </div>
             """
 
-            for i, row in enumerate(rows):
-                bg_color = "#ffffff" if i % 2 == 0 else "#f9f9f9"
-                html += f"""
-                        <tr style="background: {bg_color};">
-                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{row[0]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[1]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[2]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[3]}</td>  # noqa: E501
-                            <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0;">{row[4]}</td>  # noqa: E501
-                            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #666; font-size: 12px;">  # noqa: E501
-                                {row[5] if len(row) > 5 else ''}
-                            </td>
-                        </tr>
-                """
-
+        # If no users have access
+        if not user_permissions:
             html += """
-                    </tbody>
-                </table>
-            """
-        else:
-            html += """
-                <p style="color: #666; font-style: italic;">No permissions set for this folder.</p>
+                <div style="text-align: center; padding: 24px; color: #5f6368;">
+                    <div style="font-size: 14px;">Only you have access</div>
+                    <div style="font-size: 12px; margin-top: 4px;">
+                        Share to give others access
+                    </div>
+                </div>
             """
 
-        html += """
+        # General access section
+        html += f"""
+            </div>
+            
+            <!-- General access -->
+            <div style="padding: 0 24px 20px;">
+                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 12px;">
+                    General access
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; 
+                            background: #f8f9fa; border-radius: 8px; border: 1px solid #e8eaed;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #5f6368;
+                                display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 12px;">🔒</span>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; color: #3c4043;">Restricted</div>
+                        <div style="font-size: 12px; color: #5f6368;">
+                            Only people with access can open with the link
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         """

@@ -12,13 +12,13 @@ from ._utils import get_syftbox_datasites
 
 _SERVER_AVAILABLE = False
 try:
-    import uvicorn
-    from fastapi import FastAPI as _FastAPI
-    from fastapi import HTTPException as _HTTPException
-    from fastapi import Query as _Query
-    from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import HTMLResponse as _HTMLResponse
-    from pydantic import BaseModel as _BaseModel
+    import uvicorn  # type: ignore[import-untyped]
+    from fastapi import FastAPI as _FastAPI  # type: ignore[import-untyped]
+    from fastapi import HTTPException as _HTTPException  # type: ignore[import-untyped]
+    from fastapi import Query as _Query  # type: ignore[import-untyped]
+    from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-untyped]
+    from fastapi.responses import HTMLResponse as _HTMLResponse  # type: ignore[import-untyped]
+    from pydantic import BaseModel as _BaseModel  # type: ignore[import-untyped]
 
     _SERVER_AVAILABLE = True
 except ImportError:

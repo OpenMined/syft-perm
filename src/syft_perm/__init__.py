@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.19"
+__version__ = "0.3.20"
 
 __all__ = [
     "open",
@@ -130,6 +130,22 @@ class Files:
             Dictionary with files, total_count, offset, limit, has_more, syftbox_path
         """
         import requests
+
+        from .server import get_server_url, start_server
+
+        # Try to get existing server first
+        server_url = get_server_url()
+        if not server_url:
+            # Try different ports if 8765 is taken
+            for port in [8765, 8766, 8767, 8768, 8769]:
+                try:
+                    server_url = start_server(port)
+                    break
+                except Exception:
+                    continue
+
+            if not server_url:
+                raise RuntimeError("Could not start server on any available port")
 
         url = get_files_url(limit=limit, offset=offset, search=search)
         response = requests.get(url)

@@ -258,7 +258,7 @@ class TestFileLimitsAPI(unittest.TestCase):
         self.assertFalse(limits["has_limits"])
 
     def test_limits_in_html_representation(self):
-        """Test that file limits appear in HTML representation."""
+        """Test that HTML representation uses Google Drive style interface."""
         # Create test file and folder
         test_file = Path(self.test_dir) / "html_test.txt"
         test_folder = Path(self.test_dir) / "html_folder"
@@ -268,22 +268,26 @@ class TestFileLimitsAPI(unittest.TestCase):
         syft_file = syft_perm.open(test_file)
         syft_folder = syft_perm.open(test_folder)
 
-        # Set limits
+        # Set limits (these don't appear in Google Drive style interface but limits still work)
         syft_file.set_file_limits(max_size=1024, allow_dirs=False)
         syft_folder.set_file_limits(max_size=2048, allow_symlinks=False)
 
-        # Check HTML representation includes limits
+        # Check HTML representation uses Google Drive style
         file_html = syft_file._repr_html_()
         folder_html = syft_folder._repr_html_()
 
-        # Should contain file limits information
-        self.assertIn("File Compliance Check:", file_html)
-        self.assertIn("1.00 KB", file_html)  # SyftFile format shows as KB
-        self.assertIn("Dirs: ✗", file_html)
+        # Should contain Google Drive style elements
+        self.assertIn("People with access", file_html)
+        self.assertIn("General access", file_html)
+        self.assertIn("Share", file_html)
+        self.assertIn("Only you have access", file_html)
+        self.assertIn("html_test.txt", file_html)
 
-        self.assertIn("Folder Compliance Check:", folder_html)
-        self.assertIn("2.00 KB", folder_html)  # SyftFolder format shows as KB
-        self.assertIn("Blocked", folder_html)
+        self.assertIn("People with access", folder_html)
+        self.assertIn("General access", folder_html)
+        self.assertIn("Share", folder_html)
+        self.assertIn("Only you have access", folder_html)
+        self.assertIn("html_folder", folder_html)
 
 
 if __name__ == "__main__":
