@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.43"
+__version__ = "0.3.44"
 
 __all__ = [
     "open",
@@ -152,42 +152,20 @@ class Files:
                     )
                     is_user_datasite = datasite_owner == user_email
 
-                # Get permissions for this file
+                # Get permissions for this file using sp.open()
                 has_yaml = False
                 try:
-                    from ._impl import SyftFile
+                    # Use open() to get the file object with all permissions
+                    syft_obj = open(file_path)
+                    permissions = syft_obj.permissions_dict
 
-                    syft_file = SyftFile(file_path)
-                    permissions = syft_file.permissions_dict
+                    # Check if syft-perm found any permission reasons (indicates yaml files exist)
+                    if hasattr(syft_obj, "permission_reasons") and syft_obj.permission_reasons:
+                        has_yaml = True
+                    elif permissions:
+                        # If we have any permissions, yaml files must exist
+                        has_yaml = True
 
-                    # Check if there are any syft.pub.yaml files in the path hierarchy
-                    # Walk up the directory tree from the file to the datasite root
-                    current = file_path.parent
-                    while current >= datasites_path:
-                        yaml_file = current / "syft.pub.yaml"
-                        if yaml_file.exists():
-                            has_yaml = True
-                            break
-                        if current == datasites_path:
-                            break
-                        current = current.parent
-
-                    # If no permissions found, check if file has owner access
-                    if not permissions:
-                        # Check if current user has any implicit permissions
-                        try:
-                            # Try to get implicit owner permissions
-                            if hasattr(syft_file, "can_read"):
-                                implicit_perms = {}
-                                if syft_file.can_read("owner"):
-                                    implicit_perms.setdefault("read", []).append("owner")
-                                if syft_file.can_write("owner"):
-                                    implicit_perms.setdefault("write", []).append("owner")
-                                if syft_file.can_admin("owner"):
-                                    implicit_perms.setdefault("admin", []).append("owner")
-                                permissions = implicit_perms
-                        except Exception:
-                            pass
                 except Exception:
                     permissions = {}
                     has_yaml = False
