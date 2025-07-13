@@ -6,13 +6,11 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.30"
+__version__ = "0.3.31"
 
 __all__ = [
     "open",
     "get_editor_url",
-    "start_permission_server",
-    "get_files_url",
     "files",
 ]
 
@@ -54,49 +52,6 @@ def get_editor_url(path: _Union[str, _Path]) -> str:
     return _get_editor_url(str(path))
 
 
-def start_permission_server(port: int = 8765, host: str = "127.0.0.1") -> str:
-    """
-    Start the permission editor server.
-
-    Args:
-        port: Port to run the server on
-        host: Host to bind to
-
-    Returns:
-        Server URL
-    """
-    from .server import start_server
-
-    result = start_server(port, host)
-    return str(result)
-
-
-def get_files_url(limit: int = 50, offset: int = 0, search: _Union[str, None] = None) -> str:
-    """
-    Get the URL for the files API endpoint.
-
-    Args:
-        limit: Number of items per page (default: 50)
-        offset: Starting index (default: 0)
-        search: Optional search term for file names
-
-    Returns:
-        URL to the files API endpoint
-    """
-    from .server import get_server_url, start_server
-
-    server_url = get_server_url()
-    if not server_url:
-        server_url = start_server()
-
-    # Build query parameters
-    params = f"?limit={limit}&offset={offset}"
-    if search:
-        params += f"&search={search}"
-
-    return f"{server_url}/files{params}"
-
-
 class Files:
     """
     Access to permissioned files in SyftBox directory.
@@ -117,6 +72,77 @@ class Files:
     def __init__(self):
         self._cache = None
 
+    def _scan_files(self, search: _Union[str, None] = None) -> list:
+        """Scan SyftBox directory for files with permissions."""
+        import os
+        from pathlib import Path
+
+        # Try to find SyftBox directory
+        syftbox_dirs = [
+            Path.home() / "SyftBox",
+            Path.home() / ".syftbox",
+            Path("/tmp/SyftBox"),
+        ]
+
+        syftbox_path = None
+        for path in syftbox_dirs:
+            if path.exists():
+                syftbox_path = path
+                break
+
+        if not syftbox_path:
+            return []
+
+        # Only scan datasites directory
+        datasites_path = syftbox_path / "datasites"
+        if not datasites_path.exists():
+            return []
+
+        files = []
+
+        # Walk through datasites directory structure
+        for root, dirs, file_names in os.walk(datasites_path):
+            root_path = Path(root)
+
+            # Skip hidden directories and .git directories
+            dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+            for file_name in file_names:
+                # Skip hidden files and syft.pub.yaml files
+                if file_name.startswith(".") or file_name == "syft.pub.yaml":
+                    continue
+
+                file_path = root_path / file_name
+                relative_path = file_path.relative_to(datasites_path)
+
+                # Apply search filter
+                if search and search.lower() not in str(relative_path).lower():
+                    continue
+
+                # Get permissions for this file
+                try:
+                    from ._impl import SyftFile
+
+                    syft_file = SyftFile(file_path)
+                    permissions = syft_file.permissions_dict
+                except Exception:
+                    permissions = {}
+
+                files.append(
+                    {
+                        "name": str(relative_path),
+                        "path": str(file_path),
+                        "is_dir": False,
+                        "permissions": permissions,
+                        "size": file_path.stat().st_size if file_path.exists() else 0,
+                        "modified": file_path.stat().st_mtime if file_path.exists() else 0,
+                    }
+                )
+
+        # Sort by name
+        files.sort(key=lambda x: x["name"])
+        return files
+
     def get(self, limit: int = 50, offset: int = 0, search: _Union[str, None] = None) -> dict:
         """
         Get paginated list of files with permissions.
@@ -127,30 +153,23 @@ class Files:
             search: Optional search term for file names
 
         Returns:
-            Dictionary with files, total_count, offset, limit, has_more, syftbox_path
+            Dictionary with files, total_count, offset, limit, has_more
         """
-        import requests
+        all_files = self._scan_files(search)
+        total_count = len(all_files)
 
-        from .server import get_server_url, start_server
+        # Apply pagination
+        end = offset + limit
+        page_files = all_files[offset:end]
+        has_more = end < total_count
 
-        # Try to get existing server first
-        server_url = get_server_url()
-        if not server_url:
-            # Try different ports if 8765 is taken
-            for port in [8765, 8766, 8767, 8768, 8769]:
-                try:
-                    server_url = start_server(port)
-                    break
-                except Exception:
-                    continue
-
-            if not server_url:
-                raise RuntimeError("Could not start server on any available port")
-
-        url = get_files_url(limit=limit, offset=offset, search=search)
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.json()
+        return {
+            "files": page_files,
+            "total_count": total_count,
+            "offset": offset,
+            "limit": limit,
+            "has_more": has_more,
+        }
 
     def all(self, search: _Union[str, None] = None) -> list:
         """
@@ -162,20 +181,7 @@ class Files:
         Returns:
             List of all files with permissions
         """
-        all_files = []
-        offset = 0
-        limit = 100
-
-        while True:
-            data = self.get(limit=limit, offset=offset, search=search)
-            all_files.extend(data["files"])
-
-            if not data["has_more"]:
-                break
-
-            offset += limit
-
-        return all_files
+        return self._scan_files(search)
 
     def search(self, term: str, limit: int = 50, offset: int = 0) -> dict:
         """
@@ -196,11 +202,8 @@ class Files:
         return "<Files: SyftBox permissioned files interface>"
 
     def _repr_html_(self) -> str:
-        """Static HTML representation for Jupyter notebooks."""
-        return (
-            "<div>SyftBox Files Interface - use sp.files.all(), "
-            "sp.files.get(), or sp.files.search()</div>"
-        )
+        """Simple HTML representation for Jupyter notebooks."""
+        return "<div>SyftBox Files - use sp.files.all() for full interface</div>"
 
 
 # Create singleton instance
