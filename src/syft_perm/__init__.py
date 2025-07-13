@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.75"
+__version__ = "0.3.76"
 
 __all__ = [
     "open",
@@ -1146,6 +1146,8 @@ class Files:
                         div.onclick = function() {{
                             inputEl.value = option;
                             hideDropdown();
+                            // Trigger search after selecting from dropdown
+                            searchFiles_{container_id}();
                         }};
                         dropdown.appendChild(div);
                     }});
@@ -1197,6 +1199,8 @@ class Files:
                         e.preventDefault();
                         inputEl.value = currentOptions[currentIndex];
                         hideDropdown();
+                        // Trigger search after selecting from dropdown
+                        searchFiles_{container_id}();
                     }} else if (e.key === 'Escape') {{
                         hideDropdown();
                     }}
