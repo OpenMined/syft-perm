@@ -1,4 +1,4 @@
-"""Test terminal property functionality for SyftFolder."""
+"""Test terminal methods functionality for SyftFolder."""
 
 import tempfile
 import unittest
@@ -7,8 +7,8 @@ from pathlib import Path
 import syft_perm
 
 
-class TestTerminalProperty(unittest.TestCase):
-    """Test the terminal property getter and setter for SyftFolder."""
+class TestTerminalMethods(unittest.TestCase):
+    """Test the terminal methods getter and setter for SyftFolder."""
 
     def setUp(self):
         """Set up test environment with temporary directory."""
@@ -27,7 +27,7 @@ class TestTerminalProperty(unittest.TestCase):
         test_folder.mkdir()
 
         folder = syft_perm.open(test_folder)
-        self.assertFalse(folder.terminal)
+        self.assertFalse(folder.get_terminal())
 
     def test_terminal_property_set_true(self):
         """Test setting terminal property to True."""
@@ -35,10 +35,10 @@ class TestTerminalProperty(unittest.TestCase):
         test_folder.mkdir()
 
         folder = syft_perm.open(test_folder)
-        folder.terminal = True
+        folder.set_terminal(True)
 
         # Verify it was set
-        self.assertTrue(folder.terminal)
+        self.assertTrue(folder.get_terminal())
 
         # Verify YAML file was created
         yaml_file = test_folder / "syft.pub.yaml"
@@ -50,11 +50,11 @@ class TestTerminalProperty(unittest.TestCase):
         test_folder.mkdir()
 
         folder = syft_perm.open(test_folder)
-        folder.terminal = True
-        folder.terminal = False
+        folder.set_terminal(True)
+        folder.set_terminal(False)
 
         # Verify it was set to False
-        self.assertFalse(folder.terminal)
+        self.assertFalse(folder.get_terminal())
 
     def test_terminal_property_persistence(self):
         """Test that terminal property persists across different folder instances."""
@@ -63,11 +63,11 @@ class TestTerminalProperty(unittest.TestCase):
 
         # Set terminal on first instance
         folder1 = syft_perm.open(test_folder)
-        folder1.terminal = True
+        folder1.set_terminal(True)
 
         # Check on second instance
         folder2 = syft_perm.open(test_folder)
-        self.assertTrue(folder2.terminal)
+        self.assertTrue(folder2.get_terminal())
 
     def test_terminal_preserves_existing_yaml(self):
         """Test that setting terminal preserves existing YAML content."""
@@ -80,10 +80,10 @@ class TestTerminalProperty(unittest.TestCase):
         folder.grant_read_access("user@example.com", force=True)
 
         # Then set terminal
-        folder.terminal = True
+        folder.set_terminal(True)
 
         # Verify both terminal and permissions exist
-        self.assertTrue(folder.terminal)
+        self.assertTrue(folder.get_terminal())
         permissions = folder.permissions_dict
         self.assertIn("user@example.com", permissions["read"])
 
@@ -93,7 +93,7 @@ class TestTerminalProperty(unittest.TestCase):
         test_folder.mkdir()
 
         folder = syft_perm.open(test_folder)
-        folder.terminal = True
+        folder.set_terminal(True)
 
         # Read YAML directly to verify structure
         yaml_file = test_folder / "syft.pub.yaml"
@@ -117,11 +117,11 @@ class TestTerminalProperty(unittest.TestCase):
         folder = syft_perm.open(test_folder)
 
         # Should return False for invalid YAML
-        self.assertFalse(folder.terminal)
+        self.assertFalse(folder.get_terminal())
 
         # Should be able to set terminal despite invalid existing file
-        folder.terminal = True
-        self.assertTrue(folder.terminal)
+        folder.set_terminal(True)
+        self.assertTrue(folder.get_terminal())
 
     def test_terminal_with_folder_permissions_integration(self):
         """Test that terminal works correctly with folder permission operations."""
@@ -131,14 +131,14 @@ class TestTerminalProperty(unittest.TestCase):
         folder = syft_perm.open(test_folder)
 
         # Set terminal first
-        folder.terminal = True
+        folder.set_terminal(True)
 
         # Add permissions
         folder.grant_read_access("alice@example.com", force=True)
         folder.grant_write_access("bob@example.com", force=True)
 
         # Verify terminal is still set
-        self.assertTrue(folder.terminal)
+        self.assertTrue(folder.get_terminal())
 
         # Verify permissions work
         permissions = folder.permissions_dict
@@ -156,7 +156,7 @@ class TestTerminalProperty(unittest.TestCase):
         _ = folder.permissions_dict
 
         # Set terminal (should clear cache)
-        folder.terminal = True
+        folder.set_terminal(True)
 
         # Access permissions again (should work with new terminal setting)
         permissions = folder.permissions_dict

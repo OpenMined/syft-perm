@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.58"
+__version__ = "0.3.59"
 
 __all__ = [
     "open",
@@ -323,16 +323,33 @@ class Files:
             else:
                 size_str = f"{size} B"
 
-            # Format permissions
+            # Format permissions - show only the highest permission level per user
             perms = file.get("permissions", {})
 
+            # Build a map of user -> highest permission
+            user_permissions = {}
+            permission_hierarchy = ["admin", "write", "create", "read"]
+
+            for perm_type in permission_hierarchy:
+                users = perms.get(perm_type, [])
+                for user in users:
+                    if user not in user_permissions:
+                        user_permissions[user] = perm_type
+
+            # Format the permissions for display
             perm_items = []
-            for perm_type, users in perms.items():
-                if users:
-                    if len(users) > 2:
-                        user_str = f"{', '.join(users[:2])}... (+{len(users) - 2})"
+            for perm_type in permission_hierarchy:
+                users_with_this_perm = [
+                    user for user, p in user_permissions.items() if p == perm_type
+                ]
+                if users_with_this_perm:
+                    if len(users_with_this_perm) > 2:
+                        user_str = (
+                            f"{', '.join(users_with_this_perm[:2])}... "
+                            f"(+{len(users_with_this_perm) - 2})"
+                        )
                     else:
-                        user_str = ", ".join(users)
+                        user_str = ", ".join(users_with_this_perm)
                     perm_items.append(
                         f"<strong>{perm_type}:</strong> {html_module.escape(user_str)}"
                     )
@@ -425,20 +442,44 @@ class Files:
             }}
 
             function formatPermissions(perms, hasYaml) {{
+                // Build a map of user -> highest permission
+                var userPermissions = {{}};
+                var permissionHierarchy = ['admin', 'write', 'create', 'read'];
+
+                for (var i = 0; i < permissionHierarchy.length; i++) {{
+                    var permType = permissionHierarchy[i];
+                    var users = perms[permType] || [];
+                    for (var j = 0; j < users.length; j++) {{
+                        var user = users[j];
+                        if (!userPermissions[user]) {{
+                            userPermissions[user] = permType;
+                        }}
+                    }}
+                }}
+
+                // Format permissions for display
                 var permItems = [];
-                for (var permType in perms) {{
-                    var users = perms[permType];
-                    if (users && users.length > 0) {{
+                for (var i = 0; i < permissionHierarchy.length; i++) {{
+                    var permType = permissionHierarchy[i];
+                    var usersWithThisPerm = [];
+                    for (var user in userPermissions) {{
+                        if (userPermissions[user] === permType) {{
+                            usersWithThisPerm.push(user);
+                        }}
+                    }}
+
+                    if (usersWithThisPerm.length > 0) {{
                         var userStr;
-                        if (users.length > 2) {{
-                            userStr = users.slice(0, 2).join(', ') + '... (+' +
-                                     (users.length - 2) + ')';
+                        if (usersWithThisPerm.length > 2) {{
+                            userStr = usersWithThisPerm.slice(0, 2).join(', ') + '... (+' +
+                                     (usersWithThisPerm.length - 2) + ')';
                         }} else {{
-                            userStr = users.join(', ');
+                            userStr = usersWithThisPerm.join(', ');
                         }}
                         permItems.push('<strong>' + permType + ':</strong> ' + escapeHtml(userStr));
                     }}
                 }}
+
                 if (permItems.length > 0) {{
                     return permItems.join('<br>');
                 }} else {{
