@@ -742,9 +742,10 @@ class Files:
             
             def check_server(port):
                 try:
-                    with urllib.request.urlopen(f"http://localhost:{port}/", timeout=0.5) as response:
+                    with urllib.request.urlopen(f"http://localhost:{port}/", timeout=0.1) as response:
                         if response.status == 200:
-                            content = response.read().decode('utf-8')
+                            # Only read first 100 bytes to check for "SyftPerm"
+                            content = response.read(100).decode('utf-8')
                             return "SyftPerm" in content
                 except:
                     pass
@@ -779,6 +780,23 @@ class Files:
             
             if server_available:
                 print(f"Server available on port {server_port}")
+                # Detect dark mode for iframe styling
+                is_dark_mode = is_dark()
+                border_color = "#3e3e42" if is_dark_mode else "#ddd"
+                
+                # Return iframe pointing to the server's files-widget endpoint
+                iframe_html = f"""
+                <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 8px; overflow: hidden;">
+                    <iframe 
+                        src="http://localhost:{server_port}/files-widget" 
+                        width="100%" 
+                        height="100%" 
+                        frameborder="0"
+                        style="border: none;">
+                    </iframe>
+                </div>
+                """
+                return iframe_html
             else:
                 ports_str = ", ".join(map(str, tried_ports))
                 print(f"Server not available (tried ports: {ports_str})")

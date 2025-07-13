@@ -1094,13 +1094,14 @@ def get_files_widget_html() -> str:
         font-size: 12px;
         background: {bg_color};
         color: {text_color};
-        overflow: hidden;
         display: flex;
         flex-direction: column;
         width: 100%;
+        height: 100vh;
         margin: 0;
         border: 1px solid {border_color};
         border-radius: 8px;
+        overflow: hidden;
     }}
 
     #{container_id} .search-controls {{
@@ -1130,7 +1131,6 @@ def get_files_widget_html() -> str:
         overflow-x: auto;
         background: {bg_color};
         min-height: 0;
-        max-height: 600px;
     }}
 
     #{container_id} table {{
@@ -1164,6 +1164,10 @@ def get_files_widget_html() -> str:
         font-size: 0.75rem;
         text-align: left;
         color: {text_color};
+    }}
+
+    #{container_id} td:first-child {{
+        padding-left: 0.5rem;
     }}
 
     #{container_id} tbody tr {{
@@ -1376,14 +1380,14 @@ def get_files_widget_html() -> str:
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 1.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
-                        <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
-                        <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
-                        <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
+                        <th style="width: 2rem; padding-left: 0.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
+                        <th style="width: 2.5rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
+                        <th style="width: 18rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
+                        <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
                         <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
                         <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
-                        <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
-                        <th style="width: 15rem;">Actions</th>
+                        <th style="width: 12rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
+                        <th style="width: 10rem;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="{container_id}-tbody">
