@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.85"
+__version__ = "0.3.86"
 
 __all__ = [
     "open",
@@ -670,15 +670,16 @@ class Files:
             border-radius: 0.25rem;
             font-size: 0.75rem;
             border: none;
-            cursor: pointer;
+            cursor: not-allowed;
             display: inline-flex;
             align-items: center;
             gap: 0.125rem;
             transition: all 0.15s;
+            opacity: 0.5;
         }}
 
         #{container_id} .btn:hover {{
-            opacity: 0.8;
+            opacity: 0.5;
         }}
 
         #{container_id} .btn-blue {{
@@ -772,14 +773,9 @@ class Files:
             <div class="search-controls">
                 <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
                 <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." style="flex: 1;">
-                <button class="btn btn-blue" 
-                        onclick="searchFiles_{container_id}()">Search</button>
-                <button class="btn btn-gray" onclick="clearSearch_{container_id}()">Clear</button>
-                <button class="btn btn-green" 
-                        onclick="newFile_{container_id}()">New</button>
-                <button class="btn btn-blue" 
-                        onclick="selectAll_{container_id}()">Select All</button>
-                <button class="btn btn-gray" onclick="refreshFiles_{container_id}()">Refresh</button>
+                <button class="btn btn-green">New</button>
+                <button class="btn btn-blue">Select All</button>
+                <button class="btn btn-gray">Refresh</button>
             </div>
 
             <div class="table-container">
@@ -868,10 +864,10 @@ class Files:
                         </td>
                         <td>
                             <div style="display: flex; gap: 0.125rem;">
-                                <button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}('{html_module.escape(file_path)}')" title="Open in editor">File</button>
-                                <button class="btn btn-blue" onclick="event.stopPropagation(); viewInfo_{container_id}('{html_module.escape(file_path)}')" title="View file info">Info</button>
-                                <button class="btn btn-purple" onclick="event.stopPropagation(); copyPath_{container_id}('syft://{html_module.escape(file_path)}')" title="Copy path">Copy</button>
-                                <button class="btn btn-red" onclick="event.stopPropagation(); deleteFile_{container_id}('{html_module.escape(file_path)}')" title="Delete file">
+                                <button class="btn btn-gray" title="Open in editor">File</button>
+                                <button class="btn btn-blue" title="View file info">Info</button>
+                                <button class="btn btn-purple" title="Copy path">Copy</button>
+                                <button class="btn btn-red" title="Delete file">
                                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M3 6h18"></path>
                                         <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
@@ -1066,10 +1062,10 @@ class Files:
                         '</td>' +
                         '<td>' +
                             '<div style="display: flex; gap: 0.125rem;">' +
-                                '<button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="Open in editor">File</button>' +
-                                '<button class="btn btn-blue" onclick="event.stopPropagation(); viewInfo_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="View file info">Info</button>' +
-                                '<button class="btn btn-purple" onclick="event.stopPropagation(); copyPath_{container_id}(\\'syft://' + filePath + '\\')" title="Copy path">Copy</button>' +
-                                '<button class="btn btn-red" onclick="event.stopPropagation(); deleteFile_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="Delete file">' +
+                                '<button class="btn btn-gray" title="Open in editor">File</button>' +
+                                '<button class="btn btn-blue" title="View file info">Info</button>' +
+                                '<button class="btn btn-purple" title="Copy path">Copy</button>' +
+                                '<button class="btn btn-red" title="Delete file">' +
                                     '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
                                         '<path d="M3 6h18"></path>' +
                                         '<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>' +
