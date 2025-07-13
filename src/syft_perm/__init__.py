@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.44"
+__version__ = "0.3.45"
 
 __all__ = [
     "open",
@@ -372,6 +372,7 @@ class Files:
             <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #e5e7eb;
                         font-size: 12px; color: #6b7280; text-align: center;">
                 <span id="{container_id}-status">Showing 20 of {total} files in datasites</span>
+                <span id="{container_id}-size" style="margin-left: 10px;"></span>
             </div>
         </div>
 
@@ -459,8 +460,9 @@ class Files:
             window.searchFiles_{container_id} = function(searchTerm) {{
                 var tbody = document.getElementById('{container_id}-tbody');
                 var status = document.getElementById('{container_id}-status');
+                var sizeSpan = document.getElementById('{container_id}-size');
 
-                if (!tbody || !status) return;
+                if (!tbody || !status || !sizeSpan) return;
 
                 searchTerm = searchTerm.toLowerCase();
                 var filteredFiles = allFiles.filter(function(file) {{
@@ -494,6 +496,12 @@ class Files:
                     tbody.appendChild(tr);
                 }}
 
+                // Calculate total size of displayed files
+                var totalSize = 0;
+                for (var i = 0; i < filteredFiles.length; i++) {{
+                    totalSize += filteredFiles[i].size || 0;
+                }}
+
                 // Update status
                 var statusText = searchTerm ?
                     'Showing ' + displayFiles.length + ' of ' + filteredFiles.length +
@@ -501,6 +509,9 @@ class Files:
                     'Showing ' + displayFiles.length + ' of ' + allFiles.length +
                     ' files in datasites';
                 status.textContent = statusText;
+
+                // Update size display
+                sizeSpan.textContent = '| Total size: ' + formatSize(totalSize);
             }};
 
             function getPathSuggestions(input) {{
@@ -614,6 +625,18 @@ class Files:
                     }}
                 }}
             }};
+        }})();
+
+        // Initialize with total size display
+        (function() {{
+            var initialTotalSize = 0;
+            for (var i = 0; i < allFiles.length; i++) {{
+                initialTotalSize += allFiles[i].size || 0;
+            }}
+            var sizeSpan = document.getElementById('{container_id}-size');
+            if (sizeSpan) {{
+                sizeSpan.textContent = '| Total size: ' + formatSize(initialTotalSize);
+            }}
         }})();
         </script>
         """

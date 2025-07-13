@@ -513,6 +513,24 @@ class SyftFile:
         """Get the file name"""
         return self._path.name
 
+    @property
+    def permissions_dict(self) -> Dict[str, List[str]]:
+        """Get all permissions for this file as a dictionary."""
+        return self._get_all_permissions()
+
+    @property
+    def has_yaml(self) -> bool:
+        """Check if this file has any associated yaml permission files."""
+        # Walk up the directory tree to find any syft.pub.yaml files
+        current_path = self._path
+        while current_path.parent != current_path:  # Stop at root
+            parent_dir = current_path.parent
+            syftpub_path = parent_dir / "syft.pub.yaml"
+            if syftpub_path.exists():
+                return True
+            current_path = parent_dir
+        return False
+
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this file using old syftbox nearest-node algorithm."""
         # Check cache first
@@ -1054,7 +1072,7 @@ class SyftFile:
                         position: sticky; top: 0; z-index: 10;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 0.25rem;">
-                        <svg width="20" height="20" viewBox="0 0 311 360" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0)"><path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear)"/><path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear)"/><path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear)"/></g><defs><linearGradient id="paint0_linear" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse"><stop stop-color="#DC7A6E"/><stop offset="0.251496" stop-color="#F6A464"/><stop offset="0.501247" stop-color="#FDC577"/><stop offset="0.753655" stop-color="#EFC381"/><stop offset="1" stop-color="#B9D599"/></linearGradient><linearGradient id="paint1_linear" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse"><stop stop-color="#BFCD94"/><stop offset="0.245025" stop-color="#B2D69E"/><stop offset="0.504453" stop-color="#8DCCA6"/><stop offset="0.745734" stop-color="#5CB8B7"/><stop offset="1" stop-color="#4CA5B8"/></linearGradient><linearGradient id="paint2_linear" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse"><stop stop-color="#D7686D"/><stop offset="0.225" stop-color="#C64B77"/><stop offset="0.485" stop-color="#A2638E"/><stop offset="0.703194" stop-color="#758AA8"/><stop offset="1" stop-color="#639EAF"/></linearGradient><clipPath id="clip0"><rect width="311" height="360" fill="white"/></clipPath></defs></svg>
+                        <svg width="20" height="20" viewBox="0 0 311 360" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0)"><path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear)"/><path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear)"/><path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear)"/></g><defs><linearGradient id="paint0_linear" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse"><stop stop-color="#DC7A6E"/><stop offset="0.251496" stop-color="#F6A464"/><stop offset="0.501247" stop-color="#FDC577"/><stop offset="0.753655" stop-color="#EFC381"/><stop offset="1" stop-color="#B9D599"/></linearGradient><linearGradient id="paint1_linear" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse"><stop stop-color="#BFCD94"/><stop offset="0.245025" stop-color="#B2D69E"/><stop offset="0.504453" stop-color="#8DCCA6"/><stop offset="0.745734" stop-color="#5CB8B7"/><stop offset="1" stop-color="#4CA5B8"/></linearGradient><linearGradient id="paint2_linear" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse"><stop stop-color="#D7686D"/><stop offset="0.225" stop-color="#C64B77"/><stop offset="0.485" stop-color="#A2638E"/><stop offset="0.703194" stop-color="#758AA8"/><stop offset="1" stop-color="#639EAF"/></linearGradient><clipPath id="clip0"><rect width="311" height="360" fill="white"/></clipPath></defs></svg>  # noqa: E501
                         <div>
                             <div style="font-size: 0.875rem; font-weight: 500; color: #374151;">
                                 {self._path.name}
@@ -1069,15 +1087,15 @@ class SyftFile:
                     </div>
                 </div>
             </div>
-            
+
             <!-- Search Bar -->
             <div style="padding: 0.5rem; background: #f8f9fa; border-bottom: 1px solid #e5e7eb;">
-                <input type="text" placeholder="🔍 Search users..." 
-                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; 
+                <input type="text" placeholder="🔍 Search users..."
+                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db;
                               border-radius: 0.25rem; font-size: 0.75rem; outline: none;
                               background: white;">
             </div>
-            
+
             <div style="flex: 1; overflow-y: auto; padding: 0;">
         """
 
@@ -2240,7 +2258,7 @@ class SyftFolder:
                         position: sticky; top: 0; z-index: 10;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 0.25rem;">
-                        <svg width="20" height="20" viewBox="0 0 311 360" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_folder)"><path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_folder)"/><path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_folder)"/><path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear_folder)"/></g><defs><linearGradient id="paint0_linear_folder" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse"><stop stop-color="#DC7A6E"/><stop offset="0.251496" stop-color="#F6A464"/><stop offset="0.501247" stop-color="#FDC577"/><stop offset="0.753655" stop-color="#EFC381"/><stop offset="1" stop-color="#B9D599"/></linearGradient><linearGradient id="paint1_linear_folder" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse"><stop stop-color="#BFCD94"/><stop offset="0.245025" stop-color="#B2D69E"/><stop offset="0.504453" stop-color="#8DCCA6"/><stop offset="0.745734" stop-color="#5CB8B7"/><stop offset="1" stop-color="#4CA5B8"/></linearGradient><linearGradient id="paint2_linear_folder" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse"><stop stop-color="#D7686D"/><stop offset="0.225" stop-color="#C64B77"/><stop offset="0.485" stop-color="#A2638E"/><stop offset="0.703194" stop-color="#758AA8"/><stop offset="1" stop-color="#639EAF"/></linearGradient><clipPath id="clip0_folder"><rect width="311" height="360" fill="white"/></clipPath></defs></svg>
+                        <svg width="20" height="20" viewBox="0 0 311 360" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_folder)"><path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_folder)"/><path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_folder)"/><path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear_folder)"/></g><defs><linearGradient id="paint0_linear_folder" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse"><stop stop-color="#DC7A6E"/><stop offset="0.251496" stop-color="#F6A464"/><stop offset="0.501247" stop-color="#FDC577"/><stop offset="0.753655" stop-color="#EFC381"/><stop offset="1" stop-color="#B9D599"/></linearGradient><linearGradient id="paint1_linear_folder" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse"><stop stop-color="#BFCD94"/><stop offset="0.245025" stop-color="#B2D69E"/><stop offset="0.504453" stop-color="#8DCCA6"/><stop offset="0.745734" stop-color="#5CB8B7"/><stop offset="1" stop-color="#4CA5B8"/></linearGradient><linearGradient id="paint2_linear_folder" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse"><stop stop-color="#D7686D"/><stop offset="0.225" stop-color="#C64B77"/><stop offset="0.485" stop-color="#A2638E"/><stop offset="0.703194" stop-color="#758AA8"/><stop offset="1" stop-color="#639EAF"/></linearGradient><clipPath id="clip0_folder"><rect width="311" height="360" fill="white"/></clipPath></defs></svg>  # noqa: E501
                         <div>
                             <div style="font-size: 0.875rem; font-weight: 500; color: #374151;">
                                 {self._path.name or 'Root Folder'}
@@ -2255,15 +2273,15 @@ class SyftFolder:
                     </div>
                 </div>
             </div>
-            
+
             <!-- Search Bar -->
             <div style="padding: 0.5rem; background: #f8f9fa; border-bottom: 1px solid #e5e7eb;">
-                <input type="text" placeholder="🔍 Search users..." 
-                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; 
+                <input type="text" placeholder="🔍 Search users..."
+                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db;
                               border-radius: 0.25rem; font-size: 0.75rem; outline: none;
                               background: white;">
             </div>
-            
+
             <div style="flex: 1; overflow-y: auto; padding: 0;">
         """
 
