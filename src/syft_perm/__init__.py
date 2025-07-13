@@ -961,7 +961,6 @@ class Files:
                             run_sh_path = syft_perm_path / "run.sh"
                             if run_sh_path.exists():
                                 subprocess.run(['chmod', '+x', str(run_sh_path)], capture_output=True)
-                                print("✓ Made run.sh executable")
                         else:
                             pass  # Failed to clone
                     except Exception as e:

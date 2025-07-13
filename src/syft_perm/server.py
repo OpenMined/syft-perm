@@ -1036,18 +1036,21 @@ def get_files_widget_html() -> str:
         </tr>
         """
     
-    # Generate CSS based on theme
+    # Generate CSS based on theme - matching Jupyter widget exactly
     if is_dark_mode:
-        # Dark mode colors
+        # Dark mode colors from Jupyter widget
         bg_color = "#1e1e1e"
         text_color = "#d4d4d4"
-        border_color = "#3e3e3e"
+        border_color = "#3e3e42"
         controls_bg = "#252526"
-        input_bg = "#3c3c3c"
-        input_border = "#464647"
+        input_bg = "#1e1e1e"
+        input_border = "#3e3e42"
         table_header_bg = "#252526"
         hover_bg = "rgba(255, 255, 255, 0.05)"
-        row_border = "#2a2a2a"
+        row_border = "#2d2d30"
+        pagination_bg = "rgba(255, 255, 255, 0.02)"
+        page_info_color = "#9ca3af"
+        status_color = "#6b7280"
     else:
         # Light mode colors
         bg_color = "#ffffff"
@@ -1059,6 +1062,9 @@ def get_files_widget_html() -> str:
         table_header_bg = "#f8f9fa"
         hover_bg = "rgba(0, 0, 0, 0.03)"
         row_border = "#f3f4f6"
+        pagination_bg = "rgba(0, 0, 0, 0.02)"
+        page_info_color = "#6b7280"
+        status_color = "#9ca3af"
     
     # Generate complete HTML with the widget
     return f"""
@@ -1070,10 +1076,10 @@ def get_files_widget_html() -> str:
     <title>SyftBox Files</title>
     <style>
     body {{
-        background-color: {bg_color};
+        background-color: {'#1e1e1e' if is_dark_mode else '#ffffff'};
         color: {text_color};
         margin: 0;
-        padding: 20px;
+        padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }}
     
@@ -1201,7 +1207,7 @@ def get_files_widget_html() -> str:
         align-items: center;
         padding: 0.5rem;
         border-top: 1px solid {border_color};
-        background: {'rgba(255, 255, 255, 0.02)' if is_dark_mode else 'rgba(0, 0, 0, 0.02)'};
+        background: {pagination_bg};
         flex-shrink: 0;
     }}
 
@@ -1210,14 +1216,14 @@ def get_files_widget_html() -> str:
         border-radius: 0.25rem;
         font-size: 0.75rem;
         border: 1px solid {border_color};
-        background: {input_bg};
+        background: {'#2d2d30' if is_dark_mode else 'white'};
         color: {text_color};
         cursor: pointer;
         transition: all 0.15s;
     }}
 
     #{container_id} .pagination button:hover:not(:disabled) {{
-        background: {hover_bg};
+        background: {'#3e3e42' if is_dark_mode else '#f3f4f6'};
     }}
 
     #{container_id} .pagination button:disabled {{
@@ -1227,12 +1233,12 @@ def get_files_widget_html() -> str:
 
     #{container_id} .pagination .page-info {{
         font-size: 0.75rem;
-        color: {'#9ca3af' if is_dark_mode else '#6b7280'};
+        color: {page_info_color};
     }}
 
     #{container_id} .pagination .status {{
         font-size: 0.75rem;
-        color: {'#6b7280' if is_dark_mode else '#9ca3af'};
+        color: {status_color};
         font-style: italic;
         opacity: 0.8;
         text-align: center;
@@ -1279,17 +1285,17 @@ def get_files_widget_html() -> str:
     }}
 
     #{container_id} .btn-red {{
-        background: {'#4c1d1d' if is_dark_mode else '#fee2e2'};
+        background: {'#4d2828' if is_dark_mode else '#fee2e2'};
         color: {'#f87171' if is_dark_mode else '#ef4444'};
     }}
 
     #{container_id} .btn-green {{
-        background: {'#1e3a2e' if is_dark_mode else '#d1fae5'};
+        background: {'#1e4032' if is_dark_mode else '#d1fae5'};
         color: {'#34d399' if is_dark_mode else '#10b981'};
     }}
 
     #{container_id} .btn-gray {{
-        background: {'#374151' if is_dark_mode else '#f3f4f6'};
+        background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
         color: {'#9ca3af' if is_dark_mode else '#6b7280'};
     }}
 
@@ -1300,10 +1306,10 @@ def get_files_widget_html() -> str:
     
     #{container_id} .autocomplete-dropdown {{
         position: absolute;
-        background: {input_bg};
+        background: {'#1e1e1e' if is_dark_mode else 'white'};
         border: 1px solid {border_color};
         border-radius: 0.25rem;
-        box-shadow: 0 4px 6px -1px {'rgba(0, 0, 0, 0.3)' if is_dark_mode else 'rgba(0, 0, 0, 0.1)'};
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         max-height: 200px;
         overflow-y: auto;
         z-index: 1000;
@@ -1323,7 +1329,7 @@ def get_files_widget_html() -> str:
     
     #{container_id} .autocomplete-option:hover,
     #{container_id} .autocomplete-option.selected {{
-        background: {hover_bg};
+        background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
     }}
 
     #{container_id} .type-badge {{
@@ -1332,7 +1338,7 @@ def get_files_widget_html() -> str:
         border-radius: 0.25rem;
         font-size: 0.75rem;
         font-weight: 500;
-        background: {table_header_bg};
+        background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
         color: {'#d1d5db' if is_dark_mode else '#374151'};
         text-align: center;
         white-space: nowrap;
