@@ -2158,9 +2158,15 @@ class Files:
         async function checkDiscoveryServer() {{
             if (serverFound) return;
             
+            console.log('Starting discovery server check on ports 62050-62100...');
+            let checkedPorts = [];
+            
             // Check discovery server ports 62050-62100
             for (let port = 62050; port <= 62100; port++) {{
                 if (serverFound) break;
+                
+                checkedPorts.push(port);
+                console.log(`Checking discovery port ${{port}}...`);
                 
                 try {{
                     const controller = new AbortController();
@@ -2172,9 +2178,12 @@ class Files:
                     }});
                     
                     if (response.ok) {{
+                        console.log(`Port ${{port}} responded with status ${{response.status}}`);
                         const data = await response.json();
+                        console.log(`Port ${{port}} response data:`, data);
+                        
                         if (data.main_server_port) {{
-                            console.log(`Found discovery server on port ${{port}}, main server on port ${{data.main_server_port}}!`);
+                            console.log(`✅ FOUND DISCOVERY SERVER on port ${{port}}, main server on port ${{data.main_server_port}}!`);
                             serverFound = true;
                             
                             // Clear the interval to stop checking
@@ -2206,9 +2215,11 @@ class Files:
                         }}
                     }}
                 }} catch (e) {{
-                    // Port not available, continue
+                    console.log(`Port ${{port}} failed: ${{e.message}}`);
                 }}
             }}
+            
+            console.log(`❌ Discovery server not found. Checked ports: ${{checkedPorts.join(', ')}}`);
         }}
         
         // Check for discovery server every 3 seconds
