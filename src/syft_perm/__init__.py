@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.81"
+__version__ = "0.3.82"
 
 __all__ = [
     "open",
@@ -491,7 +491,6 @@ class Files:
             </script>
             """
             display(HTML(update_html))
-            time.sleep(0.1)  # Small delay to make progress visible
 
         # Scan files with progress tracking
         all_files = self._scan_files(progress_callback=update_progress)
