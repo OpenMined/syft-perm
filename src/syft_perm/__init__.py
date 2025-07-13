@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.71"
+__version__ = "0.3.72"
 
 __all__ = [
     "open",
@@ -615,14 +615,15 @@ class Files:
         }}
 
         #{container_id} .type-badge {{
-            display: inline-flex;
-            align-items: center;
-            padding: 0.125rem 0.25rem;
+            display: inline-block;
+            padding: 0.125rem 0.375rem;
             border-radius: 0.25rem;
             font-size: 0.75rem;
             font-weight: 500;
             background: #f3f4f6;
             color: #374151;
+            text-align: center;
+            white-space: nowrap;
         }}
 
         #{container_id} .admin-email {{
@@ -666,8 +667,8 @@ class Files:
                             <th style="width: 20rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">Name ↕</th>
                             <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('admin')">Admin ↕</th>
                             <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
-                            <th style="width: 2.5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
-                            <th style="width: 3rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
+                            <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
+                            <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
                             <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
                             <th style="width: 15rem;">Actions</th>
                         </tr>
