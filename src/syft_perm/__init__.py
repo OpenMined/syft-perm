@@ -717,30 +717,40 @@ class Files:
 
         from IPython.display import HTML, clear_output, display
 
-        # Count datasites first
-        syftbox_dirs = [
-            Path.home() / "SyftBox",
-            Path.home() / ".syftbox",
-            Path("/tmp/SyftBox"),
-        ]
-
-        datasites_path = None
-        for path in syftbox_dirs:
-            if path.exists():
-                datasites_path = path / "datasites"
-                if datasites_path.exists():
-                    break
-
-        total_datasites = 0
-        if datasites_path and datasites_path.exists():
-            total_datasites = len(
-                [d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
-            )
-
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
+        
+        # Non-obvious tips for users
+        tips = [
+            'Use quotation marks to search for exact phrases like "machine learning"',
+            'Multiple words without quotes searches for files containing ALL words',
+            'Press Tab in search boxes for auto-completion suggestions',
+            'Tab completion in Admin filter shows all available datasite emails',
+            'Use sp.files.page(5) to jump directly to page 5',
+            'Click any row to copy its syft:// path to clipboard',
+            'Try sp.files.search("keyword") for programmatic filtering',
+            'Use sp.files.filter(extension=".csv") to find specific file types',
+            'Chain filters: sp.files.filter(extension=".py").search("test")',
+            'Escape special characters with backslash when searching',
+            'ASCII loading bar only appears with print(sp.files), not in Jupyter',
+            'Loading progress: first 10% is setup, 10-100% is file scanning',
+            'Press Escape to close the tab-completion dropdown',
+            'Use sp.open("syft://path") to access files programmatically',
+            'Search for dates in various formats: 2024-01-15, Jan-15, etc',
+            'Admin filter supports partial matching - type "gmail" for all Gmail users',
+            'File sizes show as B, KB, MB, or GB automatically',
+            'The # column shows files in chronological order by modified date',
+            'Empty search returns all files - useful for resetting filters',
+            'Search works across file names, paths, and extensions at once'
+        ]
+        
+        # Pick a random tip for loading and footer
+        import random
+        loading_tip = random.choice(tips)
+        footer_tip = random.choice(tips)
+        show_footer_tip = random.random() < 0.5  # 50% chance
 
-        # Variables to track progress
-        progress_data = {"current": 0, "total": total_datasites, "status": "Starting..."}
+        # Variables to track progress (start with percentage-based)
+        progress_data = {"current": 0, "total": 100, "status": "Initializing..."}
 
         # Show loading animation with real progress tracking
         loading_html = f"""
@@ -799,17 +809,68 @@ class Files:
             <div style="width: 340px; height: 6px; background-color: #e5e7eb; border-radius: 3px; margin: 0 auto; overflow: hidden;">
                 <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
             </div>
-            <div id="loading-status-{container_id}" style="margin-top: 12px; color: #9ca3af; opacity: 0.7; font-size: 12px;">Scanning <span id="current-count-{container_id}">0</span> of {total_datasites} datasites...</div>
+            <div id="loading-status-{container_id}" style="margin-top: 12px; color: #9ca3af; opacity: 0.7; font-size: 12px;">Initializing...</div>
+            <div style="margin-top: 20px; padding: 12px 24px; background: #f0f9ff; border-radius: 6px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                <div style="font-size: 12px; color: #0c4a6e; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <span style="font-weight: 600; color: #0369a1;">💡 TIP:</span> {html_module.escape(loading_tip)}
+                </div>
+            </div>
         </div>
         """
         display(HTML(loading_html))
+        
+        # Helper function to update loading bar
+        def update_loading_display(percent, status):
+            update_html = f"""
+            <script>
+            (function() {{
+                var loadingBar = document.getElementById('loading-bar-{container_id}');
+                var loadingStatus = document.getElementById('loading-status-{container_id}');
+                
+                if (loadingBar) {{
+                    loadingBar.style.width = '{percent:.1f}%';
+                }}
+                if (loadingStatus) {{
+                    loadingStatus.innerHTML = '{status}';
+                }}
+            }})();
+            </script>
+            """
+            display(HTML(update_html))
+            time.sleep(0.01)
+        
+        # Count datasites with progress (0-10% of loading bar)
+        update_loading_display(2, "Finding SyftBox directory...")
+        
+        syftbox_dirs = [
+            Path.home() / "SyftBox",
+            Path.home() / ".syftbox",
+            Path("/tmp/SyftBox"),
+        ]
+
+        datasites_path = None
+        for path in syftbox_dirs:
+            if path.exists():
+                datasites_path = path / "datasites"
+                if datasites_path.exists():
+                    break
+        
+        update_loading_display(5, "Counting datasites...")
+        
+        total_datasites = 0
+        if datasites_path and datasites_path.exists():
+            datasite_dirs = [d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+            total_datasites = len(datasite_dirs)
+            update_loading_display(10, f"Found {total_datasites} datasites. Starting scan...")
+        else:
+            update_loading_display(10, "No datasites found...")
 
         # Variables for throttling updates
         datasite_count = [0]  # Use list to make it mutable in nested function
         last_datasite = [None]  # Track last datasite to detect changes
-        update_interval = max(1, total_datasites // 20)  # Update at most 20 times
+        update_interval = max(1, total_datasites // 20) if total_datasites > 0 else 1  # Update at most 20 times
         
-        # Progress callback function
+        # Progress callback function for file scanning (10-100%)
         def update_progress(current, total, status):
             progress_data["current"] = current
             progress_data["total"] = total
@@ -827,8 +888,11 @@ class Files:
             if datasite_count[0] % update_interval != 0 and current < total:
                 return  # Skip this update unless it's time for an update or the last one
 
-            # Update the display
-            progress_percent = (current / max(total, 1)) * 100
+            # Update the display - map scanning progress from 10% to 100%
+            scan_percent = (current / max(total, 1)) * 100
+            # Map to 10-100% range (first 10% was for initialization)
+            progress_percent = 10 + (scan_percent * 0.9)
+            
             update_html = f"""
             <script>
             (function() {{
@@ -1291,10 +1355,12 @@ class Files:
             var filteredFiles = allFiles.slice();
             var currentPage = {self._initial_page};
             var itemsPerPage = {self._items_per_page};
-            var sortColumn = 'name';
-            var sortDirection = 'asc';
+            var sortColumn = 'modified';
+            var sortDirection = 'desc';
             var searchHistory = [];
             var adminHistory = [];
+            var showFooterTip = {'true' if show_footer_tip else 'false'};
+            var footerTip = {json.dumps(footer_tip)};
 
             // Helper function to escape HTML
             function escapeHtml(text) {{
@@ -1357,11 +1423,21 @@ class Files:
                 var totalSize = calculateTotalSize();
                 var sizeStr = formatSize(totalSize);
                 
+                // Check if we're searching
+                var searchValue = document.getElementById('{container_id}-search').value;
+                var adminFilter = document.getElementById('{container_id}-admin-filter').value;
+                var isSearching = searchValue !== '' || adminFilter !== '';
+                
                 var statusText = fileCount + ' files';
                 if (folderCount > 0) {{
                     statusText += ', ' + folderCount + ' folders';
                 }}
-                statusText += ', ' + sizeStr + ' total';
+                statusText += ' • Total size: ' + sizeStr;
+                
+                // Show tip if not searching and showFooterTip is true
+                if (!isSearching && showFooterTip) {{
+                    statusText += ' • 💡 ' + footerTip;
+                }}
                 
                 showStatus(statusText);
             }}
@@ -1862,6 +1938,13 @@ class Files:
             var totalPages = Math.ceil(filteredFiles.length / itemsPerPage);
             if (currentPage > totalPages) currentPage = totalPages;
             if (currentPage < 1) currentPage = 1;
+            
+            // Apply initial sort by modified date (newest first)
+            filteredFiles.sort(function(a, b) {{
+                var aVal = a.modified || 0;
+                var bVal = b.modified || 0;
+                return bVal - aVal; // Descending order (newest first)
+            }});
             
             // Initial render
             renderTable();
