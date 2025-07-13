@@ -521,15 +521,11 @@ class SyftFile:
     @property
     def has_yaml(self) -> bool:
         """Check if this file has any associated yaml permission files."""
-        # Walk up the directory tree to find any syft.pub.yaml files
-        current_path = self._path
-        while current_path.parent != current_path:  # Stop at root
-            parent_dir = current_path.parent
-            syftpub_path = parent_dir / "syft.pub.yaml"
-            if syftpub_path.exists():
-                return True
-            current_path = parent_dir
-        return False
+        # Use the same logic as _get_all_permissions to find yaml files
+        # This ensures consistency with how permissions are actually resolved
+        perms = self._get_all_permissions()
+        # If we have any permissions set (not just empty lists), then yaml files exist
+        return any(users for users in perms.values())
 
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this file using old syftbox nearest-node algorithm."""
