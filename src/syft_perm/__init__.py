@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.79"
+__version__ = "0.3.80"
 
 __all__ = [
     "open",
@@ -78,7 +78,7 @@ class Files:
     def __init__(self):
         self._cache = None
 
-    def _scan_files(self, search: _Union[str, None] = None) -> list:
+    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None) -> list:
         """Scan SyftBox directory for files with permissions."""
         import os
         from pathlib import Path
@@ -126,21 +126,34 @@ class Files:
         except Exception:
             pass
 
-        # First pass: collect all unique paths (files and folders)
-        for root, dirs, file_names in os.walk(datasites_path):
-            root_path = Path(root)
+        # Count total datasites for progress tracking
+        datasite_dirs = [d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+        total_datasites = len(datasite_dirs)
+        processed_datasites = 0
 
-            # Skip hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith(".")]
+        # First pass: collect all unique paths (files and folders) per datasite
+        for datasite_dir in datasite_dirs:
+            if progress_callback:
+                progress_callback(processed_datasites, total_datasites, f"Scanning {datasite_dir.name}")
+            
+            for root, dirs, file_names in os.walk(datasite_dir):
+                root_path = Path(root)
 
-            # Add current directory
-            if root_path != datasites_path:  # Don't add the datasites folder itself
+                # Skip hidden directories
+                dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+                # Add current directory
                 all_paths.add(root_path)
 
-            # Add all files
-            for file_name in file_names:
-                if not file_name.startswith(".") and file_name != "syft.pub.yaml":
-                    all_paths.add(root_path / file_name)
+                # Add all files
+                for file_name in file_names:
+                    if not file_name.startswith(".") and file_name != "syft.pub.yaml":
+                        all_paths.add(root_path / file_name)
+            
+            processed_datasites += 1
+
+        if progress_callback:
+            progress_callback(total_datasites, total_datasites, "Processing files...")
 
         # Second pass: process all paths and create entries
         for path in sorted(all_paths):
@@ -377,6 +390,8 @@ class Files:
         import html as html_module
         import json
         import uuid
+        import threading
+        import time
         from datetime import datetime
         from pathlib import Path
 
@@ -402,32 +417,52 @@ class Files:
                 [d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
             )
 
-        # Show loading animation
+        container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
+        
+        # Variables to track progress
+        progress_data = {"current": 0, "total": total_datasites, "status": "Starting..."}
+        
+        # Show loading animation with real progress tracking
         loading_html = f"""
-        <div id="loading-container" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+        <div id="loading-container-{container_id}" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
             <div style="font-size: 18px; color: #666; margin-bottom: 15px;">Loading the internet of private data...</div>
             <div style="width: 300px; height: 4px; background-color: #e5e7eb; border-radius: 2px; margin: 0 auto; overflow: hidden;">
-                <div id="loading-bar" style="width: 0%; height: 100%; background-color: #6b7280; transition: width 0.3s ease;"></div>
+                <div id="loading-bar-{container_id}" style="width: 0%; height: 100%; background-color: #6b7280; transition: width 0.3s ease;"></div>
             </div>
-            <div id="loading-status" style="margin-top: 10px; color: #9ca3af; font-size: 12px;">Scanning <span id="current-count">0</span> of {total_datasites} datasites...</div>
+            <div id="loading-status-{container_id}" style="margin-top: 10px; color: #9ca3af; font-size: 12px;">Scanning <span id="current-count-{container_id}">0</span> of {total_datasites} datasites...</div>
         </div>
-        <script>
-        (function() {{
-            var totalDatasites = {total_datasites};
-            var currentCount = 0;
-            var interval = setInterval(function() {{
-                currentCount = Math.min(currentCount + Math.floor(Math.random() * 3) + 1, totalDatasites - 1);
-                var progress = (currentCount / totalDatasites) * 100;
-                document.getElementById('loading-bar').style.width = progress + '%';
-                document.getElementById('current-count').textContent = currentCount;
-            }}, 200);
-        }})();
-        </script>
         """
         display(HTML(loading_html))
 
-        container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-        data = self.get(limit=100)  # Get more files initially
+        # Progress callback function
+        def update_progress(current, total, status):
+            progress_data["current"] = current
+            progress_data["total"] = total  
+            progress_data["status"] = status
+            
+            # Update the display
+            progress_percent = (current / max(total, 1)) * 100
+            update_html = f"""
+            <script>
+            (function() {{
+                var loadingBar = document.getElementById('loading-bar-{container_id}');
+                var currentCount = document.getElementById('current-count-{container_id}');
+                var loadingStatus = document.getElementById('loading-status-{container_id}');
+                
+                if (loadingBar) loadingBar.style.width = '{progress_percent:.1f}%';
+                if (currentCount) currentCount.textContent = '{current}';
+                if (loadingStatus) loadingStatus.innerHTML = '{status} - <span id="current-count-{container_id}">{current}</span> of {total} datasites...';
+            }})();
+            </script>
+            """
+            display(HTML(update_html))
+            time.sleep(0.1)  # Small delay to make progress visible
+
+        # Scan files with progress tracking
+        all_files = self._scan_files(progress_callback=update_progress)
+        
+        # Get initial display files
+        data = {"files": all_files[:100], "total_count": len(all_files)}
         files = data["files"]
         total = data["total_count"]
 
@@ -439,8 +474,7 @@ class Files:
                 "No files found in SyftBox/datasites directory</div>"
             )
 
-        # Get all files for search
-        all_files = self._scan_files()
+        # Use the already scanned files for search
 
         # Clear loading animation
         clear_output()
