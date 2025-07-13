@@ -1112,36 +1112,15 @@ class SyftFile:
         # If no users have access
         if not user_permissions:
             html += """
-                <div style="text-align: center; padding: 24px; color: #5f6368;">
-                    <div style="font-size: 14px;">Only you have access</div>
-                    <div style="font-size: 12px; margin-top: 4px;">
-                        Share to give others access
+                <div style="text-align: center; padding: 16px 8px; color: #586069;">
+                    <div style="font-size: 13px; font-weight: 500;">No permissions set</div>
+                    <div style="font-size: 11px; margin-top: 2px;">
+                        Only the owner has access
                     </div>
                 </div>
             """
 
-        # General access section
-        html += f"""
-            </div>
-            
-            <!-- General access -->
-            <div style="padding: 0 24px 20px;">
-                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 12px;">
-                    General access
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; 
-                            background: #f8f9fa; border-radius: 8px; border: 1px solid #e8eaed;">
-                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #5f6368;
-                                display: flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 12px;">🔒</span>
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-size: 14px; color: #3c4043;">Restricted</div>
-                        <div style="font-size: 12px; color: #5f6368;">
-                            Only people with access can open with the link
-                        </div>
-                    </div>
-                </div>
+        html += """
             </div>
         </div>
         """
@@ -2227,41 +2206,30 @@ class SyftFolder:
         # Get current user (folder owner)
         current_user = os.path.basename(os.path.expanduser("~"))
 
-        # Create Google Drive style HTML
+        # Create Jupyter-friendly permissions interface
         html = f"""
-        <div style="font-family: 'Google Sans', 'Segoe UI', Tahoma, sans-serif; 
-                    max-width: 480px; background: white; border-radius: 8px; 
-                    box-shadow: 0 1px 3px rgba(60,64,67,.3); margin: 16px 0;">
-            
-            <!-- Header -->
-            <div style="padding: 20px 24px 16px; border-bottom: 1px solid #e8eaed;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                    background: white; border: 1px solid #e1e4e8;
+                    border-radius: 6px; margin: 8px 0; overflow: hidden;">
+            <div style="background: #f6f8fa; padding: 12px 16px; border-bottom: 1px solid #e1e4e8;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 24px; height: 24px; background: #4285f4; border-radius: 3px;
-                                    display: flex; align-items: center; justify-content: center;">
-                            <span style="color: white; font-size: 14px; font-weight: 500;">📁</span>
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">📁</span>
                         <div>
-                            <div style="font-size: 16px; font-weight: 500; color: #3c4043;">
+                            <div style="font-size: 14px; font-weight: 600; color: #24292e;">
                                 {self._path.name or 'Root Folder'}
                             </div>
-                            <div style="font-size: 12px; color: #5f6368; margin-top: 2px;">
-                                {current_user} • Owner
+                            <div style="font-size: 12px; color: #586069;">
+                                Owner: {current_user}
                             </div>
                         </div>
                     </div>
-                    <button style="background: #1a73e8; color: white; border: none; padding: 8px 16px;
-                                   border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer;">
-                        Share
-                    </button>
+                    <div style="font-size: 12px; color: #586069; font-weight: 600;">
+                        PERMISSIONS
+                    </div>
                 </div>
             </div>
-            
-            <!-- People with access section -->
-            <div style="padding: 16px 24px;">
-                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 16px;">
-                    People with access
-                </div>
+            <div style="padding: 8px;">
         """
 
         # Add each user
@@ -2301,36 +2269,15 @@ class SyftFolder:
         # If no users have access
         if not user_permissions:
             html += """
-                <div style="text-align: center; padding: 24px; color: #5f6368;">
-                    <div style="font-size: 14px;">Only you have access</div>
-                    <div style="font-size: 12px; margin-top: 4px;">
-                        Share to give others access
+                <div style="text-align: center; padding: 16px 8px; color: #586069;">
+                    <div style="font-size: 13px; font-weight: 500;">No permissions set</div>
+                    <div style="font-size: 11px; margin-top: 2px;">
+                        Only the owner has access
                     </div>
                 </div>
             """
 
-        # General access section
-        html += f"""
-            </div>
-            
-            <!-- General access -->
-            <div style="padding: 0 24px 20px;">
-                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 12px;">
-                    General access
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px; padding: 12px; 
-                            background: #f8f9fa; border-radius: 8px; border: 1px solid #e8eaed;">
-                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #5f6368;
-                                display: flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 12px;">🔒</span>
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-size: 14px; color: #3c4043;">Restricted</div>
-                        <div style="font-size: 12px; color: #5f6368;">
-                            Only people with access can open with the link
-                        </div>
-                    </div>
-                </div>
+        html += """
             </div>
         </div>
         """

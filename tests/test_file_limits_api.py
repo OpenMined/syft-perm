@@ -276,17 +276,17 @@ class TestFileLimitsAPI(unittest.TestCase):
         file_html = syft_file._repr_html_()
         folder_html = syft_folder._repr_html_()
 
-        # Should contain Google Drive style elements
-        self.assertIn("People with access", file_html)
-        self.assertIn("General access", file_html)
-        self.assertIn("Share", file_html)
-        self.assertIn("Only you have access", file_html)
+        # Should contain Jupyter-friendly interface elements
+        self.assertIn("PERMISSIONS", file_html)
+        self.assertIn("Owner:", file_html)
+        self.assertIn("No permissions set", file_html)
+        self.assertIn("Only the owner has access", file_html)
         self.assertIn("html_test.txt", file_html)
 
-        self.assertIn("People with access", folder_html)
-        self.assertIn("General access", folder_html)
-        self.assertIn("Share", folder_html)
-        self.assertIn("Only you have access", folder_html)
+        self.assertIn("PERMISSIONS", folder_html)
+        self.assertIn("Owner:", folder_html)
+        self.assertIn("No permissions set", folder_html)
+        self.assertIn("Only the owner has access", folder_html)
         self.assertIn("html_folder", folder_html)
 
 

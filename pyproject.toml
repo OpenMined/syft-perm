@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "syft-perm"
-version = "0.3.21"
+version = "0.3.22"
 description = "Minimal utilities for managing SyftBox file permissions"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -32,6 +32,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
+    "loguru>=0.7.3",
     "pyyaml>=6.0",
     "requests>=2.31.0",
 ]
@@ -46,6 +47,7 @@ display = [
 server = [
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
+    "loguru>=0.7.0",
 ]
 dev = [
     "pytest>=7.0",
