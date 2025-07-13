@@ -30,7 +30,8 @@
       "Bash(mkdir:*)",
       "Bash(cat:*)",
       "Bash(uv pip install:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

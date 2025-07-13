@@ -318,27 +318,9 @@ if _SERVER_AVAILABLE:
     
     @app.get("/files-widget", response_class=HTMLResponse)  # type: ignore[misc]
     async def files_widget() -> str:
-        """Serve the files widget exactly like sp.files._repr_html_()."""
-        # Import the Files class to generate the exact same HTML
-        from . import files as sp_files
-        
-        # Get the HTML by calling _repr_html_() on the files instance
-        html_content = sp_files._repr_html_()
-        
-        # Wrap it in a basic HTML page structure
-        return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SyftBox Files</title>
-</head>
-<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-    {html_content}
-</body>
-</html>
-"""
+        """Serve the files widget interface."""
+        # Generate the widget HTML directly for web serving
+        return get_files_widget_html()
 
 
 def get_editor_html(path: str) -> str:
@@ -906,6 +888,851 @@ def get_editor_html(path: str) -> str:
 </body>
 </html>
     """
+
+
+def get_files_widget_html() -> str:
+    """Generate the files widget HTML for web serving."""
+    import html as html_module
+    import json
+    import random
+    import uuid
+    from datetime import datetime
+    from pathlib import Path
+    
+    # Import needed functions
+    from . import files as sp_files
+    
+    container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
+    
+    # For web context, default to light mode
+    # You could add a query parameter to support dark mode
+    is_dark_mode = False
+    
+    # Non-obvious tips for users
+    tips = [
+        'Use quotation marks to search for exact phrases like "machine learning"',
+        'Multiple words without quotes searches for files containing ALL words',
+        'Press Tab in search boxes for auto-completion suggestions',
+        'Tab completion in Admin filter shows all available datasite emails',
+        'Use sp.files.page(5) to jump directly to page 5',
+        'Click any row to copy its syft:// path to clipboard',
+        'Try sp.files.search("keyword") for programmatic filtering',
+        'Use sp.files.filter(extension=".csv") to find specific file types',
+        'Chain filters: sp.files.filter(extension=".py").search("test")',
+        'Escape special characters with backslash when searching',
+        'ASCII loading bar only appears with print(sp.files), not in Jupyter',
+        'Loading progress: first 10% is setup, 10-100% is file scanning',
+        'Press Escape to close the tab-completion dropdown',
+        'Use sp.open("syft://path") to access files programmatically',
+        'Search for dates in various formats: 2024-01-15, Jan-15, etc',
+        'Admin filter supports partial matching - type "gmail" for all Gmail users',
+        'File sizes show as B, KB, MB, or GB automatically',
+        'The # column shows files in chronological order by modified date',
+        'Empty search returns all files - useful for resetting filters',
+        'Search works across file names, paths, and extensions at once'
+    ]
+    
+    # Pick a random tip for footer
+    footer_tip = random.choice(tips)
+    show_footer_tip = random.random() < 0.5  # 50% chance
+    
+    # Scan files - for web context, we'll scan synchronously
+    all_files = sp_files._scan_files()
+    
+    # Get initial display files
+    files = all_files[:100]
+    total = len(all_files)
+    
+    if not files:
+        return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyftBox Files</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <div style='padding: 40px; text-align: center; color: #666;'>
+        No files found in SyftBox/datasites directory
+    </div>
+</body>
+</html>
+"""
+    
+    # Generate the initial table rows HTML
+    table_rows_html = ""
+    sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+    chronological_ids = {}
+    for i, file in enumerate(sorted_by_date):
+        file_key = f"{file['name']}|{file['path']}"
+        chronological_ids[file_key] = i + 1
+    
+    for file in files[:50]:  # First page only
+        file_name = file['name']
+        file_key = f"{file['name']}|{file['path']}"
+        chrono_id = chronological_ids.get(file_key, 0)
+        modified = datetime.fromtimestamp(file.get('modified', 0)).strftime('%m/%d/%Y %H:%M')
+        size = file.get('size', 0)
+        
+        # Format size
+        if size > 1024 * 1024:
+            size_str = f"{size / (1024 * 1024):.1f} MB"
+        elif size > 1024:
+            size_str = f"{size / 1024:.1f} KB"
+        else:
+            size_str = f"{size} B"
+        
+        # Get permissions summary
+        perms = file.get('permissions_summary', [])
+        perms_html = ""
+        if perms:
+            for i, perm in enumerate(perms[:3]):
+                perms_html += f'<span>{html_module.escape(perm)}</span>'
+            if len(perms) > 3:
+                perms_html += f'<span>+{len(perms) - 3} more...</span>'
+        else:
+            perms_html = '<span style="color: #9ca3af;">No permissions</span>'
+        
+        table_rows_html += f"""
+        <tr onclick="copyPath_{container_id}('syft://{file_name}', this)">
+            <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
+            <td>{chrono_id}</td>
+            <td><div class="truncate" style="font-weight: 500;" title="syft://{html_module.escape(file_name)}">syft://{html_module.escape(file_name)}</div></td>
+            <td>
+                <div class="date-text">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                        <line x1="16" x2="16" y1="2" y2="6"></line>
+                        <line x1="8" x2="8" y1="2" y2="6"></line>
+                        <line x1="3" x2="21" y1="10" y2="10"></line>
+                    </svg>
+                    <span class="truncate">{modified}</span>
+                </div>
+            </td>
+            <td><span class="type-badge">{'folder' if file.get('is_dir') else file.get('extension', '.txt')}</span></td>
+            <td><span style="color: #6b7280;">{size_str}</span></td>
+            <td>
+                <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">
+                    {perms_html}
+                </div>
+            </td>
+            <td>
+                <div style="display: flex; gap: 0.125rem;">
+                    <button class="btn btn-gray" title="Open in editor">File</button>
+                    <button class="btn btn-blue" title="View file info">Info</button>
+                    <button class="btn btn-purple" title="Copy path">Copy</button>
+                    <button class="btn btn-red" title="Delete file">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            <line x1="10" x2="10" y1="11" y2="17"></line>
+                            <line x1="14" x2="14" y1="11" y2="17"></line>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        """
+    
+    # Generate complete HTML with the widget
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyftBox Files</title>
+    <style>
+    #{container_id} * {{
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }}
+
+    #{container_id} {{
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 12px;
+        background: #ffffff;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        margin: 0;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }}
+
+    #{container_id} .search-controls {{
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e7eb;
+        flex-shrink: 0;
+    }}
+
+    #{container_id} .search-controls input {{
+        flex: 1;
+        min-width: 200px;
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        background: #ffffff;
+    }}
+
+    #{container_id} .table-container {{
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: auto;
+        background: #ffffff;
+        min-height: 0;
+        max-height: 600px;
+    }}
+
+    #{container_id} table {{
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.75rem;
+    }}
+
+    #{container_id} thead {{
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e7eb;
+    }}
+
+    #{container_id} th {{
+        text-align: left;
+        padding: 0.375rem 0.25rem;
+        font-weight: 500;
+        font-size: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 10;
+    }}
+
+    #{container_id} td {{
+        padding: 0.375rem 0.25rem;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: top;
+        font-size: 0.75rem;
+        text-align: left;
+    }}
+
+    #{container_id} tbody tr {{
+        transition: background-color 0.15s;
+        cursor: pointer;
+    }}
+
+    #{container_id} tbody tr:hover {{
+        background: rgba(0, 0, 0, 0.03);
+    }}
+
+    @keyframes rainbow {{
+        0% {{ background-color: #ffe9ec; }}
+        14.28% {{ background-color: #fff4ea; }}
+        28.57% {{ background-color: #ffffea; }}
+        42.86% {{ background-color: #eaffef; }}
+        57.14% {{ background-color: #eaf6ff; }}
+        71.43% {{ background-color: #f5eaff; }}
+        85.71% {{ background-color: #ffeaff; }}
+        100% {{ background-color: #ffe9ec; }}
+    }}
+
+    #{container_id} .rainbow-flash {{
+        animation: rainbow 0.8s ease-in-out;
+    }}
+
+    #{container_id} .pagination {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        border-top: 1px solid #e5e7eb;
+        background: rgba(0, 0, 0, 0.02);
+        flex-shrink: 0;
+    }}
+
+    #{container_id} .pagination button {{
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        border: 1px solid #e5e7eb;
+        background: white;
+        cursor: pointer;
+        transition: all 0.15s;
+    }}
+
+    #{container_id} .pagination button:hover:not(:disabled) {{
+        background: #f3f4f6;
+    }}
+
+    #{container_id} .pagination button:disabled {{
+        opacity: 0.5;
+        cursor: not-allowed;
+    }}
+
+    #{container_id} .pagination .page-info {{
+        font-size: 0.75rem;
+        color: #6b7280;
+    }}
+
+    #{container_id} .pagination .status {{
+        font-size: 0.75rem;
+        color: #9ca3af;
+        font-style: italic;
+        opacity: 0.8;
+        text-align: center;
+        flex: 1;
+    }}
+
+    #{container_id} .pagination .pagination-controls {{
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }}
+
+    #{container_id} .truncate {{
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }}
+
+    #{container_id} .btn {{
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        border: none;
+        cursor: not-allowed;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.125rem;
+        transition: all 0.15s;
+        opacity: 0.5;
+    }}
+
+    #{container_id} .btn:hover {{
+        opacity: 0.5;
+    }}
+
+    #{container_id} .btn-blue {{
+        background: #dbeafe;
+        color: #3b82f6;
+    }}
+
+    #{container_id} .btn-purple {{
+        background: #e9d5ff;
+        color: #a855f7;
+    }}
+
+    #{container_id} .btn-red {{
+        background: #fee2e2;
+        color: #ef4444;
+    }}
+
+    #{container_id} .btn-green {{
+        background: #d1fae5;
+        color: #10b981;
+    }}
+
+    #{container_id} .btn-gray {{
+        background: #f3f4f6;
+        color: #6b7280;
+    }}
+
+    #{container_id} .icon {{
+        width: 0.5rem;
+        height: 0.5rem;
+    }}
+    
+    #{container_id} .autocomplete-dropdown {{
+        position: absolute;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.25rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }}
+    
+    #{container_id} .autocomplete-dropdown.show {{
+        display: block;
+    }}
+    
+    #{container_id} .autocomplete-option {{
+        padding: 0.5rem;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }}
+    
+    #{container_id} .autocomplete-option:hover,
+    #{container_id} .autocomplete-option.selected {{
+        background: #f3f4f6;
+    }}
+
+    #{container_id} .type-badge {{
+        display: inline-block;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        background: #ffffff;
+        color: #374151;
+        text-align: center;
+        white-space: nowrap;
+    }}
+
+    #{container_id} .admin-email {{
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: #374151;
+    }}
+
+    #{container_id} .date-text {{
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        color: #4b5563;
+    }}
+    </style>
+</head>
+<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <div id="{container_id}">
+        <div class="search-controls">
+            <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
+            <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." style="flex: 1;">
+            <button class="btn btn-green">New</button>
+            <button class="btn btn-blue">Select All</button>
+            <button class="btn btn-gray">Refresh</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 1.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
+                        <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
+                        <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
+                        <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
+                        <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
+                        <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
+                        <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
+                        <th style="width: 15rem;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="{container_id}-tbody">
+                    {table_rows_html}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination">
+            <div></div>
+            <span class="status" id="{container_id}-status">Loading...</span>
+            <div class="pagination-controls">
+                <button onclick="changePage_{container_id}(-1)" id="{container_id}-prev-btn" disabled>Previous</button>
+                <span class="page-info" id="{container_id}-page-info">Page 1 of {max(1, (total + 49) // 50)}</span>
+                <button onclick="changePage_{container_id}(1)" id="{container_id}-next-btn">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {{
+        // Store all files data
+        var allFiles = {json.dumps(all_files)};
+        
+        // Create chronological index
+        var sortedByDate = allFiles.slice().sort(function(a, b) {{
+            return (b.modified || 0) - (a.modified || 0);
+        }});
+        
+        var chronologicalIds = {{}};
+        for (var i = 0; i < sortedByDate.length; i++) {{
+            var file = sortedByDate[i];
+            var fileKey = file.name + '|' + file.path;
+            chronologicalIds[fileKey] = i + 1;
+        }}
+        
+        var filteredFiles = allFiles.slice();
+        var currentPage = 1;
+        var itemsPerPage = 50;
+        var sortColumn = 'modified';
+        var sortDirection = 'desc';
+        var showFooterTip = {'true' if show_footer_tip else 'false'};
+        var footerTip = {json.dumps(footer_tip)};
+
+        // All the JavaScript functions from the template
+        function escapeHtml(text) {{
+            var div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }}
+
+        function formatDate(timestamp) {{
+            var date = new Date(timestamp * 1000);
+            return (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                   date.getDate().toString().padStart(2, '0') + '/' +
+                   date.getFullYear() + ' ' +
+                   date.getHours().toString().padStart(2, '0') + ':' +
+                   date.getMinutes().toString().padStart(2, '0');
+        }}
+
+        function formatSize(size) {{
+            if (size > 1024 * 1024) {{
+                return (size / (1024 * 1024)).toFixed(1) + ' MB';
+            }} else if (size > 1024) {{
+                return (size / 1024).toFixed(1) + ' KB';
+            }} else {{
+                return size + ' B';
+            }}
+        }}
+
+        function showStatus(message) {{
+            var statusEl = document.getElementById('{container_id}-status');
+            if (statusEl) statusEl.textContent = message;
+        }}
+        
+        function calculateTotalSize() {{
+            var totalSize = 0;
+            filteredFiles.forEach(function(file) {{
+                if (!file.is_dir) {{
+                    totalSize += file.size || 0;
+                }}
+            }});
+            return totalSize;
+        }}
+        
+        function updateStatus() {{
+            var fileCount = 0;
+            var folderCount = 0;
+            
+            filteredFiles.forEach(function(item) {{
+                if (item.is_dir) {{
+                    folderCount++;
+                }} else {{
+                    fileCount++;
+                }}
+            }});
+            
+            var totalSize = calculateTotalSize();
+            var sizeStr = formatSize(totalSize);
+            
+            var searchValue = document.getElementById('{container_id}-search').value;
+            var adminFilter = document.getElementById('{container_id}-admin-filter').value;
+            var isSearching = searchValue !== '' || adminFilter !== '';
+            
+            var statusText = fileCount + ' files';
+            if (folderCount > 0) {{
+                statusText += ', ' + folderCount + ' folders';
+            }}
+            statusText += ' • Total size: ' + sizeStr;
+            
+            if (!isSearching && showFooterTip) {{
+                statusText += ' • 💡 ' + footerTip;
+            }}
+            
+            showStatus(statusText);
+        }}
+
+        function renderTable() {{
+            var tbody = document.getElementById('{container_id}-tbody');
+            var totalFiles = filteredFiles.length;
+            var totalPages = Math.max(1, Math.ceil(totalFiles / itemsPerPage));
+            
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            
+            document.getElementById('{container_id}-prev-btn').disabled = currentPage === 1;
+            document.getElementById('{container_id}-next-btn').disabled = currentPage === totalPages;
+            document.getElementById('{container_id}-page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
+            
+            if (totalFiles === 0) {{
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No files found</td></tr>';
+                return;
+            }}
+            
+            var start = (currentPage - 1) * itemsPerPage;
+            var end = Math.min(start + itemsPerPage, totalFiles);
+            
+            var html = '';
+            for (var i = start; i < end; i++) {{
+                var file = filteredFiles[i];
+                var fileName = file.name.split('/').pop();
+                var filePath = file.name;
+                var fullSyftPath = 'syft://' + filePath;
+                var datasiteOwner = file.datasite_owner || 'unknown';
+                var modified = formatDate(file.modified || 0);
+                var fileExt = file.extension || '.txt';
+                var sizeStr = formatSize(file.size || 0);
+                var isDir = file.is_dir || false;
+                
+                var fileKey = file.name + '|' + file.path;
+                var chronoId = chronologicalIds[fileKey] || (i + 1);
+                
+                html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
+                    '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
+                    '<td>' + chronoId + '</td>' +
+                    '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(fullSyftPath) + '">' + escapeHtml(fullSyftPath) + '</div></td>' +
+                    '<td>' +
+                        '<div class="date-text">' +
+                            '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                                '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>' +
+                                '<line x1="16" x2="16" y1="2" y2="6"></line>' +
+                                '<line x1="8" x2="8" y1="2" y2="6"></line>' +
+                                '<line x1="3" x2="21" y1="10" y2="10"></line>' +
+                            '</svg>' +
+                            '<span class="truncate">' + modified + '</span>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td><span class="type-badge">' + (isDir ? 'folder' : fileExt) + '</span></td>' +
+                    '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
+                    '<td>' +
+                        '<div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">';
+                
+                var perms = file.permissions_summary || [];
+                if (perms.length > 0) {{
+                    for (var j = 0; j < Math.min(perms.length, 3); j++) {{
+                        html += '<span>' + escapeHtml(perms[j]) + '</span>';
+                    }}
+                    if (perms.length > 3) {{
+                        html += '<span>+' + (perms.length - 3) + ' more...</span>';
+                    }}
+                }} else {{
+                    html += '<span style="color: #9ca3af;">No permissions</span>';
+                }}
+                
+                html += '</div>' +
+                    '</td>' +
+                    '<td>' +
+                        '<div style="display: flex; gap: 0.125rem;">' +
+                            '<button class="btn btn-gray" title="Open in editor">File</button>' +
+                            '<button class="btn btn-blue" title="View file info">Info</button>' +
+                            '<button class="btn btn-purple" title="Copy path">Copy</button>' +
+                            '<button class="btn btn-red" title="Delete file">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                                    '<path d="M3 6h18"></path>' +
+                                    '<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>' +
+                                    '<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>' +
+                                    '<line x1="10" x2="10" y1="11" y2="17"></line>' +
+                                    '<line x1="14" x2="14" y1="11" y2="17"></line>' +
+                                '</svg>' +
+                            '</button>' +
+                        '</div>' +
+                    '</td>' +
+                '</tr>';
+            }}
+            
+            tbody.innerHTML = html;
+        }}
+
+        // Search files
+        window.searchFiles_{container_id} = function() {{
+            var searchTerm = document.getElementById('{container_id}-search').value.toLowerCase();
+            var adminFilter = document.getElementById('{container_id}-admin-filter').value.toLowerCase();
+            
+            // Parse search terms
+            var searchTerms = [];
+            var currentTerm = '';
+            var inQuotes = false;
+            var quoteChar = '';
+            
+            for (var i = 0; i < searchTerm.length; i++) {{
+                var char = searchTerm[i];
+                
+                if ((char === '"' || char === "'") && !inQuotes) {{
+                    inQuotes = true;
+                    quoteChar = char;
+                }} else if (char === quoteChar && inQuotes) {{
+                    inQuotes = false;
+                    if (currentTerm.length > 0) {{
+                        searchTerms.push(currentTerm);
+                        currentTerm = '';
+                    }}
+                    quoteChar = '';
+                }} else if (char === ' ' && !inQuotes) {{
+                    if (currentTerm.length > 0) {{
+                        searchTerms.push(currentTerm);
+                        currentTerm = '';
+                    }}
+                }} else {{
+                    currentTerm += char;
+                }}
+            }}
+            
+            if (currentTerm.length > 0) {{
+                searchTerms.push(currentTerm);
+            }}
+            
+            filteredFiles = allFiles.filter(function(file) {{
+                var adminMatch = adminFilter === '' || (file.datasite_owner || '').toLowerCase().includes(adminFilter);
+                if (!adminMatch) return false;
+                
+                if (searchTerms.length === 0) return true;
+                
+                return searchTerms.every(function(term) {{
+                    var searchableContent = [
+                        file.name,
+                        file.datasite_owner || '',
+                        file.extension || '',
+                        formatSize(file.size || 0),
+                        formatDate(file.modified || 0),
+                        file.is_dir ? 'folder' : 'file',
+                        (file.permissions_summary || []).join(' ')
+                    ].join(' ').toLowerCase();
+                    
+                    return searchableContent.includes(term);
+                }});
+            }});
+            
+            currentPage = 1;
+            renderTable();
+            updateStatus();
+        }};
+
+        // Change page
+        window.changePage_{container_id} = function(direction) {{
+            var totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
+            currentPage += direction;
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            renderTable();
+        }};
+
+        // Copy path
+        window.copyPath_{container_id} = function(path, rowElement) {{
+            var command = 'sp.open("' + path + '")';
+            
+            navigator.clipboard.writeText(command).then(function() {{
+                if (rowElement) {{
+                    rowElement.classList.add('rainbow-flash');
+                    setTimeout(function() {{
+                        rowElement.classList.remove('rainbow-flash');
+                    }}, 800);
+                }}
+                
+                showStatus('Copied to clipboard: ' + command);
+                setTimeout(function() {{
+                    updateStatus();
+                }}, 2000);
+            }}).catch(function() {{
+                showStatus('Failed to copy to clipboard');
+            }});
+        }};
+
+        // Toggle select all
+        window.toggleSelectAll_{container_id} = function() {{
+            var selectAllCheckbox = document.getElementById('{container_id}-select-all');
+            var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
+            checkboxes.forEach(function(cb) {{ 
+                cb.checked = selectAllCheckbox.checked; 
+            }});
+            showStatus(selectAllCheckbox.checked ? 'All visible files selected' : 'Selection cleared');
+        }};
+        
+        // Update select all state
+        window.updateSelectAllState_{container_id} = function() {{
+            var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
+            var selectAllCheckbox = document.getElementById('{container_id}-select-all');
+            var allChecked = true;
+            var someChecked = false;
+            
+            checkboxes.forEach(function(cb) {{
+                if (!cb.checked) allChecked = false;
+                if (cb.checked) someChecked = true;
+            }});
+            
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = !allChecked && someChecked;
+        }};
+
+        // Sort table
+        window.sortTable_{container_id} = function(column) {{
+            if (sortColumn === column) {{
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            }} else {{
+                sortColumn = column;
+                sortDirection = 'asc';
+            }}
+            
+            filteredFiles.sort(function(a, b) {{
+                var aVal, bVal;
+                
+                switch(column) {{
+                    case 'index':
+                        aVal = a.modified || 0;
+                        bVal = b.modified || 0;
+                        var temp = aVal;
+                        aVal = -bVal;
+                        bVal = -temp;
+                        break;
+                    case 'name':
+                        aVal = a.name.toLowerCase();
+                        bVal = b.name.toLowerCase();
+                        break;
+                    case 'modified':
+                        aVal = a.modified || 0;
+                        bVal = b.modified || 0;
+                        break;
+                    case 'type':
+                        aVal = (a.extension || '').toLowerCase();
+                        bVal = (b.extension || '').toLowerCase();
+                        break;
+                    case 'size':
+                        aVal = a.size || 0;
+                        bVal = b.size || 0;
+                        break;
+                    case 'permissions':
+                        aVal = (a.permissions_summary || []).length;
+                        bVal = (b.permissions_summary || []).length;
+                        break;
+                    default:
+                        return 0;
+                }}
+                
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            }});
+            
+            currentPage = 1;
+            renderTable();
+        }};
+
+        // Add real-time search
+        document.getElementById('{container_id}-search').addEventListener('input', function() {{
+            searchFiles_{container_id}();
+        }});
+        document.getElementById('{container_id}-admin-filter').addEventListener('input', function() {{
+            searchFiles_{container_id}();
+        }});
+        
+        // Apply initial sort
+        filteredFiles.sort(function(a, b) {{
+            var aVal = a.modified || 0;
+            var bVal = b.modified || 0;
+            return bVal - aVal;
+        }});
+        
+        // Initial render
+        renderTable();
+        updateStatus();
+    }})();
+    </script>
+</body>
+</html>
+"""
 
 
 # Server management
