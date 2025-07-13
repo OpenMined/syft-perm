@@ -1103,14 +1103,16 @@ class SyftFile:
                             {initials}
                         </span>
                     </div>
-                    <div style="flex: 1; min-width: 0;">
+                    <div style="flex: 1; min-width: 0; display: flex;
+                                align-items: center; gap: 0.75rem;">
                         <div style="font-size: 0.75rem; color: #374151; font-weight: 500;
                                     overflow: hidden; text-overflow: ellipsis;
-                                    white-space: nowrap;">
+                                    white-space: nowrap; min-width: 0;">
                             {display_name}
                         </div>
-                        <div style="font-size: 0.625rem; color: #6b7280; line-height: 1.2;
-                                    margin-top: 0.125rem;">
+                        <div style="font-size: 0.625rem; color: #6b7280;
+                                    overflow: hidden; text-overflow: ellipsis;
+                                    white-space: nowrap; flex: 1; min-width: 0;">
                             {reason_text}
                         </div>
                     </div>
@@ -2280,14 +2282,16 @@ class SyftFolder:
                             {initials}
                         </span>
                     </div>
-                    <div style="flex: 1; min-width: 0;">
+                    <div style="flex: 1; min-width: 0; display: flex;
+                                align-items: center; gap: 0.75rem;">
                         <div style="font-size: 0.75rem; color: #374151; font-weight: 500;
                                     overflow: hidden; text-overflow: ellipsis;
-                                    white-space: nowrap;">
+                                    white-space: nowrap; min-width: 0;">
                             {display_name}
                         </div>
-                        <div style="font-size: 0.625rem; color: #6b7280; line-height: 1.2;
-                                    margin-top: 0.125rem;">
+                        <div style="font-size: 0.625rem; color: #6b7280;
+                                    overflow: hidden; text-overflow: ellipsis;
+                                    white-space: nowrap; flex: 1; min-width: 0;">
                             {reason_text}
                         </div>
                     </div>

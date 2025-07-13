@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.28"
+__version__ = "0.3.30"
 
 __all__ = [
     "open",
@@ -192,13 +192,8 @@ class Files:
         return self.get(limit=limit, offset=offset, search=term)
 
     def __repr__(self) -> str:
-        """String representation showing basic info."""
-        try:
-            data = self.get(limit=1)
-            total = data["total_count"]
-            return f"<Files: {total} permissioned files in {data['syftbox_path']}>"
-        except Exception:
-            return "<Files: Not connected>"
+        """Static string representation."""
+        return "<Files: SyftBox permissioned files interface>"
 
     def _repr_html_(self) -> str:
         """Static HTML representation for Jupyter notebooks."""
