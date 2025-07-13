@@ -752,9 +752,8 @@ class Files:
                             try:
                                 response = requests.get(f"http://localhost:{configured_port}/", timeout=0.5)
                                 if response.status_code == 200:
-                                    # Verify it's syft-perm
-                                    widget_response = requests.get(f"http://localhost:{configured_port}/files-widget", timeout=0.5)
-                                    if widget_response.status_code == 200:
+                                    # Check if response contains syft-perm identifier
+                                    if "SyftPerm" in response.text:
                                         server_available = True
                                         server_port = configured_port
                             except:
@@ -768,9 +767,8 @@ class Files:
                     try:
                         response = requests.get(f"http://localhost:{port}/", timeout=0.5)
                         if response.status_code == 200:
-                            # Try to verify it's actually syft-perm by checking for the files-widget endpoint
-                            widget_response = requests.get(f"http://localhost:{port}/files-widget", timeout=0.5)
-                            if widget_response.status_code == 200:
+                            # Check if response contains syft-perm identifier
+                            if "SyftPerm" in response.text:
                                 server_available = True
                                 server_port = port
                                 break
