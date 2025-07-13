@@ -10,6 +10,12 @@ echo "Starting syft-perm SyftBox app..."
 SYFTBOX_ASSIGNED_PORT=${SYFTBOX_ASSIGNED_PORT:-8080}
 echo "Using port: $SYFTBOX_ASSIGNED_PORT"
 
+# Save port to config file for discovery
+CONFIG_DIR="$HOME/.syftperm"
+mkdir -p "$CONFIG_DIR"
+echo "{\"port\": $SYFTBOX_ASSIGNED_PORT}" > "$CONFIG_DIR/config.json"
+echo "Saved port configuration to $CONFIG_DIR/config.json"
+
 # Environment setup for clean installation
 export ZSH_DISABLE_COMPFIX=true
 export NONINTERACTIVE=1

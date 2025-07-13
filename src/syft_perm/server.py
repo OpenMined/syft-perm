@@ -1843,6 +1843,19 @@ def get_editor_url(path: str) -> str:
             f"file://{path}  # Server not available - install with: pip install 'syft-perm[server]'"
         )
 
+    # First check if there's a configured port
+    configured_port = _get_configured_port()
+    if configured_port:
+        # Verify the server is running on this port
+        try:
+            import requests
+            response = requests.get(f"http://localhost:{configured_port}/", timeout=0.5)
+            if response.status_code == 200:
+                return f"http://localhost:{configured_port}/editor/{path}"
+        except Exception:
+            pass
+
+    # Fall back to default behavior
     server_url = get_server_url()
     if not server_url:
         server_url = start_server()
@@ -1850,11 +1863,40 @@ def get_editor_url(path: str) -> str:
     return f"{server_url}/editor/{path}"
 
 
+def _get_configured_port() -> Optional[int]:
+    """Get the configured port from ~/.syftperm/config.json if it exists."""
+    try:
+        import json
+        from pathlib import Path
+        
+        config_path = Path.home() / ".syftperm" / "config.json"
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+                return config.get('port')
+    except Exception:
+        pass
+    return None
+
+
 def get_files_widget_url() -> str:
     """Get the URL for the files widget interface."""
     if not _SERVER_AVAILABLE:
         return "Server not available - install with: pip install 'syft-perm[server]'"
 
+    # First check if there's a configured port
+    configured_port = _get_configured_port()
+    if configured_port:
+        # Verify the server is running on this port
+        try:
+            import requests
+            response = requests.get(f"http://localhost:{configured_port}/", timeout=0.5)
+            if response.status_code == 200:
+                return f"http://localhost:{configured_port}/files-widget"
+        except Exception:
+            pass
+
+    # Fall back to default behavior
     server_url = get_server_url()
     if not server_url:
         server_url = start_server()

@@ -731,6 +731,60 @@ class Files:
 
         from IPython.display import HTML, clear_output, display
 
+        # Check if server is available
+        try:
+            import requests
+            import os
+            import json
+            
+            server_available = False
+            server_port = None
+            
+            # First, try to read port from config file
+            config_path = Path.home() / ".syftperm" / "config.json"
+            if config_path.exists():
+                try:
+                    with open(config_path, 'r') as f:
+                        config = json.load(f)
+                        configured_port = config.get('port')
+                        if configured_port:
+                            # Verify the server is actually running on this port
+                            try:
+                                response = requests.get(f"http://localhost:{configured_port}/", timeout=0.5)
+                                if response.status_code == 200:
+                                    # Verify it's syft-perm
+                                    widget_response = requests.get(f"http://localhost:{configured_port}/files-widget", timeout=0.5)
+                                    if widget_response.status_code == 200:
+                                        server_available = True
+                                        server_port = configured_port
+                            except:
+                                pass
+                except:
+                    pass
+            
+            # If not found via config, fall back to checking common ports
+            if not server_available:
+                for port in [8080, 8765, 5000]:
+                    try:
+                        response = requests.get(f"http://localhost:{port}/", timeout=0.5)
+                        if response.status_code == 200:
+                            # Try to verify it's actually syft-perm by checking for the files-widget endpoint
+                            widget_response = requests.get(f"http://localhost:{port}/files-widget", timeout=0.5)
+                            if widget_response.status_code == 200:
+                                server_available = True
+                                server_port = port
+                                break
+                    except:
+                        pass
+            
+            if server_available:
+                print(f"Server available on port {server_port}")
+            else:
+                print("Server not available")
+        except ImportError:
+            # requests not available
+            print("Server not available")
+
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
         
         # Detect dark mode early for loading animation
