@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.38"
+__version__ = "0.3.39"
 
 __all__ = [
     "open",
@@ -125,6 +125,23 @@ class Files:
 
                     syft_file = SyftFile(file_path)
                     permissions = syft_file.permissions_dict
+
+                    # If no permissions found, check if file has owner access
+                    if not permissions:
+                        # Check if current user has any implicit permissions
+                        try:
+                            # Try to get implicit owner permissions
+                            if hasattr(syft_file, "can_read"):
+                                implicit_perms = {}
+                                if syft_file.can_read("owner"):
+                                    implicit_perms.setdefault("read", []).append("owner")
+                                if syft_file.can_write("owner"):
+                                    implicit_perms.setdefault("write", []).append("owner")
+                                if syft_file.can_admin("owner"):
+                                    implicit_perms.setdefault("admin", []).append("owner")
+                                permissions = implicit_perms
+                        except Exception:
+                            pass
                 except Exception:
                     permissions = {}
 
@@ -259,9 +276,9 @@ class Files:
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <thead style="background: #f8f9fa; position: sticky; top: 0; z-index: 10;">
                         <tr>
-                            <th style="{th_style} width: 50%;">File Path</th>
-                            <th style="{th_style} width: 15%;">Size</th>
-                            <th style="{th_style} width: 35%;">Permissions</th>
+                            <th style="{th_style} width: 65%;">File Path</th>
+                            <th style="{th_style} width: 10%;">Size</th>
+                            <th style="{th_style} width: 25%;">Permissions</th>
                         </tr>
                     </thead>
                     <tbody id="{container_id}-tbody">
@@ -291,7 +308,11 @@ class Files:
                         f"<strong>{perm_type}:</strong> {html_module.escape(user_str)}"
                     )
 
-            perm_str = "<br>".join(perm_items) if perm_items else "<em>No permissions</em>"
+            if perm_items:
+                perm_str = "<br>".join(perm_items)
+            else:
+                # Show more informative message about permission status
+                perm_str = "<em style='color: #9ca3af;'>No explicit permissions</em>"
 
             html += f"""
                     <tr style="border-bottom: 1px solid #f3f4f6;">
@@ -357,7 +378,8 @@ class Files:
                         permItems.push('<strong>' + permType + ':</strong> ' + escapeHtml(userStr));
                     }}
                 }}
-                return permItems.length > 0 ? permItems.join('<br>') : '<em>No permissions</em>';
+                return permItems.length > 0 ? permItems.join('<br>') :
+                       '<em style="color: #9ca3af;">No explicit permissions</em>';
             }}
 
             var selectedSuggestionIndex = -1;
