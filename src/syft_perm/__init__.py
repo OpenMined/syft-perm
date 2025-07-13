@@ -779,7 +779,6 @@ class Files:
                         break
             
             if server_available:
-                print(f"Server available on port {server_port}")
                 # Detect dark mode for iframe styling
                 is_dark_mode = is_dark()
                 border_color = "#3e3e42" if is_dark_mode else "#ddd"
@@ -798,11 +797,8 @@ class Files:
                 </div>
                 """
                 return iframe_html
-            else:
-                ports_str = ", ".join(map(str, tried_ports))
-                print(f"Server not available (tried ports: {ports_str})")
         except Exception:
-            print("Server not available")
+            pass
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
         
@@ -859,7 +855,7 @@ class Files:
             border-radius: 3px;
         }}
         </style>
-        <div id="loading-container-{container_id}" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: {'#1e1e1e' if is_dark_mode else '#ffffff'};">
+        <div id="loading-container-{container_id}" style="height: 600px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: {'#1e1e1e' if is_dark_mode else '#ffffff'}; border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'}; border-radius: 8px;">
             <div style="margin-bottom: 28px;">
                 <svg class="syftbox-logo" xmlns="http://www.w3.org/2000/svg" width="62" height="72" viewBox="0 0 311 360" fill="none"&gt;
                     <g clip-path="url(#clip0_7523_4240)">
@@ -2184,11 +2180,16 @@ class Files:
                         console.log(`✅ FOUND DISCOVERY SERVER on port 62050, main server on port ${{data.main_server_port}}!`);
                         window.syftPermServerFound_{container_id} = true;
                         
-                        // Clear the interval to stop checking
+                        // Clear the interval to stop checking immediately
                         if (window.syftPermCheckInterval_{container_id}) {{
                             clearInterval(window.syftPermCheckInterval_{container_id});
                             window.syftPermCheckInterval_{container_id} = null;
                         }}
+                        
+                        // Prevent any further execution of this function
+                        checkDiscoveryServer_{container_id} = function() {{}};
+                        
+                        console.log('Discovery complete, all intervals cleared');
                         
                         // Replace the widget with iframe with smooth transition
                         const container = document.getElementById('{container_id}');
@@ -2211,38 +2212,90 @@ class Files:
                             `;
                             
                             const iframe = document.createElement('iframe');
-                            iframe.src = `http://localhost:${{data.main_server_port}}/files-widget`;
                             iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
                             iframe.frameBorder = '0';
                             // Allow clipboard access in iframe
                             iframe.allow = 'clipboard-read; clipboard-write';
                             
-                            // Wait for iframe to load before transitioning
+                            // Add iframe to container
+                            iframeContainer.appendChild(iframe);
+                            
+                            // Ensure container maintains height
+                            container.style.minHeight = '600px';
+                            container.style.position = 'relative';
+                            
+                            // Store current content
+                            const currentContent = container.innerHTML;
+                            
+                            // Create a wrapper div to maintain height
+                            const wrapper = document.createElement('div');
+                            wrapper.style.cssText = 'position: relative; width: 100%; height: 600px;';
+                            
+                            // Add iframe container to wrapper (invisible)
+                            wrapper.appendChild(iframeContainer);
+                            
+                            // Create overlay with current content to show during loading
+                            const overlay = document.createElement('div');
+                            overlay.style.cssText = `
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                background: ${{isDark ? '#1e1e1e' : '#ffffff'}};
+                                z-index: 1000;
+                                transition: opacity 0.5s ease-out;
+                            `;
+                            overlay.innerHTML = currentContent;
+                            wrapper.appendChild(overlay);
+                            
+                            // Replace container content with wrapper
+                            container.innerHTML = '';
+                            container.appendChild(wrapper);
+                            
+                            // Now set the src - any reloads will happen while invisible
+                            iframe.src = `http://localhost:${{data.main_server_port}}/files-widget`;
+                            
+                            // Track load state
+                            let loadCount = 0;
+                            
+                            // Wait for iframe to load
                             iframe.onload = function() {{
-                                // Small delay to ensure content is rendered
+                                loadCount++;
+                                console.log(`Iframe load event #${{loadCount}}`);
+                                
+                                // Wait a bit longer to ensure any secondary loads complete
                                 setTimeout(() => {{
-                                    // Fade out the existing content
-                                    container.style.transition = 'opacity 0.3s ease-out';
-                                    container.style.opacity = '0';
-                                    
-                                    setTimeout(() => {{
-                                        // Clear the container and add the iframe
-                                        container.innerHTML = '';
-                                        container.appendChild(iframeContainer);
-                                        
-                                        // Reset container opacity and fade in the iframe
-                                        container.style.opacity = '1';
-                                        
-                                        // Trigger the fade in after a brief moment
+                                    if (loadCount === 1) {{
+                                        // First load - might reload, wait longer
                                         setTimeout(() => {{
-                                            iframeContainer.style.opacity = '1';
-                                        }}, 50);
-                                    }}, 300);
+                                            console.log('Starting transition after iframe stabilized');
+                                            // Fade out overlay
+                                            overlay.style.opacity = '0';
+                                            
+                                            // Fade in iframe
+                                            setTimeout(() => {{
+                                                iframeContainer.style.opacity = '1';
+                                                
+                                                // Remove overlay after transition
+                                                setTimeout(() => {{
+                                                    if (overlay.parentNode) {{
+                                                        overlay.remove();
+                                                    }}
+                                                    // Clean up wrapper
+                                                    if (wrapper.parentNode) {{
+                                                        container.innerHTML = '';
+                                                        iframeContainer.style.position = 'static';
+                                                        container.appendChild(iframeContainer);
+                                                        container.style.minHeight = '';
+                                                        container.style.position = '';
+                                                    }}
+                                                }}, 500);
+                                            }}, 100);
+                                        }}, 500); // Extra delay for potential reload
+                                    }}
                                 }}, 100);
                             }};
-                            
-                            // Add iframe to container (but don't display yet)
-                            iframeContainer.appendChild(iframe);
                         }}
                         return;
                     }}

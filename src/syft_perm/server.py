@@ -975,6 +975,11 @@ def get_files_widget_html() -> str:
         modified = datetime.fromtimestamp(file.get('modified', 0)).strftime('%m/%d/%Y %H:%M')
         size = file.get('size', 0)
         
+        # Truncate URL to match notebook display (60 chars)
+        display_name = file_name
+        if len(display_name) > 60:
+            display_name = display_name[:57] + "..."
+        
         # Format size
         if size > 1024 * 1024:
             size_str = f"{size / (1024 * 1024):.1f} MB"
@@ -998,7 +1003,7 @@ def get_files_widget_html() -> str:
         <tr onclick="copyPath_{container_id}('syft://{file_name}', this)">
             <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
             <td>{chrono_id}</td>
-            <td><div class="truncate" style="font-weight: 500;" title="syft://{html_module.escape(file_name)}">syft://{html_module.escape(file_name)}</div></td>
+            <td><div class="truncate" style="font-weight: 500;" title="syft://{html_module.escape(file_name)}">syft://{html_module.escape(display_name)}</div></td>
             <td>
                 <div class="date-text">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
