@@ -2158,68 +2158,59 @@ class Files:
         async function checkDiscoveryServer() {{
             if (serverFound) return;
             
-            console.log('Starting discovery server check on ports 62050-62100...');
-            let checkedPorts = [];
+            console.log('Checking discovery server on port 62050...');
             
-            // Check discovery server ports 62050-62100
-            for (let port = 62050; port <= 62100; port++) {{
-                if (serverFound) break;
+            try {{
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 200);
                 
-                checkedPorts.push(port);
-                console.log(`Checking discovery port ${{port}}...`);
+                const response = await fetch('http://localhost:62050/', {{
+                    signal: controller.signal,
+                    mode: 'cors'
+                }});
                 
-                try {{
-                    const controller = new AbortController();
-                    setTimeout(() => controller.abort(), 200);
+                if (response.ok) {{
+                    console.log(`Port 62050 responded with status ${{response.status}}`);
+                    const data = await response.json();
+                    console.log('Port 62050 response data:', data);
                     
-                    const response = await fetch(`http://localhost:${{port}}/`, {{
-                        signal: controller.signal,
-                        mode: 'cors'
-                    }});
-                    
-                    if (response.ok) {{
-                        console.log(`Port ${{port}} responded with status ${{response.status}}`);
-                        const data = await response.json();
-                        console.log(`Port ${{port}} response data:`, data);
+                    if (data.main_server_port) {{
+                        console.log(`✅ FOUND DISCOVERY SERVER on port 62050, main server on port ${{data.main_server_port}}!`);
+                        serverFound = true;
                         
-                        if (data.main_server_port) {{
-                            console.log(`✅ FOUND DISCOVERY SERVER on port ${{port}}, main server on port ${{data.main_server_port}}!`);
-                            serverFound = true;
-                            
-                            // Clear the interval to stop checking
-                            if (checkInterval) {{
-                                clearInterval(checkInterval);
-                            }}
-                            
-                            // Replace the widget with iframe
-                            const container = document.getElementById('{container_id}');
-                            if (container) {{
-                                const isDark = document.body.classList.contains('vscode-dark') || 
-                                             document.documentElement.getAttribute('data-jp-theme-name') === 'JupyterLab Dark' ||
-                                             window.matchMedia('(prefers-color-scheme: dark)').matches;
-                                const borderColor = isDark ? '#3e3e42' : '#ddd';
-                                
-                                container.innerHTML = `
-                                    <div style="width: 100%; height: 600px; border: 1px solid ${{borderColor}}; border-radius: 8px; overflow: hidden;">
-                                        <iframe 
-                                            src="http://localhost:${{data.main_server_port}}/files-widget" 
-                                            width="100%" 
-                                            height="100%" 
-                                            frameborder="0"
-                                            style="border: none;">
-                                        </iframe>
-                                    </div>
-                                `;
-                            }}
-                            return;
+                        // Clear the interval to stop checking
+                        if (checkInterval) {{
+                            clearInterval(checkInterval);
                         }}
+                        
+                        // Replace the widget with iframe
+                        const container = document.getElementById('{container_id}');
+                        if (container) {{
+                            const isDark = document.body.classList.contains('vscode-dark') || 
+                                         document.documentElement.getAttribute('data-jp-theme-name') === 'JupyterLab Dark' ||
+                                         window.matchMedia('(prefers-color-scheme: dark)').matches;
+                            const borderColor = isDark ? '#3e3e42' : '#ddd';
+                            
+                            container.innerHTML = `
+                                <div style="width: 100%; height: 600px; border: 1px solid ${{borderColor}}; border-radius: 8px; overflow: hidden;">
+                                    <iframe 
+                                        src="http://localhost:${{data.main_server_port}}/files-widget" 
+                                        width="100%" 
+                                        height="100%" 
+                                        frameborder="0"
+                                        style="border: none;">
+                                    </iframe>
+                                </div>
+                            `;
+                        }}
+                        return;
                     }}
-                }} catch (e) {{
-                    console.log(`Port ${{port}} failed: ${{e.message}}`);
                 }}
+            }} catch (e) {{
+                console.log(`Port 62050 failed: ${{e.message}}`);
             }}
             
-            console.log(`❌ Discovery server not found. Checked ports: ${{checkedPorts.join(', ')}}`);
+            console.log('❌ Discovery server not found on port 62050');
         }}
         
         // Check for discovery server every 3 seconds
