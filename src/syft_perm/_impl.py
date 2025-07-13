@@ -1900,41 +1900,107 @@ class SyftFolder:
         return self._get_all_permissions()
 
     def _get_all_permissions(self) -> Dict[str, List[str]]:
-        """Get all permissions for this folder using old syftbox nearest-node algorithm."""
+        """Get all permissions for this folder from its own syft.pub.yaml file."""
         # Check cache first
         cache_key = str(self._path)
         cached = _permission_cache.get(cache_key)
         if cached is not None:
             return cached
 
-        # Find the nearest node with matching rules (old syftbox algorithm)
-        nearest_permissions: Dict[str, List[str]] = {
+        # Initialize permissions
+        folder_permissions: Dict[str, List[str]] = {
             "read": [],
             "create": [],
             "write": [],
             "admin": [],
         }
 
-        # Walk up the directory tree to find the nearest node with matching rules
-        current_path = self._path
-        while current_path.parent != current_path:  # Stop at root
-            parent_dir = current_path.parent
-            syftpub_path = parent_dir / "syft.pub.yaml"
+        # First check if this folder has its own syft.pub.yaml file
+        syftpub_path = self._path / "syft.pub.yaml"
+        if syftpub_path.exists():
+            try:
+                with open(syftpub_path, "r") as f:
+                    content = yaml.safe_load(f) or {"rules": []}
 
-            if syftpub_path.exists():
-                try:
-                    with open(syftpub_path, "r") as f:
-                        content = yaml.safe_load(f) or {"rules": []}
+                # Process rules from the folder's own yaml file
+                rules = content.get("rules", [])
+                sorted_rules = _sort_rules_by_specificity(rules)
+                for rule in sorted_rules:
+                    pattern = rule.get("pattern", "")
+                    # For the folder's own permissions, we look for "**" pattern
+                    # which means permissions for the folder itself
+                    if pattern == "**":
+                        access = rule.get("access", {})
+                        # Check file limits if present
+                        limits = rule.get("limits", {})
+                        if limits:
+                            # Check if directories are allowed
+                            if not limits.get("allow_dirs", True):
+                                continue  # Skip this rule for directories
 
-                    # Check if this is a terminal node
-                    if content.get("terminal", False):
-                        # Terminal nodes stop inheritance and their rules take precedence
+                        # Use this rule's permissions
+                        folder_permissions = {
+                            perm: format_users(access.get(perm, []))
+                            for perm in ["read", "create", "write", "admin"]
+                        }
+                        # Stop at first matching rule (sorted by specificity)
+                        break
+
+            except Exception:
+                pass
+
+        # If no own permissions found, fall back to hierarchical search
+        if not any(folder_permissions.values()):
+            # Walk up the directory tree to find the nearest node with matching rules
+            current_path = self._path
+            while current_path.parent != current_path:  # Stop at root
+                parent_dir = current_path.parent
+                syftpub_path = parent_dir / "syft.pub.yaml"
+
+                if syftpub_path.exists():
+                    try:
+                        with open(syftpub_path, "r") as f:
+                            content = yaml.safe_load(f) or {"rules": []}
+
+                        # Check if this is a terminal node
+                        if content.get("terminal", False):
+                            # Terminal nodes stop inheritance and their rules take precedence
+                            rules = content.get("rules", [])
+                            sorted_rules = _sort_rules_by_specificity(rules)
+                            for rule in sorted_rules:
+                                pattern = rule.get("pattern", "")
+                                # Check if pattern matches our folder path
+                                # relative to this directory
+                                rel_path = str(self._path.relative_to(parent_dir))
+                                if _glob_match(pattern, rel_path) or _glob_match(
+                                    pattern, rel_path + "/"
+                                ):
+                                    access = rule.get("access", {})
+                                    # Check file limits if present
+                                    limits = rule.get("limits", {})
+                                    if limits:
+                                        # Check if directories are allowed
+                                        if not limits.get("allow_dirs", True):
+                                            continue  # Skip this rule for directories
+
+                                    # Terminal rules override everything - return immediately
+                                    result = {
+                                        perm: format_users(access.get(perm, []))
+                                        for perm in ["read", "create", "write", "admin"]
+                                    }
+                                    _permission_cache.set(cache_key, result)
+                                    return result
+                            # If no match in terminal, stop inheritance with empty permissions
+                            _permission_cache.set(cache_key, folder_permissions)
+                            return folder_permissions
+
+                        # Process rules for non-terminal nodes (sort by specificity first)
                         rules = content.get("rules", [])
                         sorted_rules = _sort_rules_by_specificity(rules)
+                        found_matching_rule = False
                         for rule in sorted_rules:
                             pattern = rule.get("pattern", "")
-                            # Check if pattern matches our folder path
-                            # relative to this directory
+                            # Check if pattern matches our folder path relative to this directory
                             rel_path = str(self._path.relative_to(parent_dir))
                             if _glob_match(pattern, rel_path) or _glob_match(
                                 pattern, rel_path + "/"
@@ -1947,57 +2013,29 @@ class SyftFolder:
                                     if not limits.get("allow_dirs", True):
                                         continue  # Skip this rule for directories
 
-                                # Terminal rules override everything - return immediately
-                                result = {
+                                # Found a matching rule - this becomes our nearest node
+                                # Use this node's permissions (not accumulate)
+                                folder_permissions = {
                                     perm: format_users(access.get(perm, []))
                                     for perm in ["read", "create", "write", "admin"]
                                 }
-                                _permission_cache.set(cache_key, result)
-                                return result
-                        # If no match in terminal, stop inheritance with empty permissions
-                        _permission_cache.set(cache_key, nearest_permissions)
-                        return nearest_permissions
+                                found_matching_rule = True
+                                # Stop at first matching rule
+                                # (rules should be sorted by specificity)
+                                break
 
-                    # Process rules for non-terminal nodes (sort by specificity first)
-                    rules = content.get("rules", [])
-                    sorted_rules = _sort_rules_by_specificity(rules)
-                    found_matching_rule = False
-                    for rule in sorted_rules:
-                        pattern = rule.get("pattern", "")
-                        # Check if pattern matches our folder path relative to this directory
-                        rel_path = str(self._path.relative_to(parent_dir))
-                        if _glob_match(pattern, rel_path) or _glob_match(pattern, rel_path + "/"):
-                            access = rule.get("access", {})
-                            # Check file limits if present
-                            limits = rule.get("limits", {})
-                            if limits:
-                                # Check if directories are allowed
-                                if not limits.get("allow_dirs", True):
-                                    continue  # Skip this rule for directories
-
-                            # Found a matching rule - this becomes our nearest node
-                            # Use this node's permissions (not accumulate)
-                            nearest_permissions = {
-                                perm: format_users(access.get(perm, []))
-                                for perm in ["read", "create", "write", "admin"]
-                            }
-                            found_matching_rule = True
-                            # Stop at first matching rule
-                            # (rules should be sorted by specificity)
+                        # If we found a matching rule, this is our nearest node - stop searching
+                        if found_matching_rule:
                             break
 
-                    # If we found a matching rule, this is our nearest node - stop searching
-                    if found_matching_rule:
-                        break
+                    except Exception:
+                        pass
 
-                except Exception:
-                    pass
-
-            current_path = parent_dir
+                current_path = parent_dir
 
         # Cache and return the effective permissions
-        _permission_cache.set(cache_key, nearest_permissions)
-        return nearest_permissions
+        _permission_cache.set(cache_key, folder_permissions)
+        return folder_permissions
 
     def _get_permission_table(self) -> List[List[str]]:
         """Get permissions formatted as a table showing effective permissions.
@@ -3100,7 +3138,57 @@ class SyftFolder:
         return new_folder
 
     def _get_all_permissions_with_sources(self) -> Dict[str, Any]:
-        # Temporary: delegate to SyftFile logic for folder
+        """Get all permissions for this folder with source information."""
+        # Initialize result structure
+        result = {
+            "permissions": {"read": [], "create": [], "write": [], "admin": []},
+            "sources": {"read": [], "create": [], "write": [], "admin": []},
+            "terminal": None,
+            "terminal_pattern": None,
+            "matched_pattern": None,
+        }
+
+        # Check if this folder has its own syft.pub.yaml file
+        syftpub_path = self._path / "syft.pub.yaml"
+        if syftpub_path.exists():
+            try:
+                with open(syftpub_path, "r") as f:
+                    content = yaml.safe_load(f) or {"rules": []}
+
+                # Process rules from the folder's own yaml file
+                rules = content.get("rules", [])
+                sorted_rules = _sort_rules_by_specificity(rules)
+                for rule in sorted_rules:
+                    pattern = rule.get("pattern", "")
+                    # For the folder's own permissions, we look for "**" pattern
+                    if pattern == "**":
+                        access = rule.get("access", {})
+                        # Check file limits if present
+                        limits = rule.get("limits", {})
+                        if limits and not limits.get("allow_dirs", True):
+                            continue  # Skip this rule for directories
+
+                        # Use this rule's permissions
+                        for perm in ["read", "create", "write", "admin"]:
+                            users = format_users(access.get(perm, []))
+                            result["permissions"][perm] = users
+                            if users:
+                                result["sources"][perm] = [
+                                    {
+                                        "path": syftpub_path,
+                                        "pattern": pattern,
+                                        "terminal": False,
+                                        "inherited": False,
+                                    }
+                                ]
+
+                        result["matched_pattern"] = pattern
+                        return result
+
+            except Exception:
+                pass
+
+        # If no own permissions found, fall back to SyftFile logic for hierarchical search
         from ._impl import SyftFile
 
         file_obj = SyftFile(self._path)
