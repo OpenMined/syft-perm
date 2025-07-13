@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.70"
+__version__ = "0.3.71"
 
 __all__ = [
     "open",
@@ -131,6 +131,79 @@ class Files:
 
             # Skip hidden directories and .git directories
             dirs[:] = [d for d in dirs if not d.startswith(".")]
+            
+            # First, add directories as entries
+            for dir_name in dirs:
+                dir_path = root_path / dir_name
+                relative_path = dir_path.relative_to(datasites_path)
+                
+                # Apply search filter
+                if search and search.lower() not in str(relative_path).lower():
+                    continue
+                
+                # Get datasite owner
+                datasite_owner = (
+                    str(relative_path).split("/")[0] if "/" in str(relative_path) else str(relative_path)
+                )
+                
+                # Check if this is in the user's datasite
+                is_user_datasite = user_email and datasite_owner == user_email
+                
+                # Get permissions for this folder
+                permissions_summary = []
+                try:
+                    syft_obj = open(dir_path)
+                    permissions = syft_obj.permissions_dict.copy()
+                    
+                    # Build permissions summary
+                    user_highest_perm = {}
+                    for perm_level in ["admin", "write", "create", "read"]:
+                        users = permissions.get(perm_level, [])
+                        for user in users:
+                            if user not in user_highest_perm:
+                                user_highest_perm[user] = perm_level
+                    
+                    perm_groups = {}
+                    for user, perm in user_highest_perm.items():
+                        if perm not in perm_groups:
+                            perm_groups[perm] = []
+                        perm_groups[perm].append(user)
+                    
+                    for perm_level in ["admin", "write", "create", "read"]:
+                        if perm_level in perm_groups:
+                            users = perm_groups[perm_level]
+                            if len(users) > 2:
+                                user_list = f"{users[0]}, {users[1]}, +{len(users)-2}"
+                            else:
+                                user_list = ", ".join(users)
+                            permissions_summary.append(f"{perm_level}: {user_list}")
+                except Exception:
+                    permissions_summary = []
+                
+                # Calculate folder size (sum of all files inside)
+                folder_size = 0
+                try:
+                    for item in dir_path.rglob("*"):
+                        if item.is_file() and not item.name.startswith("."):
+                            folder_size += item.stat().st_size
+                except Exception:
+                    folder_size = 0
+                
+                files.append(
+                    {
+                        "name": str(relative_path),
+                        "path": str(dir_path),
+                        "is_dir": True,
+                        "permissions": {},
+                        "is_user_datasite": is_user_datasite,
+                        "has_yaml": dir_path.joinpath("syft.pub.yaml").exists(),
+                        "size": folder_size,
+                        "modified": dir_path.stat().st_mtime if dir_path.exists() else 0,
+                        "extension": "folder",
+                        "datasite_owner": datasite_owner,
+                        "permissions_summary": permissions_summary,
+                    }
+                )
 
             for file_name in file_names:
                 # Skip hidden files and syft.pub.yaml files
@@ -612,6 +685,7 @@ class Files:
             modified = datetime.fromtimestamp(file.get("modified", 0)).strftime("%m/%d/%Y")
             file_ext = file.get("extension", ".txt")
             size = file.get("size", 0)
+            is_dir = file.get("is_dir", False)
 
             # Format size
             if size > 1024 * 1024:
@@ -646,7 +720,7 @@ class Files:
                                 <span class="truncate">{modified}</span>
                             </div>
                         </td>
-                        <td><span class="type-badge">{file_ext}</span></td>
+                        <td><span class="type-badge" style="{'background: #dbeafe; color: #3b82f6;' if is_dir else ''}">{file_ext if not is_dir else '📁 folder'}</span></td>
                         <td><span style="color: #6b7280;">{size_str}</span></td>
                         <td>
                             <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">
@@ -796,6 +870,7 @@ class Files:
                     var modified = formatDate(file.modified || 0);
                     var fileExt = file.extension || '.txt';
                     var sizeStr = formatSize(file.size || 0);
+                    var isDir = file.is_dir || false;
                     
                     html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                         '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
@@ -821,7 +896,7 @@ class Files:
                                 '<span class="truncate">' + modified + '</span>' +
                             '</div>' +
                         '</td>' +
-                        '<td><span class="type-badge">' + fileExt + '</span></td>' +
+                        '<td><span class="type-badge"' + (isDir ? ' style="background: #dbeafe; color: #3b82f6;"' : '') + '>' + (isDir ? '📁 folder' : fileExt) + '</span></td>' +
                         '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
                         '<td>' +
                             '<div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">';
