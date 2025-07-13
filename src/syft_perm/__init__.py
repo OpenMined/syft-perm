@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.35"
+__version__ = "0.3.37"
 
 __all__ = [
     "open",
@@ -202,154 +202,56 @@ class Files:
         return "<Files: SyftBox permissioned files interface>"
 
     def _repr_html_(self) -> str:
-        """Generate fallback widget with working search functionality."""
-        import uuid
+        """Generate simple widget with working search functionality for Jupyter."""
         import html as html_module
         import json
-        
+        import uuid
+
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-        data = self.get(limit=50)  # Get first 50 files
+        data = self.get(limit=100)  # Get more files initially
         files = data["files"]
         total = data["total_count"]
-        
+
         if not files:
-            return "<div style='padding: 20px; color: #666;'>No files found in SyftBox/datasites directory</div>"
+            return ("<div style='padding: 20px; color: #666;'>"
+                    "No files found in SyftBox/datasites directory</div>")
+
+        # Get all files for search
+        all_files = self._scan_files()
+
+        # Build HTML template
+        div_style = ("font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, "
+                     "sans-serif; border: 1px solid #e5e7eb; border-radius: 8px; "
+                     "overflow: hidden; max-width: 100%;")
+        input_style = ("width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; "
+                       "border-radius: 6px; font-size: 14px; outline: none;")
+        th_style = ("text-align: left; padding: 10px; font-weight: 600; "
+                    "border-bottom: 1px solid #e5e7eb;")
         
-        # Get more files for search (up to 1000)
-        all_files = self._scan_files()[:1000]
-        
-        # CSS similar to syft-objects
         html = f"""
-        <style>
-        #{container_id} {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 12px;
-            background: #ffffff;
-        }}
-        #{container_id} .widget-container {{
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            overflow: hidden;
-            height: 400px;
-            display: flex;
-            flex-direction: column;
-        }}
-        #{container_id} .header {{
-            background: #ffffff;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 0.5rem;
-            flex-shrink: 0;
-        }}
-        #{container_id} .search-controls {{
-            display: flex;
-            gap: 0.25rem;
-            flex-wrap: wrap;
-            padding: 0.5rem;
-            background: #ffffff;
-        }}
-        #{container_id} .table-container {{
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: auto;
-            background: #ffffff;
-            min-height: 0;
-        }}
-        #{container_id} table {{
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-        }}
-        #{container_id} thead {{
-            background: rgba(0, 0, 0, 0.03);
-            border-bottom: 1px solid #e5e7eb;
-        }}
-        #{container_id} th {{
-            text-align: left;
-            padding: 0.375rem 0.25rem;
-            font-weight: 500;
-            font-size: 0.75rem;
-            border-bottom: 1px solid #e5e7eb;
-            position: sticky;
-            top: 0;
-            background: rgba(0, 0, 0, 0.03);
-            z-index: 10;
-        }}
-        #{container_id} td {{
-            padding: 0.375rem 0.25rem;
-            border-bottom: 1px solid #f3f4f6;
-            vertical-align: top;
-            font-size: 0.75rem;
-            text-align: left;
-        }}
-        #{container_id} tbody tr {{
-            transition: background-color 0.15s;
-        }}
-        #{container_id} tbody tr:hover {{
-            background: rgba(0, 0, 0, 0.03);
-        }}
-        #{container_id} .pagination {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem;
-            border-top: 1px solid #e5e7eb;
-            background: rgba(0, 0, 0, 0.02);
-            flex-shrink: 0;
-        }}
-        #{container_id} .pagination button {{
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            border: 1px solid #e5e7eb;
-            background: white;
-            cursor: pointer;
-            transition: all 0.15s;
-        }}
-        #{container_id} .pagination button:hover:not(:disabled) {{
-            background: #f3f4f6;
-        }}
-        #{container_id} .pagination button:disabled {{
-            opacity: 0.5;
-            cursor: not-allowed;
-        }}
-        #{container_id} .page-info {{
-            font-size: 0.75rem;
-            color: #6b7280;
-        }}
-        #{container_id} .status {{
-            font-size: 0.75rem;
-            color: #9ca3af;
-            font-style: italic;
-            opacity: 0.8;
-            text-align: center;
-            flex: 1;
-        }}
-        </style>
-        
-        <div id="{container_id}">
-            <div class="widget-container">
-                <div class="header">
-                    <div class="search-controls">
-                        <input id="{container_id}-search" placeholder="🔍 Search files..." 
-                               style="flex: 1; padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem; font-size: 0.75rem;">
-                        <button onclick="clearSearch_{container_id}()" style="padding: 0.25rem 0.5rem; border: 1px solid #e5e7eb; background: white; border-radius: 0.25rem; font-size: 0.75rem; cursor: pointer;">Clear</button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 50%;">File Path</th>
-                                <th style="width: 15%;">Size</th>
-                                <th style="width: 35%;">Permissions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="{container_id}-tbody">
+        <div id="{container_id}" style="{div_style}">
+            <!-- Search Header -->
+            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb;">
+                <input id="{container_id}-search" type="text" placeholder="🔍 Search files..." 
+                       style="{input_style}"
+                       oninput="searchFiles_{container_id}(this.value)">
+            </div>
+            
+            <!-- Table Container -->
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead style="background: #f8f9fa; position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="{th_style} width: 50%;">File Path</th>
+                            <th style="{th_style} width: 15%;">Size</th>
+                            <th style="{th_style} width: 35%;">Permissions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="{container_id}-tbody">
         """
-        
-        # Initial table rows
-        items_per_page = 20
-        for i, file in enumerate(files[:items_per_page]):
+
+        # Initial table rows - show first 20 files
+        for file in files[:20]:
             # Format file size
             size = file.get("size", 0)
             if size > 1024 * 1024:
@@ -367,130 +269,63 @@ class Files:
                     if len(users) > 2:
                         user_str = f"{', '.join(users[:2])}... (+{len(users)-2})"
                     else:
-                        user_str = ', '.join(users)
-                    perm_items.append(f"<strong>{perm_type}:</strong> {html_module.escape(user_str)}")
+                        user_str = ", ".join(users)
+                    perm_items.append(
+                        f"<strong>{perm_type}:</strong> {html_module.escape(user_str)}"
+                    )
 
             perm_str = "<br>".join(perm_items) if perm_items else "<em>No permissions</em>"
-            
+
             html += f"""
-                        <tr>
-                            <td style="font-family: 'SF Mono', Monaco, monospace; word-break: break-all;">
-                                {html_module.escape(file['name'])}
-                            </td>
-                            <td style="color: #6b7280;">
-                                {size_str}
-                            </td>
-                            <td style="font-size: 0.7rem; line-height: 1.3;">
-                                {perm_str}
-                            </td>
-                        </tr>
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 10px; font-family: 'SF Mono', Monaco, monospace; 
+                                   word-break: break-all;">
+                            {html_module.escape(file['name'])}
+                        </td>
+                        <td style="padding: 10px; color: #6b7280;">
+                            {size_str}
+                        </td>
+                        <td style="padding: 10px; font-size: 12px; line-height: 1.4;">
+                            {perm_str}
+                        </td>
+                    </tr>
             """
-        
-        total_pages = max(1, (total + items_per_page - 1) // items_per_page)
-        
+
         html += f"""
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination">
-                    <div></div>
-                    <span class="status" id="{container_id}-status">Showing {len(files[:items_per_page])} of {total} files in datasites</span>
-                    <div>
-                        <button onclick="changePage_{container_id}(-1)" id="{container_id}-prev" disabled>Previous</button>
-                        <span class="page-info" id="{container_id}-page-info">Page 1 of {total_pages}</span>
-                        <button onclick="changePage_{container_id}(1)" id="{container_id}-next" {'disabled' if total_pages <= 1 else ''}>Next</button>
-                    </div>
-                </div>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #e5e7eb; 
+                        font-size: 12px; color: #6b7280; text-align: center;">
+                <span id="{container_id}-status">Showing 20 of {total} files in datasites</span>
             </div>
         </div>
         
         <script>
-        // Store files data
-        window['{container_id}_files'] = {json.dumps(all_files)};
-        window['{container_id}_filteredFiles'] = window['{container_id}_files'];
-        window['{container_id}_currentPage'] = 1;
-        window['{container_id}_itemsPerPage'] = {items_per_page};
-        window['{container_id}_totalFiles'] = {len(all_files)};
-        
-        function escapeHtml_{container_id}(text) {{
-            var div = document.createElement('div');
-            div.textContent = text || '';
-            return div.innerHTML;
-        }}
-        
-        function filterFiles_{container_id}() {{
-            var searchTerm = document.getElementById('{container_id}-search').value.toLowerCase();
-            var allFiles = window['{container_id}_files'];
+        (function() {{
+            // Store all files data in a way that's compatible with Jupyter
+            var allFiles = {json.dumps(all_files)};
+            var container = document.getElementById('{container_id}');
             
-            var filtered = allFiles.filter(function(file) {{
-                return !searchTerm || file.name.toLowerCase().includes(searchTerm);
-            }});
+            function escapeHtml(text) {{
+                var div = document.createElement('div');
+                div.textContent = text || '';
+                return div.innerHTML;
+            }}
             
-            window['{container_id}_filteredFiles'] = filtered;
-            window['{container_id}_totalFiles'] = filtered.length;
-            window['{container_id}_currentPage'] = 1;
-            
-            updateDisplay_{container_id}();
-        }}
-        
-        function clearSearch_{container_id}() {{
-            document.getElementById('{container_id}-search').value = '';
-            filterFiles_{container_id}();
-        }}
-        
-        function changePage_{container_id}(direction) {{
-            var currentPage = window['{container_id}_currentPage'];
-            var itemsPerPage = window['{container_id}_itemsPerPage'];
-            var totalFiles = window['{container_id}_totalFiles'];
-            var totalPages = Math.max(1, Math.ceil(totalFiles / itemsPerPage));
-            
-            currentPage += direction;
-            if (currentPage < 1) currentPage = 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-            
-            window['{container_id}_currentPage'] = currentPage;
-            updateDisplay_{container_id}();
-        }}
-        
-        function updateDisplay_{container_id}() {{
-            var currentPage = window['{container_id}_currentPage'];
-            var itemsPerPage = window['{container_id}_itemsPerPage'];
-            var totalFiles = window['{container_id}_totalFiles'];
-            var totalPages = Math.max(1, Math.ceil(totalFiles / itemsPerPage));
-            var files = window['{container_id}_filteredFiles'];
-            
-            // Update page info
-            document.getElementById('{container_id}-page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
-            document.getElementById('{container_id}-status').textContent = 'Showing ' + Math.min(itemsPerPage, totalFiles - (currentPage-1)*itemsPerPage) + ' of ' + totalFiles + ' files in datasites';
-            
-            // Update buttons
-            document.getElementById('{container_id}-prev').disabled = currentPage === 1;
-            document.getElementById('{container_id}-next').disabled = currentPage === totalPages;
-            
-            // Update table
-            var tbody = document.getElementById('{container_id}-tbody');
-            tbody.innerHTML = '';
-            
-            var start = (currentPage - 1) * itemsPerPage;
-            var end = Math.min(start + itemsPerPage, totalFiles);
-            
-            for (var i = start; i < end; i++) {{
-                var file = files[i];
-                if (!file) continue;
-                
-                // Format file size
-                var size = file.size || 0;
-                var sizeStr;
+            function formatSize(size) {{
                 if (size > 1024 * 1024) {{
-                    sizeStr = (size / (1024 * 1024)).toFixed(1) + ' MB';
+                    return (size / (1024 * 1024)).toFixed(1) + ' MB';
                 }} else if (size > 1024) {{
-                    sizeStr = (size / 1024).toFixed(1) + ' KB';
+                    return (size / 1024).toFixed(1) + ' KB';
                 }} else {{
-                    sizeStr = size + ' B';
+                    return size + ' B';
                 }}
-                
-                // Format permissions
-                var perms = file.permissions || {{}};
+            }}
+            
+            function formatPermissions(perms) {{
                 var permItems = [];
                 for (var permType in perms) {{
                     var users = perms[permType];
@@ -501,25 +336,54 @@ class Files:
                         }} else {{
                             userStr = users.join(', ');
                         }}
-                        permItems.push('<strong>' + permType + ':</strong> ' + escapeHtml_{container_id}(userStr));
+                        permItems.push('<strong>' + permType + ':</strong> ' + escapeHtml(userStr));
                     }}
                 }}
-                var permStr = permItems.length > 0 ? permItems.join('<br>') : '<em>No permissions</em>';
-                
-                var tr = document.createElement('tr');
-                tr.innerHTML = 
-                    '<td style="font-family: \\'SF Mono\\', Monaco, monospace; word-break: break-all;">' + escapeHtml_{container_id}(file.name) + '</td>' +
-                    '<td style="color: #6b7280;">' + sizeStr + '</td>' +
-                    '<td style="font-size: 0.7rem; line-height: 1.3;">' + permStr + '</td>';
-                tbody.appendChild(tr);
+                return permItems.length > 0 ? permItems.join('<br>') : '<em>No permissions</em>';
             }}
-        }}
-        
-        // Add search event listener
-        document.getElementById('{container_id}-search').addEventListener('input', filterFiles_{container_id});
+            
+            window.searchFiles_{container_id} = function(searchTerm) {{
+                var tbody = document.getElementById('{container_id}-tbody');
+                var status = document.getElementById('{container_id}-status');
+                
+                if (!tbody || !status) return;
+                
+                searchTerm = searchTerm.toLowerCase();
+                var filteredFiles = allFiles.filter(function(file) {{
+                    return !searchTerm || file.name.toLowerCase().includes(searchTerm);
+                }});
+                
+                // Clear current table
+                tbody.innerHTML = '';
+                
+                // Show first 50 filtered results
+                var displayFiles = filteredFiles.slice(0, 50);
+                
+                for (var i = 0; i < displayFiles.length; i++) {{
+                    var file = displayFiles[i];
+                    var sizeStr = formatSize(file.size || 0);
+                    var permStr = formatPermissions(file.permissions || {{}});
+                    
+                    var tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid #f3f4f6';
+                    tr.innerHTML = 
+                        '<td style="padding: 10px; font-family: \\'SF Mono\\', Monaco, monospace; ' +
+                        'word-break: break-all;">' + escapeHtml(file.name) + '</td>' +
+                        '<td style="padding: 10px; color: #6b7280;">' + sizeStr + '</td>' +
+                        '<td style="padding: 10px; font-size: 12px; line-height: 1.4;">' + permStr + '</td>';
+                    tbody.appendChild(tr);
+                }}
+                
+                // Update status
+                var statusText = searchTerm ? 
+                    'Showing ' + displayFiles.length + ' of ' + filteredFiles.length + ' matching files' :
+                    'Showing ' + displayFiles.length + ' of ' + allFiles.length + ' files in datasites';
+                status.textContent = statusText;
+            }};
+        }})();
         </script>
         """
-        
+
         return html
 
 
