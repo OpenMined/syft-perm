@@ -1084,6 +1084,10 @@ class SyftFile:
 
             # Determine if this is public access
             display_name = "Anyone with the link" if user == "*" else user
+            
+            # Get permission reasons for this user
+            has_permission, reasons = self._check_permission_with_reasons(user, role.lower())
+            reason_text = "; ".join(reasons[:2]) if reasons else "Direct permission"  # Limit to 2 reasons
 
             html += f"""
                 <div style="display: flex; align-items: center; padding: 6px 8px; gap: 10px;
@@ -1098,6 +1102,9 @@ class SyftFile:
                         </div>
                         <div style="font-size: 11px; color: #586069;">
                             {user if user != "*" else "Public access"}
+                        </div>
+                        <div style="font-size: 10px; color: #6a737d; margin-top: 2px;">
+                            {reason_text}
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
@@ -2241,6 +2248,10 @@ class SyftFolder:
 
             # Determine if this is public access
             display_name = "Anyone with the link" if user == "*" else user
+            
+            # Get permission reasons for this user
+            has_permission, reasons = self._check_permission_with_reasons(user, role.lower())
+            reason_text = "; ".join(reasons[:2]) if reasons else "Direct permission"  # Limit to 2 reasons
 
             html += f"""
                 <div style="display: flex; align-items: center; padding: 6px 8px; gap: 10px;
@@ -2255,6 +2266,9 @@ class SyftFolder:
                         </div>
                         <div style="font-size: 11px; color: #586069;">
                             {user if user != "*" else "Public access"}
+                        </div>
+                        <div style="font-size: 10px; color: #6a737d; margin-top: 2px;">
+                            {reason_text}
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">

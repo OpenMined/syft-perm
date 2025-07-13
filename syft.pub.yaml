@@ -4,6 +4,7 @@ rules:
     admin:
     - liamtrask@gmail.com
     write:
+    - bennett@openmined.org
     - jamesbrown@gmail.com
     create:
     - peter@openmined.org

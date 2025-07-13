@@ -1671,12 +1671,14 @@ wheels = [
 
 [[package]]
 name = "syft-perm"
-version = "0.3.22"
+version = "0.3.24"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi" },
     { name = "loguru" },
     { name = "pyyaml" },
     { name = "requests" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -1714,6 +1716,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
+    { name = "fastapi", specifier = ">=0.104.0" },
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.104.0" },
     { name = "flake8", marker = "extra == 'dev'" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
@@ -1729,6 +1732,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.31.0" },
     { name = "syft-core", marker = "extra == 'syftbox'" },
     { name = "tabulate", marker = "extra == 'display'", specifier = ">=0.9.0" },
+    { name = "uvicorn", specifier = ">=0.24.0" },
     { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.24.0" },
 ]
 
