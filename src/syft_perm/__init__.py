@@ -213,30 +213,44 @@ class Files:
         total = data["total_count"]
 
         if not files:
-            return ("<div style='padding: 20px; color: #666;'>"
-                    "No files found in SyftBox/datasites directory</div>")
+            return (
+                "<div style='padding: 20px; color: #666;'>"
+                "No files found in SyftBox/datasites directory</div>"
+            )
 
         # Get all files for search
         all_files = self._scan_files()
 
         # Build HTML template
-        div_style = ("font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, "
-                     "sans-serif; border: 1px solid #e5e7eb; border-radius: 8px; "
-                     "overflow: hidden; max-width: 100%;")
-        input_style = ("width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; "
-                       "border-radius: 6px; font-size: 14px; outline: none;")
-        th_style = ("text-align: left; padding: 10px; font-weight: 600; "
-                    "border-bottom: 1px solid #e5e7eb;")
-        
+        div_style = (
+            "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, "
+            "sans-serif; border: 1px solid #e5e7eb; border-radius: 8px; "
+            "overflow: hidden; max-width: 100%;"
+        )
+        input_style = (
+            "width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; "
+            "border-radius: 6px; font-size: 14px; outline: none;"
+        )
+        th_style = (
+            "text-align: left; padding: 10px; font-weight: 600; "
+            "border-bottom: 1px solid #e5e7eb;"
+        )
+
         html = f"""
         <div id="{container_id}" style="{div_style}">
             <!-- Search Header -->
-            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb;">
-                <input id="{container_id}-search" type="text" placeholder="🔍 Search files..." 
+            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb; position: relative;">
+                <input id="{container_id}-search" type="text" placeholder="🔍 Search files... (use Tab for autocomplete)"
                        style="{input_style}"
-                       oninput="searchFiles_{container_id}(this.value)">
+                       oninput="searchFiles_{container_id}(this.value)"
+                       onkeydown="handleKeyDown_{container_id}(event)"
+                       autocomplete="off">
+                <div id="{container_id}-suggestions" style="display: none; position: absolute; top: 100%; left: 12px; right: 12px;
+                                                              background: white; border: 1px solid #d1d5db; border-top: none;
+                                                              border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
+                                                              z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
             </div>
-            
+
             <!-- Table Container -->
             <div style="max-height: 400px; overflow-y: auto;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -267,7 +281,7 @@ class Files:
             for perm_type, users in perms.items():
                 if users:
                     if len(users) > 2:
-                        user_str = f"{', '.join(users[:2])}... (+{len(users)-2})"
+                        user_str = f"{', '.join(users[:2])}... (+{len(users) - 2})"
                     else:
                         user_str = ", ".join(users)
                     perm_items.append(
@@ -278,7 +292,7 @@ class Files:
 
             html += f"""
                     <tr style="border-bottom: 1px solid #f3f4f6;">
-                        <td style="padding: 10px; font-family: 'SF Mono', Monaco, monospace; 
+                        <td style="padding: 10px; font-family: 'SF Mono', Monaco, monospace;
                                    word-break: break-all;">
                             {html_module.escape(file['name'])}
                         </td>
@@ -295,26 +309,26 @@ class Files:
                     </tbody>
                 </table>
             </div>
-            
+
             <!-- Footer -->
-            <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #e5e7eb; 
+            <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #e5e7eb;
                         font-size: 12px; color: #6b7280; text-align: center;">
                 <span id="{container_id}-status">Showing 20 of {total} files in datasites</span>
             </div>
         </div>
-        
+
         <script>
         (function() {{
             // Store all files data in a way that's compatible with Jupyter
             var allFiles = {json.dumps(all_files)};
             var container = document.getElementById('{container_id}');
-            
+
             function escapeHtml(text) {{
                 var div = document.createElement('div');
                 div.textContent = text || '';
                 return div.innerHTML;
             }}
-            
+
             function formatSize(size) {{
                 if (size > 1024 * 1024) {{
                     return (size / (1024 * 1024)).toFixed(1) + ' MB';
@@ -324,7 +338,7 @@ class Files:
                     return size + ' B';
                 }}
             }}
-            
+
             function formatPermissions(perms) {{
                 var permItems = [];
                 for (var permType in perms) {{
@@ -341,41 +355,41 @@ class Files:
                 }}
                 return permItems.length > 0 ? permItems.join('<br>') : '<em>No permissions</em>';
             }}
-            
+
             window.searchFiles_{container_id} = function(searchTerm) {{
                 var tbody = document.getElementById('{container_id}-tbody');
                 var status = document.getElementById('{container_id}-status');
-                
+
                 if (!tbody || !status) return;
-                
+
                 searchTerm = searchTerm.toLowerCase();
                 var filteredFiles = allFiles.filter(function(file) {{
                     return !searchTerm || file.name.toLowerCase().includes(searchTerm);
                 }});
-                
+
                 // Clear current table
                 tbody.innerHTML = '';
-                
+
                 // Show first 50 filtered results
                 var displayFiles = filteredFiles.slice(0, 50);
-                
+
                 for (var i = 0; i < displayFiles.length; i++) {{
                     var file = displayFiles[i];
                     var sizeStr = formatSize(file.size || 0);
                     var permStr = formatPermissions(file.permissions || {{}});
-                    
+
                     var tr = document.createElement('tr');
                     tr.style.borderBottom = '1px solid #f3f4f6';
-                    tr.innerHTML = 
+                    tr.innerHTML =
                         '<td style="padding: 10px; font-family: \\'SF Mono\\', Monaco, monospace; ' +
                         'word-break: break-all;">' + escapeHtml(file.name) + '</td>' +
                         '<td style="padding: 10px; color: #6b7280;">' + sizeStr + '</td>' +
                         '<td style="padding: 10px; font-size: 12px; line-height: 1.4;">' + permStr + '</td>';
                     tbody.appendChild(tr);
                 }}
-                
+
                 // Update status
-                var statusText = searchTerm ? 
+                var statusText = searchTerm ?
                     'Showing ' + displayFiles.length + ' of ' + filteredFiles.length + ' matching files' :
                     'Showing ' + displayFiles.length + ' of ' + allFiles.length + ' files in datasites';
                 status.textContent = statusText;
