@@ -77,10 +77,14 @@ class Files:
 
     def __init__(self):
         self._cache = None
+        self._initial_page = 1  # Default to first page
+        self._items_per_page = 50  # Default items per page
 
-    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None) -> list:
+    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False) -> list:
         """Scan SyftBox directory for files with permissions."""
         import os
+        import sys
+        import time
         from pathlib import Path
 
         # Try to find SyftBox directory
@@ -133,10 +137,27 @@ class Files:
         total_datasites = len(datasite_dirs)
         processed_datasites = 0
 
+        # Setup ASCII progress bar if requested
+        if show_ascii_progress and total_datasites > 0:
+            print("Scanning datasites...")
+            
+        def update_ascii_progress(current, total, status):
+            if show_ascii_progress:
+                percent = (current / max(total, 1)) * 100
+                bar_length = 40
+                filled_length = int(bar_length * current / max(total, 1))
+                bar = '█' * filled_length + '░' * (bar_length - filled_length)
+                sys.stdout.write(f'\r[{bar}] {percent:.0f}% - {status}')
+                sys.stdout.flush()
+
         # First pass: collect all unique paths (files and folders) per datasite
         for datasite_dir in datasite_dirs:
             if progress_callback:
                 progress_callback(
+                    processed_datasites, total_datasites, f"Scanning {datasite_dir.name}"
+                )
+            elif show_ascii_progress:
+                update_ascii_progress(
                     processed_datasites, total_datasites, f"Scanning {datasite_dir.name}"
                 )
 
@@ -159,6 +180,10 @@ class Files:
             # Update progress after each datasite is fully processed
             if progress_callback:
                 progress_callback(
+                    processed_datasites, total_datasites, f"Completed {datasite_dir.name}"
+                )
+            elif show_ascii_progress:
+                update_ascii_progress(
                     processed_datasites, total_datasites, f"Completed {datasite_dir.name}"
                 )
 
@@ -304,6 +329,12 @@ class Files:
 
         # Sort by name
         files.sort(key=lambda x: x["name"])
+        
+        # Clear ASCII progress bar if it was shown
+        if show_ascii_progress and total_datasites > 0:
+            sys.stdout.write('\r' + ' ' * 80 + '\r')  # Clear the line
+            sys.stdout.flush()
+        
         return files
 
     def get(self, limit: int = 50, offset: int = 0, search: _Union[str, None] = None) -> dict:
@@ -500,9 +531,165 @@ class Files:
         else:
             raise TypeError("Files indexing only supports slice notation, e.g., files[1:10]")
 
+    def page(self, page_number: int, items_per_page: int = 50) -> "Files":
+        """
+        Return a Files instance that will display starting at a specific page.
+        
+        Args:
+            page_number: The page number to jump to (1-based indexing)
+            items_per_page: Number of items per page (default: 50)
+        
+        Returns:
+            Files instance that will render starting at the requested page
+        """
+        if page_number < 1:
+            raise ValueError("Page number must be >= 1")
+            
+        # Create a new Files instance with the initial page set
+        new_files = Files()
+        new_files._initial_page = page_number
+        new_files._items_per_page = items_per_page
+        return new_files
+
     def __repr__(self) -> str:
-        """Static string representation."""
-        return "<Files: SyftBox permissioned files interface>"
+        """Generate ASCII table representation of files."""
+        from datetime import datetime
+        
+        # Get files with ASCII progress bar
+        all_files = self._scan_files(show_ascii_progress=True)
+        
+        if not all_files:
+            return "No files found in SyftBox/datasites directory"
+        
+        # Sort by modified date (newest first)
+        sorted_files = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+        
+        # Calculate pagination
+        total_files = len(sorted_files)
+        total_pages = (total_files + self._items_per_page - 1) // self._items_per_page
+        
+        # Validate current page
+        current_page = min(self._initial_page, total_pages)
+        current_page = max(1, current_page)
+        
+        # Get files for current page
+        start = (current_page - 1) * self._items_per_page
+        end = min(start + self._items_per_page, total_files)
+        page_files = sorted_files[start:end]
+        
+        # Create chronological index
+        chronological_ids = {}
+        for i, file in enumerate(sorted_files):
+            file_key = f"{file['name']}|{file['path']}"
+            chronological_ids[file_key] = i + 1
+        
+        # Define column widths
+        col_widths = {
+            'num': 5,
+            'url': 60,
+            'modified': 16,
+            'type': 8,
+            'size': 10,
+            'perms': 12
+        }
+        
+        # Build header
+        header = (
+            f"{'#':<{col_widths['num']}} "
+            f"{'URL':<{col_widths['url']}} "
+            f"{'Modified':<{col_widths['modified']}} "
+            f"{'Type':<{col_widths['type']}} "
+            f"{'Size':<{col_widths['size']}} "
+            f"{'Permissions':<{col_widths['perms']}}"
+        )
+        
+        separator = "-" * len(header)
+        
+        # Build rows
+        rows = []
+        for file in page_files:
+            # Get chronological number
+            file_key = f"{file['name']}|{file['path']}"
+            num = chronological_ids.get(file_key, 0)
+            
+            # Format URL (truncate if needed)
+            url = file['name']
+            if len(url) > col_widths['url']:
+                url = url[:col_widths['url']-3] + "..."
+            
+            # Format modified date
+            modified_ts = file.get('modified', 0)
+            if modified_ts:
+                modified = datetime.fromtimestamp(modified_ts).strftime('%Y-%m-%d %H:%M')
+            else:
+                modified = 'Unknown'
+            
+            # Format file type
+            file_type = file.get('extension', '').lstrip('.') or 'file'
+            if len(file_type) > col_widths['type']:
+                file_type = file_type[:col_widths['type']-3] + "..."
+            
+            # Format size
+            size_bytes = file.get('size', 0)
+            if size_bytes < 1024:
+                size = f"{size_bytes} B"
+            elif size_bytes < 1024 * 1024:
+                size = f"{size_bytes / 1024:.1f} KB"
+            elif size_bytes < 1024 * 1024 * 1024:
+                size = f"{size_bytes / (1024 * 1024):.1f} MB"
+            else:
+                size = f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+            
+            # Format permissions count
+            perms = file.get('permissions_summary', [])
+            perm_str = f"{len(perms)} users"
+            
+            # Build row
+            row = (
+                f"{num:<{col_widths['num']}} "
+                f"{url:<{col_widths['url']}} "
+                f"{modified:<{col_widths['modified']}} "
+                f"{file_type:<{col_widths['type']}} "
+                f"{size:>{col_widths['size']}} "
+                f"{perm_str:<{col_widths['perms']}}"
+            )
+            rows.append(row)
+        
+        # Calculate totals for footer
+        file_count = 0
+        folder_count = 0
+        total_size = 0
+        
+        for file in sorted_files:
+            if file.get('is_dir', False):
+                folder_count += 1
+            else:
+                file_count += 1
+                total_size += file.get('size', 0)
+        
+        # Format total size
+        if total_size < 1024:
+            size_str = f"{total_size} B"
+        elif total_size < 1024 * 1024:
+            size_str = f"{total_size / 1024:.1f} KB"
+        elif total_size < 1024 * 1024 * 1024:
+            size_str = f"{total_size / (1024 * 1024):.1f} MB"
+        else:
+            size_str = f"{total_size / (1024 * 1024 * 1024):.1f} GB"
+        
+        # Build output
+        output = [
+            f"Files (Page {current_page} of {total_pages}, showing {start+1}-{end} of {total_files} items)",
+            separator,
+            header,
+            separator
+        ]
+        output.extend(rows)
+        output.append(separator)
+        output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
+        output.append(f"Use sp.files.page(n) to view other pages or sp.files in Jupyter for interactive view")
+        
+        return "\n".join(output)
 
     def _repr_html_(self) -> str:
         """Generate SyftObjects-style widget for Jupyter."""
@@ -603,11 +790,28 @@ class Files:
         """
         display(HTML(loading_html))
 
+        # Variables for throttling updates
+        datasite_count = [0]  # Use list to make it mutable in nested function
+        last_datasite = [None]  # Track last datasite to detect changes
+        update_interval = max(1, total_datasites // 20)  # Update at most 20 times
+        
         # Progress callback function
         def update_progress(current, total, status):
             progress_data["current"] = current
             progress_data["total"] = total
             progress_data["status"] = status
+            
+            # Extract datasite from status (status format: "Scanning email@domain.com")
+            current_datasite = status.split(" ")[-1] if " " in status else status
+            
+            # Check if datasite changed
+            if current_datasite != last_datasite[0]:
+                last_datasite[0] = current_datasite
+                datasite_count[0] += 1
+            
+            # Only update every update_interval datasites or on the last one
+            if datasite_count[0] % update_interval != 0 and current < total:
+                return  # Skip this update unless it's time for an update or the last one
 
             # Update the display
             progress_percent = (current / max(total, 1)) * 100
@@ -938,7 +1142,6 @@ class Files:
                             <th style="width: 1.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
                             <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
                             <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
-                            <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('admin')">Admin ↕</th>
                             <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
                             <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
                             <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
@@ -1072,8 +1275,8 @@ class Files:
             }}
             
             var filteredFiles = allFiles.slice();
-            var currentPage = 1;
-            var itemsPerPage = 50;
+            var currentPage = {self._initial_page};
+            var itemsPerPage = {self._items_per_page};
             var sortColumn = 'name';
             var sortDirection = 'asc';
             var searchHistory = [];
@@ -1194,15 +1397,6 @@ class Files:
                         '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
                         '<td>' + chronoId + '</td>' +
                         '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(fullSyftPath) + '">' + escapeHtml(fullSyftPath) + '</div></td>' +
-                        '<td>' +
-                            '<div class="admin-email">' +
-                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                                    '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>' +
-                                    '<circle cx="12" cy="7" r="4"></circle>' +
-                                '</svg>' +
-                                '<span class="truncate">' + escapeHtml(datasiteOwner) + '</span>' +
-                            '</div>' +
-                        '</td>' +
                         '<td>' +
                             '<div class="date-text">' +
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
@@ -1650,7 +1844,13 @@ class Files:
                 if (e.key === 'Enter') searchFiles_{container_id}();
             }});
             
-            // Initial status update
+            // Validate initial page and update
+            var totalPages = Math.ceil(filteredFiles.length / itemsPerPage);
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            
+            // Initial render
+            renderTable();
             updateStatus();
         }})();
         </script>
@@ -1671,7 +1871,7 @@ class FilteredFiles(Files):
         self._limit = limit
         self._offset = offset
     
-    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None) -> list:
+    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False) -> list:
         """Return the pre-filtered files instead of scanning."""
         return self._filtered_files
     
@@ -1914,7 +2114,6 @@ class FilteredFiles(Files):
                             <th style="width: 1.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
                             <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
                             <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
-                            <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('admin')">Admin ↕</th>
                             <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
                             <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
                             <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
@@ -2013,8 +2212,146 @@ class FilteredFiles(Files):
         return html
 
     def __repr__(self) -> str:
-        """String representation showing filtered count."""
-        return f"<FilteredFiles: {len(self._filtered_files)} files>"
+        """Generate ASCII table representation of filtered files."""
+        from datetime import datetime
+        
+        if not self._filtered_files:
+            return "FilteredFiles: No files match the filter criteria"
+        
+        # Sort by modified date (newest first) to match main Files display
+        sorted_files = sorted(self._filtered_files, key=lambda x: x.get("modified", 0), reverse=True)
+        
+        # Calculate display range
+        total_files = len(sorted_files)
+        items_per_page = self._limit if self._limit else 50
+        
+        # Get files to display
+        if self._limit:
+            # If limit is set, show from offset to offset+limit
+            start = self._offset
+            end = min(start + self._limit, total_files)
+            display_files = sorted_files[start:end]
+            page_info = f"FilteredFiles (showing {start+1}-{end} of {total_files} filtered files)"
+        else:
+            # Otherwise show first page
+            end = min(items_per_page, total_files)
+            display_files = sorted_files[:end]
+            page_info = f"FilteredFiles (showing 1-{end} of {total_files} filtered files)"
+        
+        # Create chronological index for all filtered files
+        chronological_ids = {}
+        for i, file in enumerate(sorted_files):
+            file_key = f"{file['name']}|{file['path']}"
+            chronological_ids[file_key] = i + 1
+        
+        # Define column widths (same as main Files class)
+        col_widths = {
+            'num': 5,
+            'url': 60,
+            'modified': 16,
+            'type': 8,
+            'size': 10,
+            'perms': 12
+        }
+        
+        # Build header
+        header = (
+            f"{'#':<{col_widths['num']}} "
+            f"{'URL':<{col_widths['url']}} "
+            f"{'Modified':<{col_widths['modified']}} "
+            f"{'Type':<{col_widths['type']}} "
+            f"{'Size':<{col_widths['size']}} "
+            f"{'Permissions':<{col_widths['perms']}}"
+        )
+        
+        separator = "-" * len(header)
+        
+        # Build rows
+        rows = []
+        for file in display_files:
+            # Get chronological number
+            file_key = f"{file['name']}|{file['path']}"
+            num = chronological_ids.get(file_key, 0)
+            
+            # Format URL (truncate if needed)
+            url = file['name']
+            if len(url) > col_widths['url']:
+                url = url[:col_widths['url']-3] + "..."
+            
+            # Format modified date
+            modified_ts = file.get('modified', 0)
+            if modified_ts:
+                modified = datetime.fromtimestamp(modified_ts).strftime('%Y-%m-%d %H:%M')
+            else:
+                modified = 'Unknown'
+            
+            # Format file type
+            file_type = file.get('extension', '').lstrip('.') or 'file'
+            if len(file_type) > col_widths['type']:
+                file_type = file_type[:col_widths['type']-3] + "..."
+            
+            # Format size
+            size_bytes = file.get('size', 0)
+            if size_bytes < 1024:
+                size = f"{size_bytes} B"
+            elif size_bytes < 1024 * 1024:
+                size = f"{size_bytes / 1024:.1f} KB"
+            elif size_bytes < 1024 * 1024 * 1024:
+                size = f"{size_bytes / (1024 * 1024):.1f} MB"
+            else:
+                size = f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+            
+            # Format permissions count
+            perms = file.get('permissions_summary', [])
+            perm_str = f"{len(perms)} users"
+            
+            # Build row
+            row = (
+                f"{num:<{col_widths['num']}} "
+                f"{url:<{col_widths['url']}} "
+                f"{modified:<{col_widths['modified']}} "
+                f"{file_type:<{col_widths['type']}} "
+                f"{size:>{col_widths['size']}} "
+                f"{perm_str:<{col_widths['perms']}}"
+            )
+            rows.append(row)
+        
+        # Calculate totals for footer
+        file_count = 0
+        folder_count = 0
+        total_size = 0
+        
+        for file in sorted_files:
+            if file.get('is_dir', False):
+                folder_count += 1
+            else:
+                file_count += 1
+                total_size += file.get('size', 0)
+        
+        # Format total size
+        if total_size < 1024:
+            size_str = f"{total_size} B"
+        elif total_size < 1024 * 1024:
+            size_str = f"{total_size / 1024:.1f} KB"
+        elif total_size < 1024 * 1024 * 1024:
+            size_str = f"{total_size / (1024 * 1024):.1f} MB"
+        else:
+            size_str = f"{total_size / (1024 * 1024 * 1024):.1f} GB"
+        
+        # Build output
+        output = [
+            page_info,
+            separator,
+            header,
+            separator
+        ]
+        output.extend(rows)
+        output.append(separator)
+        output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
+        if total_files > len(display_files):
+            output.append(f"Use FilteredFiles in Jupyter for interactive view of all {total_files} results")
+        
+        return "\n".join(output)
 
 
 # Create singleton instance
