@@ -181,6 +181,116 @@ class TestFolderPermissions(unittest.TestCase):
         # Should have empty read list but still have the structure
         self.assertIn("read: []", content)
 
+    def test_grandchild_file_inheritance_from_folder_permissions(self):
+        """Test that files in nested subdirectories inherit folder permissions correctly."""
+        # Create test folder structure: chat/inner_dialogue/convo2.txt
+        test_folder = Path(self.test_dir) / "chat"
+        test_folder.mkdir()
+
+        # Create nested subdirectory
+        inner_folder = test_folder / "inner_dialogue"
+        inner_folder.mkdir()
+
+        # Create files at different levels
+        direct_file = test_folder / "convo1.txt"
+        direct_file.write_text("direct conversation")
+
+        grandchild_file = inner_folder / "convo2.txt"
+        grandchild_file.write_text("nested conversation")
+
+        # Grant permission to the root folder
+        folder = syft_perm.open(test_folder)
+        folder.grant_read_access("andrew@openmined.org", force=True)
+
+        # Verify folder permissions
+        self.assertTrue(folder.has_read_access("andrew@openmined.org"))
+        folder_explanation = folder.explain_permissions("andrew@openmined.org")
+        self.assertIn("READ: ✓ GRANTED", folder_explanation)
+        self.assertIn(f"Explicitly granted read in {test_folder}", folder_explanation)
+        self.assertIn("Pattern '**' matched", folder_explanation)
+
+        # Open and test direct child file
+        direct_file_obj = syft_perm.open(direct_file)
+        self.assertTrue(direct_file_obj.has_read_access("andrew@openmined.org"))
+        self.assertFalse(direct_file_obj.has_write_access("andrew@openmined.org"))
+
+        # Check direct file explanation shows inheritance
+        direct_explanation = direct_file_obj.explain_permissions("andrew@openmined.org")
+        self.assertIn("READ: ✓ GRANTED", direct_explanation)
+        self.assertIn(f"Explicitly granted read in {test_folder}", direct_explanation)
+        self.assertIn("Pattern '**' matched", direct_explanation)
+
+        # Open and test grandchild file (in nested subdirectory)
+        grandchild_file_obj = syft_perm.open(grandchild_file)
+        self.assertTrue(grandchild_file_obj.has_read_access("andrew@openmined.org"))
+        self.assertFalse(grandchild_file_obj.has_write_access("andrew@openmined.org"))
+
+        # Check grandchild file explanation shows inheritance
+        grandchild_explanation = grandchild_file_obj.explain_permissions("andrew@openmined.org")
+        self.assertIn("READ: ✓ GRANTED", grandchild_explanation)
+        self.assertIn(f"Explicitly granted read in {test_folder}", grandchild_explanation)
+        self.assertIn("Pattern '**' matched", grandchild_explanation)
+
+        # Verify only one yaml file exists (in the root folder)
+        folder_yaml = test_folder / "syft.pub.yaml"
+        inner_yaml = inner_folder / "syft.pub.yaml"
+
+        self.assertTrue(folder_yaml.exists(), "Root folder should have syft.pub.yaml")
+        self.assertFalse(inner_yaml.exists(), "Nested folder should not have its own syft.pub.yaml")
+
+        # Verify yaml content uses "**" pattern for inheritance
+        content = folder_yaml.read_text()
+        self.assertIn("pattern: '**'", content)
+        self.assertIn("andrew@openmined.org", content)
+
+    def test_multiple_nested_levels_inheritance(self):
+        """Test inheritance through multiple nested levels."""
+        # Create deep nested structure: root/level1/level2/level3/file.txt
+        root_folder = Path(self.test_dir) / "root"
+        root_folder.mkdir()
+
+        level1 = root_folder / "level1"
+        level1.mkdir()
+
+        level2 = level1 / "level2"
+        level2.mkdir()
+
+        level3 = level2 / "level3"
+        level3.mkdir()
+
+        deep_file = level3 / "deep_file.txt"
+        deep_file.write_text("deeply nested content")
+
+        # Grant permission to root folder
+        root = syft_perm.open(root_folder)
+        root.grant_write_access("andrew@openmined.org", force=True)
+
+        # Test deep file inheritance
+        deep_file_obj = syft_perm.open(deep_file)
+
+        # Write permission includes read, create
+        self.assertTrue(deep_file_obj.has_read_access("andrew@openmined.org"))
+        self.assertTrue(deep_file_obj.has_create_access("andrew@openmined.org"))
+        self.assertTrue(deep_file_obj.has_write_access("andrew@openmined.org"))
+        self.assertFalse(deep_file_obj.has_admin_access("andrew@openmined.org"))
+
+        # Check explanation
+        explanation = deep_file_obj.explain_permissions("andrew@openmined.org")
+        self.assertIn("READ: ✓ GRANTED", explanation)
+        self.assertIn("CREATE: ✓ GRANTED", explanation)
+        self.assertIn("WRITE: ✓ GRANTED", explanation)
+        self.assertIn("ADMIN: ✗ DENIED", explanation)
+        self.assertIn(f"Explicitly granted write in {root_folder}", explanation)
+
+        # Verify only root has yaml file
+        root_yaml = root_folder / "syft.pub.yaml"
+        self.assertTrue(root_yaml.exists())
+
+        # Check that no intermediate folders have yaml files
+        self.assertFalse((level1 / "syft.pub.yaml").exists())
+        self.assertFalse((level2 / "syft.pub.yaml").exists())
+        self.assertFalse((level3 / "syft.pub.yaml").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
