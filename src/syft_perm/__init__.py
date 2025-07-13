@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.68"
+__version__ = "0.3.70"
 
 __all__ = [
     "open",
@@ -588,7 +588,7 @@ class Files:
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 1.5rem;">☑</th>
+                            <th style="width: 1.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
                             <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
                             <th style="width: 20rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">Name ↕</th>
                             <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('admin')">Admin ↕</th>
@@ -623,7 +623,7 @@ class Files:
 
             html += f"""
                     <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
-                        <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+                        <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
                         <td>{i}</td>
                         <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(full_syft_path)}">{html_module.escape(full_syft_path)}</div></td>
                         <td>
@@ -798,7 +798,7 @@ class Files:
                     var sizeStr = formatSize(file.size || 0);
                     
                     html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
-                        '<td><input type="checkbox" onclick="event.stopPropagation()"></td>' +
+                        '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
                         '<td>' + (totalFiles - i - 1) + '</td>' +
                         '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(fullSyftPath) + '">' + escapeHtml(fullSyftPath) + '</div></td>' +
                         '<td>' +
@@ -950,11 +950,37 @@ class Files:
                 showStatus('Creating new file...');
             }};
 
-            // Select all
-            window.selectAll_{container_id} = function() {{
+            // Toggle select all
+            window.toggleSelectAll_{container_id} = function() {{
+                var selectAllCheckbox = document.getElementById('{container_id}-select-all');
                 var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
-                checkboxes.forEach(function(cb) {{ cb.checked = true; }});
-                showStatus('All visible files selected');
+                checkboxes.forEach(function(cb) {{ 
+                    cb.checked = selectAllCheckbox.checked; 
+                }});
+                showStatus(selectAllCheckbox.checked ? 'All visible files selected' : 'Selection cleared');
+            }};
+            
+            // Update select all checkbox state based on individual checkboxes
+            window.updateSelectAllState_{container_id} = function() {{
+                var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
+                var selectAllCheckbox = document.getElementById('{container_id}-select-all');
+                var allChecked = true;
+                var someChecked = false;
+                
+                checkboxes.forEach(function(cb) {{
+                    if (!cb.checked) allChecked = false;
+                    if (cb.checked) someChecked = true;
+                }});
+                
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = !allChecked && someChecked;
+            }};
+            
+            // Select all button (legacy)
+            window.selectAll_{container_id} = function() {{
+                var selectAllCheckbox = document.getElementById('{container_id}-select-all');
+                selectAllCheckbox.checked = true;
+                toggleSelectAll_{container_id}();
             }};
 
             // Refresh files
@@ -1107,11 +1133,18 @@ class Files:
                 }});
             }}
             
-            // Get unique file names for tab completion
+            // Get unique file names and paths for tab completion
             function getFileNames() {{
                 var names = [];
                 var seen = {{}};;
                 allFiles.forEach(function(file) {{
+                    // Add the full path
+                    if (!seen[file.name]) {{
+                        seen[file.name] = true;
+                        names.push(file.name);
+                    }}
+                    
+                    // Also add individual parts for convenience
                     var parts = file.name.split('/');
                     parts.forEach(function(part) {{
                         if (part && !seen[part]) {{
