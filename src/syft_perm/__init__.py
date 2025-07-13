@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.59"
+__version__ = "0.3.60"
 
 __all__ = [
     "open",
@@ -171,6 +171,14 @@ class Files:
                     permissions = {}
                     has_yaml = False
 
+                # Get file extension
+                file_ext = file_path.suffix if file_path.suffix else ".txt"
+
+                # Get datasite owner
+                datasite_owner = (
+                    str(relative_path).split("/")[0] if "/" in str(relative_path) else ""
+                )
+
                 files.append(
                     {
                         "name": str(relative_path),
@@ -181,6 +189,8 @@ class Files:
                         "has_yaml": has_yaml,
                         "size": file_path.stat().st_size if file_path.exists() else 0,
                         "modified": file_path.stat().st_mtime if file_path.exists() else 0,
+                        "extension": file_ext,
+                        "datasite_owner": datasite_owner,
                     }
                 )
 
@@ -247,10 +257,11 @@ class Files:
         return "<Files: SyftBox permissioned files interface>"
 
     def _repr_html_(self) -> str:
-        """Generate simple widget with working search functionality for Jupyter."""
+        """Generate SyftObjects-style widget for Jupyter."""
         import html as html_module
         import json
         import uuid
+        from datetime import datetime
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
         data = self.get(limit=100)  # Get more files initially
@@ -259,63 +270,291 @@ class Files:
 
         if not files:
             return (
-                "<div style='padding: 20px; color: #666;'>"
+                "<div style='padding: 40px; text-align: center; color: #666; "
+                "font-family: -apple-system, BlinkMacSystemFont, sans-serif;'>"
                 "No files found in SyftBox/datasites directory</div>"
             )
 
         # Get all files for search
         all_files = self._scan_files()
 
-        # Build HTML template
-        div_style = (
-            "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, "
-            "sans-serif; border: 1px solid #e5e7eb; border-radius: 8px; "
-            "overflow: hidden; max-width: 100%;"
-        )
-        input_style = (
-            "width: calc(100% - 24px); padding: 8px 12px; border: 1px solid #d1d5db; "
-            "border-radius: 6px; font-size: 14px; outline: none; box-sizing: border-box;"
-        )
-        th_style = (
-            "text-align: left; padding: 10px; font-weight: 600; "
-            "border-bottom: 1px solid #e5e7eb;"
-        )
-
+        # Build HTML template with SyftObjects styling
         html = f"""
-        <div id="{container_id}" style="{div_style}">
-            <!-- Search Header -->
-            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb;
-                        position: relative;">
-                <input id="{container_id}-search" type="text"
-                       placeholder="🔍 Search files... (use Tab for autocomplete)"
-                       style="{input_style}"
-                       oninput="searchFiles_{container_id}(this.value)"
-                       onkeydown="handleKeyDown_{container_id}(event)"
-                       autocomplete="off">
-                <div id="{container_id}-suggestions"
-                     style="display: none; position: absolute; top: 100%; left: 12px; right: 12px;
-                            background: white; border: 1px solid #d1d5db; border-top: none;
-                            border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
-                            z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+        <style>
+        #{container_id} * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        #{container_id} {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            background: #ffffff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin: 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }}
+
+        #{container_id} .search-controls {{
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }}
+
+        #{container_id} .search-controls input {{
+            flex: 1;
+            min-width: 200px;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }}
+
+        #{container_id} .table-container {{
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            background: #ffffff;
+            min-height: 0;
+            max-height: 600px;
+        }}
+
+        #{container_id} table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }}
+
+        #{container_id} thead {{
+            background: #f8f9fa;
+            border-bottom: 1px solid #e5e7eb;
+        }}
+
+        #{container_id} th {{
+            text-align: left;
+            padding: 0.375rem 0.25rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            z-index: 10;
+        }}
+
+        #{container_id} td {{
+            padding: 0.375rem 0.25rem;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: top;
+            font-size: 0.75rem;
+            text-align: left;
+        }}
+
+        #{container_id} tbody tr {{
+            transition: background-color 0.15s;
+            cursor: pointer;
+        }}
+
+        #{container_id} tbody tr:hover {{
+            background: rgba(0, 0, 0, 0.03);
+        }}
+
+        @keyframes rainbow {{
+            0% {{ background-color: #ffe9ec; }}
+            14.28% {{ background-color: #fff4ea; }}
+            28.57% {{ background-color: #ffffea; }}
+            42.86% {{ background-color: #eaffef; }}
+            57.14% {{ background-color: #eaf6ff; }}
+            71.43% {{ background-color: #f5eaff; }}
+            85.71% {{ background-color: #ffeaff; }}
+            100% {{ background-color: #ffe9ec; }}
+        }}
+
+        #{container_id} .rainbow-flash {{
+            animation: rainbow 0.8s ease-in-out;
+        }}
+
+        #{container_id} .pagination {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-top: 1px solid #e5e7eb;
+            background: rgba(0, 0, 0, 0.02);
+            flex-shrink: 0;
+        }}
+
+        #{container_id} .pagination button {{
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+        }}
+
+        #{container_id} .pagination button:hover:not(:disabled) {{
+            background: #f3f4f6;
+        }}
+
+        #{container_id} .pagination button:disabled {{
+            opacity: 0.5;
+            cursor: not-allowed;
+        }}
+
+        #{container_id} .pagination .page-info {{
+            font-size: 0.75rem;
+            color: #6b7280;
+        }}
+
+        #{container_id} .pagination .status {{
+            font-size: 0.75rem;
+            color: #9ca3af;
+            font-style: italic;
+            opacity: 0.8;
+            text-align: center;
+            flex: 1;
+        }}
+
+        #{container_id} .pagination .pagination-controls {{
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }}
+
+        #{container_id} .truncate {{
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }}
+
+        #{container_id} .btn {{
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.125rem;
+            transition: all 0.15s;
+        }}
+
+        #{container_id} .btn:hover {{
+            opacity: 0.8;
+        }}
+
+        #{container_id} .btn-blue {{
+            background: #dbeafe;
+            color: #3b82f6;
+        }}
+
+        #{container_id} .btn-purple {{
+            background: #e9d5ff;
+            color: #a855f7;
+        }}
+
+        #{container_id} .btn-red {{
+            background: #fee2e2;
+            color: #ef4444;
+        }}
+
+        #{container_id} .btn-green {{
+            background: #d1fae5;
+            color: #10b981;
+        }}
+
+        #{container_id} .btn-gray {{
+            background: #f3f4f6;
+            color: #6b7280;
+        }}
+
+        #{container_id} .icon {{
+            width: 0.5rem;
+            height: 0.5rem;
+        }}
+
+        #{container_id} .type-badge {{
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: #f3f4f6;
+            color: #374151;
+        }}
+
+        #{container_id} .admin-email {{
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #374151;
+        }}
+
+        #{container_id} .date-text {{
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }}
+        </style>
+
+        <div id="{container_id}">
+            <div class="search-controls">
+                <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
+                <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." style="flex: 1;">
+                <button class="btn btn-blue" 
+                        onclick="searchFiles_{container_id}()">Search</button>
+                <button class="btn btn-gray" onclick="clearSearch_{container_id}()">Clear</button>
+                <button class="btn btn-green" 
+                        onclick="newFile_{container_id}()">New</button>
+                <button class="btn btn-blue" 
+                        onclick="selectAll_{container_id}()">Select All</button>
+                <button class="btn btn-gray" onclick="refreshFiles_{container_id}()">Refresh</button>
             </div>
 
-            <!-- Table Container -->
-            <div style="max-height: 400px; overflow-y: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                    <thead style="background: #f8f9fa; position: sticky; top: 0; z-index: 10;">
+            <div class="table-container">
+                <table>
+                    <thead>
                         <tr>
-                            <th style="{th_style} width: 65%;">File Path</th>
-                            <th style="{th_style} width: 10%;">Size</th>
-                            <th style="{th_style} width: 25%;">Permissions</th>
+                            <th style="width: 1.5rem;">☑</th>
+                            <th style="width: 2rem;">#</th>
+                            <th style="width: 20rem;">Name</th>
+                            <th style="width: 8rem;">Admin</th>
+                            <th style="width: 7rem;">Modified</th>
+                            <th style="width: 2.5rem;">Type</th>
+                            <th style="width: 3rem;">Size</th>
+                            <th style="width: 15rem;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="{container_id}-tbody">
         """
 
-        # Initial table rows - show first 20 files
-        for file in files[:20]:
-            # Format file size
+        # Initial table rows - show first 50 files
+        for i, file in enumerate(files[:50]):
+            # Format file info
+            file_name = file["name"].split("/")[-1]  # Just the filename
+            file_path = file["name"]
+            datasite_owner = file.get("datasite_owner", "unknown")
+            modified = datetime.fromtimestamp(file.get("modified", 0)).strftime("%m/%d/%Y")
+            file_ext = file.get("extension", ".txt")
             size = file.get("size", 0)
+
+            # Format size
             if size > 1024 * 1024:
                 size_str = f"{size / (1024 * 1024):.1f} MB"
             elif size > 1024:
@@ -323,56 +562,48 @@ class Files:
             else:
                 size_str = f"{size} B"
 
-            # Format permissions - show only the highest permission level per user
-            perms = file.get("permissions", {})
-
-            # Build a map of user -> highest permission
-            user_permissions = {}
-            permission_hierarchy = ["admin", "write", "create", "read"]
-
-            for perm_type in permission_hierarchy:
-                users = perms.get(perm_type, [])
-                for user in users:
-                    if user not in user_permissions:
-                        user_permissions[user] = perm_type
-
-            # Format the permissions for display
-            perm_items = []
-            for perm_type in permission_hierarchy:
-                users_with_this_perm = [
-                    user for user, p in user_permissions.items() if p == perm_type
-                ]
-                if users_with_this_perm:
-                    if len(users_with_this_perm) > 2:
-                        user_str = (
-                            f"{', '.join(users_with_this_perm[:2])}... "
-                            f"(+{len(users_with_this_perm) - 2})"
-                        )
-                    else:
-                        user_str = ", ".join(users_with_this_perm)
-                    perm_items.append(
-                        f"<strong>{perm_type}:</strong> {html_module.escape(user_str)}"
-                    )
-
-            if perm_items:
-                perm_str = "<br>".join(perm_items)
-            else:
-                # Show that no explicit permissions were found
-                perm_str = "<em style='color: #9ca3af;'>No explicit permissions</em>"
-
             html += f"""
-                    <tr style="border-bottom: 1px solid #f3f4f6;">
-                        <td style="padding: 10px; font-family: 'SF Mono', Monaco, monospace;
-                                   word-break: break-all; text-align: left; cursor: pointer;"
-                            onclick="copyToClipboard_{container_id}('syft://{html_module.escape(file['name'])}')"
-                            title="Click to copy sp.open() command">
-                            syft://{html_module.escape(file['name'])}
+                    <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
+                        <td><input type="checkbox" onclick="event.stopPropagation()"></td>
+                        <td>{i}</td>
+                        <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(file_path)}">{html_module.escape(file_name)}</div></td>
+                        <td>
+                            <div class="admin-email">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                <span class="truncate">{html_module.escape(datasite_owner)}</span>
+                            </div>
                         </td>
-                        <td style="padding: 10px; color: #6b7280;">
-                            {size_str}
+                        <td>
+                            <div class="date-text">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                    <line x1="16" x2="16" y1="2" y2="6"></line>
+                                    <line x1="8" x2="8" y1="2" y2="6"></line>
+                                    <line x1="3" x2="21" y1="10" y2="10"></line>
+                                </svg>
+                                <span class="truncate">{modified}</span>
+                            </div>
                         </td>
-                        <td style="padding: 10px; font-size: 12px; line-height: 1.4;">
-                            {perm_str}
+                        <td><span class="type-badge">{file_ext}</span></td>
+                        <td><span style="color: #6b7280;">{size_str}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 0.125rem;">
+                                <button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}('{html_module.escape(file_path)}')" title="Open in editor">File</button>
+                                <button class="btn btn-blue" onclick="event.stopPropagation(); viewInfo_{container_id}('{html_module.escape(file_path)}')" title="View file info">Info</button>
+                                <button class="btn btn-purple" onclick="event.stopPropagation(); copyPath_{container_id}('syft://{html_module.escape(file_path)}')" title="Copy path">Copy</button>
+                                <button class="btn btn-red" onclick="event.stopPropagation(); deleteFile_{container_id}('{html_module.escape(file_path)}')" title="Delete file">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                        <line x1="10" x2="10" y1="11" y2="17"></line>
+                                        <line x1="14" x2="14" y1="11" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>
             """
@@ -382,55 +613,41 @@ class Files:
                 </table>
             </div>
 
-            <!-- Footer -->
-            <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #e5e7eb;
-                        font-size: 12px; color: #6b7280; text-align: center;">
-                <span id="{container_id}-status">Showing 20 of {total} files in datasites</span>
-                <span id="{container_id}-size" style="margin-left: 10px;"></span>
+            <div class="pagination">
+                <div></div>
+                <span class="status" id="{container_id}-status">Loaded {len(files[:50])} of {total} files</span>
+                <div class="pagination-controls">
+                    <button onclick="changePage_{container_id}(-1)" id="{container_id}-prev-btn" disabled>Previous</button>
+                    <span class="page-info" id="{container_id}-page-info">Page 1 of {(total + 49) // 50}</span>
+                    <button onclick="changePage_{container_id}(1)" id="{container_id}-next-btn">Next</button>
+                </div>
             </div>
         </div>
 
         <script>
         (function() {{
-            // Store all files data in a way that's compatible with Jupyter
+            // Store all files data
             var allFiles = {json.dumps(all_files)};
-            var container = document.getElementById('{container_id}');
+            var filteredFiles = allFiles.slice();
+            var currentPage = 1;
+            var itemsPerPage = 50;
 
+            // Helper function to escape HTML
             function escapeHtml(text) {{
                 var div = document.createElement('div');
                 div.textContent = text || '';
                 return div.innerHTML;
             }}
 
-            window.copyToClipboard_{container_id} = function(path) {{
-                var command = 'sp.open("' + path + '")';
-
-                // Create temporary textarea to copy text
-                var textarea = document.createElement('textarea');
-                textarea.value = command;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-
-                // Select and copy
-                textarea.select();
-                try {{
-                    document.execCommand('copy');
-                    // Optional: Show brief feedback
-                    var originalTitle = event.target.title;
-                    event.target.title = 'Copied!';
-                    event.target.style.color = '#10b981';
-                    setTimeout(function() {{
-                        event.target.title = originalTitle;
-                        event.target.style.color = '';
-                    }}, 1000);
-                }} catch (err) {{
-                    console.error('Failed to copy:', err);
-                }}
-
-                document.body.removeChild(textarea);
+            // Format date
+            function formatDate(timestamp) {{
+                var date = new Date(timestamp * 1000);
+                return (date.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                       date.getDate().toString().padStart(2, '0') + '/' +
+                       date.getFullYear();
             }}
 
+            // Format size
             function formatSize(size) {{
                 if (size > 1024 * 1024) {{
                     return (size / (1024 * 1024)).toFixed(1) + ' MB';
@@ -441,236 +658,205 @@ class Files:
                 }}
             }}
 
-            function formatPermissions(perms, hasYaml) {{
-                // Build a map of user -> highest permission
-                var userPermissions = {{}};
-                var permissionHierarchy = ['admin', 'write', 'create', 'read'];
-
-                for (var i = 0; i < permissionHierarchy.length; i++) {{
-                    var permType = permissionHierarchy[i];
-                    var users = perms[permType] || [];
-                    for (var j = 0; j < users.length; j++) {{
-                        var user = users[j];
-                        if (!userPermissions[user]) {{
-                            userPermissions[user] = permType;
-                        }}
-                    }}
-                }}
-
-                // Format permissions for display
-                var permItems = [];
-                for (var i = 0; i < permissionHierarchy.length; i++) {{
-                    var permType = permissionHierarchy[i];
-                    var usersWithThisPerm = [];
-                    for (var user in userPermissions) {{
-                        if (userPermissions[user] === permType) {{
-                            usersWithThisPerm.push(user);
-                        }}
-                    }}
-
-                    if (usersWithThisPerm.length > 0) {{
-                        var userStr;
-                        if (usersWithThisPerm.length > 2) {{
-                            userStr = usersWithThisPerm.slice(0, 2).join(', ') + '... (+' +
-                                     (usersWithThisPerm.length - 2) + ')';
-                        }} else {{
-                            userStr = usersWithThisPerm.join(', ');
-                        }}
-                        permItems.push('<strong>' + permType + ':</strong> ' + escapeHtml(userStr));
-                    }}
-                }}
-
-                if (permItems.length > 0) {{
-                    return permItems.join('<br>');
-                }} else {{
-                    // Show that no explicit permissions were found
-                    return '<em style="color: #9ca3af;">No explicit permissions</em>';
-                }}
+            // Show status message
+            function showStatus(message) {{
+                var statusEl = document.getElementById('{container_id}-status');
+                if (statusEl) statusEl.textContent = message;
             }}
 
-            var selectedSuggestionIndex = -1;
-            var currentSuggestions = [];
-
-            window.searchFiles_{container_id} = function(searchTerm) {{
+            // Render table
+            function renderTable() {{
                 var tbody = document.getElementById('{container_id}-tbody');
-                var status = document.getElementById('{container_id}-status');
-                var sizeSpan = document.getElementById('{container_id}-size');
-
-                if (!tbody || !status || !sizeSpan) return;
-
-                searchTerm = searchTerm.toLowerCase();
-                var filteredFiles = allFiles.filter(function(file) {{
-                    return !searchTerm || file.name.toLowerCase().includes(searchTerm);
-                }});
-
-                // Clear current table
-                tbody.innerHTML = '';
-
-                // Show first 50 filtered results
-                var displayFiles = filteredFiles.slice(0, 50);
-
-                for (var i = 0; i < displayFiles.length; i++) {{
-                    var file = displayFiles[i];
-                    var sizeStr = formatSize(file.size || 0);
-                    var permStr = formatPermissions(file.permissions || {{}},
-                                                   file.has_yaml || false);
-
-                    var tr = document.createElement('tr');
-                    tr.style.borderBottom = '1px solid #f3f4f6';
-                    tr.innerHTML =
-                        '<td style="padding: 10px; font-family: monospace; ' +
-                        'word-break: break-all; text-align: left; cursor: pointer;" ' +
-                        'onclick="copyToClipboard_' + '{container_id}' + '(\\'' +
-                        'syft://' + file.name + '\\')" ' +
-                        'title="Click to copy sp.open() command">' +
-                        'syft://' + escapeHtml(file.name) + '</td>' +
-                        '<td style="padding: 10px; color: #6b7280;">' + sizeStr + '</td>' +
-                        '<td style="padding: 10px; font-size: 12px; line-height: 1.4;">' +
-                        permStr + '</td>';
-                    tbody.appendChild(tr);
-                }}
-
-                // Calculate total size of displayed files
-                var totalSize = 0;
-                for (var i = 0; i < filteredFiles.length; i++) {{
-                    totalSize += filteredFiles[i].size || 0;
-                }}
-
-                // Update status
-                var statusText = searchTerm ?
-                    'Showing ' + displayFiles.length + ' of ' + filteredFiles.length +
-                    ' matching files' :
-                    'Showing ' + displayFiles.length + ' of ' + allFiles.length +
-                    ' files in datasites';
-                status.textContent = statusText;
-
-                // Update size display
-                sizeSpan.textContent = '| Total size: ' + formatSize(totalSize);
-            }};
-
-            function getPathSuggestions(input) {{
-                var suggestions = new Set();
-                var inputLower = input.toLowerCase();
-
-                // Get all path segments that match the input
-                allFiles.forEach(function(file) {{
-                    var parts = file.name.split('/');
-                    var currentPath = '';
-
-                    for (var i = 0; i < parts.length; i++) {{
-                        if (i > 0) currentPath += '/';
-                        currentPath += parts[i];
-
-                        if (currentPath.toLowerCase().startsWith(inputLower) &&
-                            currentPath !== input) {{
-                            suggestions.add(currentPath);
-                        }}
-                    }}
-                }});
-
-                return Array.from(suggestions).sort().slice(0, 10);
-            }}
-
-            function showSuggestions(suggestions) {{
-                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
-                if (!suggestionsDiv) return;
-
-                if (suggestions.length === 0) {{
-                    suggestionsDiv.style.display = 'none';
+                var totalFiles = filteredFiles.length;
+                var totalPages = Math.max(1, Math.ceil(totalFiles / itemsPerPage));
+                
+                // Ensure currentPage is valid
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+                
+                // Update pagination controls
+                document.getElementById('{container_id}-prev-btn').disabled = currentPage === 1;
+                document.getElementById('{container_id}-next-btn').disabled = currentPage === totalPages;
+                document.getElementById('{container_id}-page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
+                
+                if (totalFiles === 0) {{
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No files found</td></tr>';
                     return;
                 }}
-
-                suggestionsDiv.innerHTML = '';
-                currentSuggestions = suggestions;
-                selectedSuggestionIndex = -1;
-
-                suggestions.forEach(function(suggestion, index) {{
-                    var div = document.createElement('div');
-                    div.textContent = suggestion;
-                    div.style.cssText = 'padding: 8px 12px; cursor: pointer; ' +
-                                        'border-bottom: 1px solid #f3f4f6;';
-                    div.onclick = function() {{
-                        document.getElementById('{container_id}-search').value = suggestion;
-                        searchFiles_{container_id}(suggestion);
-                        suggestionsDiv.style.display = 'none';
-                    }};
-                    div.onmouseover = function() {{
-                        selectedSuggestionIndex = index;
-                        updateSuggestionHighlight();
-                    }};
-                    suggestionsDiv.appendChild(div);
-                }});
-
-                suggestionsDiv.style.display = 'block';
-            }}
-
-            function updateSuggestionHighlight() {{
-                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
-                if (!suggestionsDiv) return;
-
-                var items = suggestionsDiv.children;
-                for (var i = 0; i < items.length; i++) {{
-                    if (i === selectedSuggestionIndex) {{
-                        items[i].style.backgroundColor = '#e5f3ff';
-                    }} else {{
-                        items[i].style.backgroundColor = 'transparent';
-                    }}
+                
+                // Calculate start and end indices
+                var start = (currentPage - 1) * itemsPerPage;
+                var end = Math.min(start + itemsPerPage, totalFiles);
+                
+                // Generate table rows
+                var html = '';
+                for (var i = start; i < end; i++) {{
+                    var file = filteredFiles[i];
+                    var fileName = file.name.split('/').pop();
+                    var filePath = file.name;
+                    var datasiteOwner = file.datasite_owner || 'unknown';
+                    var modified = formatDate(file.modified || 0);
+                    var fileExt = file.extension || '.txt';
+                    var sizeStr = formatSize(file.size || 0);
+                    
+                    html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
+                        '<td><input type="checkbox" onclick="event.stopPropagation()"></td>' +
+                        '<td>' + (totalFiles - i - 1) + '</td>' +
+                        '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(filePath) + '">' + escapeHtml(fileName) + '</div></td>' +
+                        '<td>' +
+                            '<div class="admin-email">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                                    '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>' +
+                                    '<circle cx="12" cy="7" r="4"></circle>' +
+                                '</svg>' +
+                                '<span class="truncate">' + escapeHtml(datasiteOwner) + '</span>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td>' +
+                            '<div class="date-text">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                                    '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>' +
+                                    '<line x1="16" x2="16" y1="2" y2="6"></line>' +
+                                    '<line x1="8" x2="8" y1="2" y2="6"></line>' +
+                                    '<line x1="3" x2="21" y1="10" y2="10"></line>' +
+                                '</svg>' +
+                                '<span class="truncate">' + modified + '</span>' +
+                            '</div>' +
+                        '</td>' +
+                        '<td><span class="type-badge">' + fileExt + '</span></td>' +
+                        '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
+                        '<td>' +
+                            '<div style="display: flex; gap: 0.125rem;">' +
+                                '<button class="btn btn-gray" onclick="event.stopPropagation(); editFile_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="Open in editor">File</button>' +
+                                '<button class="btn btn-blue" onclick="event.stopPropagation(); viewInfo_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="View file info">Info</button>' +
+                                '<button class="btn btn-purple" onclick="event.stopPropagation(); copyPath_{container_id}(\\'syft://' + filePath + '\\')" title="Copy path">Copy</button>' +
+                                '<button class="btn btn-red" onclick="event.stopPropagation(); deleteFile_{container_id}(\\'' + escapeHtml(filePath) + '\\')" title="Delete file">' +
+                                    '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                                        '<path d="M3 6h18"></path>' +
+                                        '<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>' +
+                                        '<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>' +
+                                        '<line x1="10" x2="10" y1="11" y2="17"></line>' +
+                                        '<line x1="14" x2="14" y1="11" y2="17"></line>' +
+                                    '</svg>' +
+                                '</button>' +
+                            '</div>' +
+                        '</td>' +
+                    '</tr>';
                 }}
+                
+                tbody.innerHTML = html;
             }}
 
-            window.handleKeyDown_{container_id} = function(event) {{
-                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
-                var isVisible = suggestionsDiv && suggestionsDiv.style.display !== 'none';
+            // Search files
+            window.searchFiles_{container_id} = function() {{
+                var searchTerm = document.getElementById('{container_id}-search').value.toLowerCase();
+                var adminFilter = document.getElementById('{container_id}-admin-filter').value.toLowerCase();
+                
+                filteredFiles = allFiles.filter(function(file) {{
+                    var nameMatch = file.name.toLowerCase().includes(searchTerm);
+                    var adminMatch = adminFilter === '' || (file.datasite_owner || '').toLowerCase().includes(adminFilter);
+                    return (searchTerm === '' || nameMatch) && adminMatch;
+                }});
+                
+                currentPage = 1;
+                renderTable();
+                showStatus('Found ' + filteredFiles.length + ' files');
+            }};
 
-                if (event.key === 'Tab') {{
-                    event.preventDefault();
-                    var input = event.target;
-                    var suggestions = getPathSuggestions(input.value);
+            // Clear search
+            window.clearSearch_{container_id} = function() {{
+                document.getElementById('{container_id}-search').value = '';
+                document.getElementById('{container_id}-admin-filter').value = '';
+                filteredFiles = allFiles.slice();
+                currentPage = 1;
+                renderTable();
+                showStatus('Showing ' + filteredFiles.length + ' files');
+            }};
 
-                    if (suggestions.length > 0) {{
-                        if (!isVisible) {{
-                            showSuggestions(suggestions);
-                        }} else {{
-                            // Cycle through suggestions
-                            selectedSuggestionIndex = (selectedSuggestionIndex + 1) %
-                                                    suggestions.length;
-                            updateSuggestionHighlight();
-                            input.value = currentSuggestions[selectedSuggestionIndex];
-                        }}
+            // Change page
+            window.changePage_{container_id} = function(direction) {{
+                var totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
+                currentPage += direction;
+                if (currentPage < 1) currentPage = 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+                renderTable();
+            }};
+
+            // Copy path with rainbow animation
+            window.copyPath_{container_id} = function(path, rowElement) {{
+                var command = 'sp.open("' + path + '")';
+                
+                // Copy to clipboard
+                navigator.clipboard.writeText(command).then(function() {{
+                    // Add rainbow animation
+                    if (rowElement) {{
+                        rowElement.classList.add('rainbow-flash');
+                        setTimeout(function() {{
+                            rowElement.classList.remove('rainbow-flash');
+                        }}, 800);
                     }}
-                }} else if (isVisible) {{
-                    if (event.key === 'ArrowDown') {{
-                        event.preventDefault();
-                        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1,
-                                                          currentSuggestions.length - 1);
-                        updateSuggestionHighlight();
-                    }} else if (event.key === 'ArrowUp') {{
-                        event.preventDefault();
-                        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
-                        updateSuggestionHighlight();
-                    }} else if (event.key === 'Enter' && selectedSuggestionIndex >= 0) {{
-                        event.preventDefault();
-                        var selected = currentSuggestions[selectedSuggestionIndex];
-                        event.target.value = selected;
-                        searchFiles_{container_id}(selected);
-                        suggestionsDiv.style.display = 'none';
-                    }} else if (event.key === 'Escape') {{
-                        suggestionsDiv.style.display = 'none';
-                    }}
+                    
+                    showStatus('Copied to clipboard: ' + command);
+                    setTimeout(function() {{
+                        showStatus('Showing ' + filteredFiles.length + ' files');
+                    }}, 2000);
+                }}).catch(function() {{
+                    showStatus('Failed to copy to clipboard');
+                }});
+            }};
+
+            // Edit file
+            window.editFile_{container_id} = function(filePath) {{
+                // In Jupyter, this would open the file editor
+                console.log('Edit file:', filePath);
+                showStatus('Opening file editor for: ' + filePath);
+            }};
+
+            // View file info
+            window.viewInfo_{container_id} = function(filePath) {{
+                // In Jupyter, this would show file permissions and metadata
+                console.log('View info for:', filePath);
+                showStatus('Viewing info for: ' + filePath);
+            }};
+
+            // Delete file
+            window.deleteFile_{container_id} = function(filePath) {{
+                if (confirm('Are you sure you want to delete this file?\\n\\n' + filePath)) {{
+                    console.log('Delete file:', filePath);
+                    showStatus('File deleted: ' + filePath);
+                    // In real implementation, would remove from list and refresh
                 }}
             }};
-        }})();
 
-        // Initialize with total size display
-        (function() {{
-            var initialTotalSize = 0;
-            for (var i = 0; i < allFiles.length; i++) {{
-                initialTotalSize += allFiles[i].size || 0;
-            }}
-            var sizeSpan = document.getElementById('{container_id}-size');
-            if (sizeSpan) {{
-                sizeSpan.textContent = '| Total size: ' + formatSize(initialTotalSize);
-            }}
+            // New file
+            window.newFile_{container_id} = function() {{
+                console.log('Create new file');
+                showStatus('Creating new file...');
+            }};
+
+            // Select all
+            window.selectAll_{container_id} = function() {{
+                var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
+                checkboxes.forEach(function(cb) {{ cb.checked = true; }});
+                showStatus('All visible files selected');
+            }};
+
+            // Refresh files
+            window.refreshFiles_{container_id} = function() {{
+                showStatus('Refreshing files...');
+                // In real implementation, would reload file list
+                setTimeout(function() {{
+                    showStatus('Files refreshed');
+                }}, 1000);
+            }};
+
+            // Add enter key support for search
+            document.getElementById('{container_id}-search').addEventListener('keypress', function(e) {{
+                if (e.key === 'Enter') searchFiles_{container_id}();
+            }});
+            document.getElementById('{container_id}-admin-filter').addEventListener('keypress', function(e) {{
+                if (e.key === 'Enter') searchFiles_{container_id}();
+            }});
         }})();
         </script>
         """

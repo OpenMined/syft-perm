@@ -541,7 +541,7 @@ class SyftFile:
         if cached is not None:
             return cached
 
-        # Initialize default permissions
+        # Find the nearest node with matching rules (old syftbox algorithm)
         nearest_permissions: Dict[str, List[str]] = {
             "read": [],
             "create": [],
@@ -549,55 +549,80 @@ class SyftFile:
             "admin": [],
         }
 
-        # First pass: collect all yaml files and check for terminal nodes
-        yaml_files = []
+        # Walk up the directory tree to find the nearest node with matching rules
         current_path = self._path
-        terminal_found_at = None
-        
         while current_path.parent != current_path:  # Stop at root
             parent_dir = current_path.parent
             syftpub_path = parent_dir / "syft.pub.yaml"
-            
+
             if syftpub_path.exists():
                 try:
                     with open(syftpub_path, "r") as f:
                         content = yaml.safe_load(f) or {"rules": []}
-                    
-                    yaml_files.append((parent_dir, content))
-                    
-                    # If this is a terminal node, remember it and stop collecting
-                    if content.get("terminal", False) and terminal_found_at is None:
-                        terminal_found_at = parent_dir
-                        break
-                        
-                except Exception:
-                    pass
-                    
-            current_path = parent_dir
 
-        # Second pass: process yaml files from the terminal node (or root) down
-        # If we found a terminal node, only process that node's rules
-        if terminal_found_at is not None:
-            # Only process the terminal node's rules
-            for parent_dir, content in yaml_files:
-                if parent_dir == terminal_found_at:
+                    # Check if this is a terminal node
+                    if content.get("terminal", False):
+                        # Terminal nodes stop inheritance and their rules take precedence
+                        rules = content.get("rules", [])
+                        sorted_rules = _sort_rules_by_specificity(rules)
+                        for rule in sorted_rules:
+                            pattern = rule.get("pattern", "")
+                            # Check if pattern matches our file path relative to this directory
+                            rel_path = str(self._path.relative_to(parent_dir))
+                            if _glob_match(pattern, rel_path):
+                                access = rule.get("access", {})
+                                # Check file limits if present
+                                limits = rule.get("limits", {})
+                                if limits:
+                                    # Check if directories are allowed
+                                    if (
+                                        not limits.get("allow_dirs", True)
+                                        and self._path is not None
+                                        and self._path.is_dir()
+                                    ):
+                                        continue  # Skip this rule for directories
+
+                                    # Check if symlinks are allowed
+                                    if not limits.get("allow_symlinks", True) and self._is_symlink:
+                                        continue  # Skip this rule for symlinks
+
+                                    # Check file size limits
+                                    max_file_size = limits.get("max_file_size")
+                                    if max_file_size is not None:
+                                        if self._size > max_file_size:
+                                            continue  # Skip this rule if file exceeds size limit
+
+                                # Terminal rules: use first matching rule
+                                # (most specific due to sorting)
+                                result = {
+                                    perm: format_users(access.get(perm, []))
+                                    for perm in ["read", "create", "write", "admin"]
+                                }
+                                _permission_cache.set(cache_key, result)
+                                return result
+                        # If no match in terminal, stop inheritance with empty permissions
+                        _permission_cache.set(cache_key, nearest_permissions)
+                        return nearest_permissions
+
+                    # Process rules for non-terminal nodes (sort by specificity first)
                     rules = content.get("rules", [])
                     sorted_rules = _sort_rules_by_specificity(rules)
+                    found_matching_rule = False
                     for rule in sorted_rules:
                         pattern = rule.get("pattern", "")
                         # Check if pattern matches our file path relative to this directory
-                        rel_path = str(self._path.relative_to(parent_dir))
+                        rel_path = (
+                            str(self._path.relative_to(parent_dir))
+                            if self._path is not None
+                            else ""
+                        )
                         if _glob_match(pattern, rel_path):
                             access = rule.get("access", {})
                             # Check file limits if present
                             limits = rule.get("limits", {})
                             if limits:
                                 # Check if directories are allowed
-                                if (
-                                    not limits.get("allow_dirs", True)
-                                    and self._path is not None
-                                    and self._path.is_dir()
-                                ):
+                                if not limits.get("allow_dirs", True) and self._path.is_dir():
                                     continue  # Skip this rule for directories
 
                                 # Check if symlinks are allowed
@@ -610,56 +635,25 @@ class SyftFile:
                                     if self._size > max_file_size:
                                         continue  # Skip this rule if file exceeds size limit
 
-                            # Terminal rules: use first matching rule
+                            # Found a matching rule - use the first matching rule
+                            # since they're sorted by specificity
+                            # This becomes our nearest node
+                            # (old syftbox: most specific matching rule wins)
                             nearest_permissions = {
                                 perm: format_users(access.get(perm, []))
                                 for perm in ["read", "create", "write", "admin"]
                             }
-                            break
-                    break
-        else:
-            # No terminal node found, use the old algorithm (nearest matching node)
-            for parent_dir, content in reversed(yaml_files):  # Process from root down
-                rules = content.get("rules", [])
-                sorted_rules = _sort_rules_by_specificity(rules)
-                for rule in sorted_rules:
-                    pattern = rule.get("pattern", "")
-                    # Check if pattern matches our file path relative to this directory
-                    rel_path = (
-                        str(self._path.relative_to(parent_dir))
-                        if self._path is not None
-                        else ""
-                    )
-                    if _glob_match(pattern, rel_path):
-                        access = rule.get("access", {})
-                        # Check file limits if present
-                        limits = rule.get("limits", {})
-                        if limits:
-                            # Check if directories are allowed
-                            if not limits.get("allow_dirs", True) and self._path.is_dir():
-                                continue  # Skip this rule for directories
+                            found_matching_rule = True
+                            break  # Use first matching rule (most specific due to sorting)
 
-                            # Check if symlinks are allowed
-                            if not limits.get("allow_symlinks", True) and self._is_symlink:
-                                continue  # Skip this rule for symlinks
-
-                            # Check file size limits
-                            max_file_size = limits.get("max_file_size")
-                            if max_file_size is not None:
-                                if self._size > max_file_size:
-                                    continue  # Skip this rule if file exceeds size limit
-
-                        # Found a matching rule
-                        nearest_permissions = {
-                            perm: format_users(access.get(perm, []))
-                            for perm in ["read", "create", "write", "admin"]
-                        }
-                        # Stop searching after finding the first match
+                    # If we found a matching rule, this is our nearest node - stop searching
+                    if found_matching_rule:
                         break
-                
-                # If we found a match, stop processing other yaml files
-                if any(users for users in nearest_permissions.values()):
-                    break
+
+                except Exception:
+                    pass
+
+            current_path = parent_dir
 
         # Add owner permissions: datasite owner gets full admin access
         path_str = str(self._path)
