@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.72"
+__version__ = "0.3.74"
 
 __all__ = [
     "open",
@@ -105,6 +105,7 @@ class Files:
             return []
 
         files = []
+        all_paths = set()  # Track all paths to avoid duplicates
 
         # Try to detect current user's email from environment or config
         user_email = None
@@ -125,34 +126,43 @@ class Files:
         except Exception:
             pass
 
-        # Walk through datasites directory structure
+        # First pass: collect all unique paths (files and folders)
         for root, dirs, file_names in os.walk(datasites_path):
             root_path = Path(root)
-
-            # Skip hidden directories and .git directories
+            
+            # Skip hidden directories
             dirs[:] = [d for d in dirs if not d.startswith(".")]
             
-            # First, add directories as entries
-            for dir_name in dirs:
-                dir_path = root_path / dir_name
-                relative_path = dir_path.relative_to(datasites_path)
+            # Add current directory
+            if root_path != datasites_path:  # Don't add the datasites folder itself
+                all_paths.add(root_path)
+            
+            # Add all files
+            for file_name in file_names:
+                if not file_name.startswith(".") and file_name != "syft.pub.yaml":
+                    all_paths.add(root_path / file_name)
+        
+        # Second pass: process all paths and create entries
+        for path in sorted(all_paths):
+            relative_path = path.relative_to(datasites_path)
+            
+            # Apply search filter
+            if search and search.lower() not in str(relative_path).lower():
+                continue
                 
-                # Apply search filter
-                if search and search.lower() not in str(relative_path).lower():
-                    continue
-                
-                # Get datasite owner
+            # Process the path (either file or folder)
+            if path.is_dir():
+                # It's a folder
                 datasite_owner = (
                     str(relative_path).split("/")[0] if "/" in str(relative_path) else str(relative_path)
                 )
                 
-                # Check if this is in the user's datasite
                 is_user_datasite = user_email and datasite_owner == user_email
                 
                 # Get permissions for this folder
                 permissions_summary = []
                 try:
-                    syft_obj = open(dir_path)
+                    syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
                     
                     # Build permissions summary
@@ -180,10 +190,10 @@ class Files:
                 except Exception:
                     permissions_summary = []
                 
-                # Calculate folder size (sum of all files inside)
+                # Calculate folder size
                 folder_size = 0
                 try:
-                    for item in dir_path.rglob("*"):
+                    for item in path.rglob("*"):
                         if item.is_file() and not item.name.startswith("."):
                             folder_size += item.stat().st_size
                 except Exception:
@@ -192,73 +202,52 @@ class Files:
                 files.append(
                     {
                         "name": str(relative_path),
-                        "path": str(dir_path),
+                        "path": str(path),
                         "is_dir": True,
                         "permissions": {},
                         "is_user_datasite": is_user_datasite,
-                        "has_yaml": dir_path.joinpath("syft.pub.yaml").exists(),
+                        "has_yaml": path.joinpath("syft.pub.yaml").exists(),
                         "size": folder_size,
-                        "modified": dir_path.stat().st_mtime if dir_path.exists() else 0,
+                        "modified": path.stat().st_mtime if path.exists() else 0,
                         "extension": "folder",
                         "datasite_owner": datasite_owner,
                         "permissions_summary": permissions_summary,
                     }
                 )
-
-            for file_name in file_names:
-                # Skip hidden files and syft.pub.yaml files
-                if file_name.startswith(".") or file_name == "syft.pub.yaml":
-                    continue
-
-                file_path = root_path / file_name
-                relative_path = file_path.relative_to(datasites_path)
-
-                # Apply search filter
-                if search and search.lower() not in str(relative_path).lower():
-                    continue
-
-                # Check if this file is in the user's datasite
-                is_user_datasite = False
-                if user_email:
-                    datasite_owner = (
-                        str(relative_path).split("/")[0] if "/" in str(relative_path) else ""
-                    )
-                    is_user_datasite = datasite_owner == user_email
-
-                # Get permissions for this file using sp.open()
+            else:
+                # It's a file
+                datasite_owner = (
+                    str(relative_path).split("/")[0] if "/" in str(relative_path) else ""
+                )
+                
+                is_user_datasite = user_email and datasite_owner == user_email
+                
+                # Get permissions for this file
                 has_yaml = False
                 permissions_summary = []
                 try:
-                    # Use open() to get the file object with all permissions
-                    syft_obj = open(file_path)
+                    syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
-
-                    # Check if syft-perm found any yaml files
-                    # If has_yaml property exists and returns True, yaml files were found
+                    
                     if hasattr(syft_obj, "has_yaml"):
                         has_yaml = syft_obj.has_yaml
-                    # Fallback: if we have any permissions with actual users, yaml files must exist
                     elif any(users for users in permissions.values()):
                         has_yaml = True
-
-                    # Build permissions summary - only show highest permission per user
-                    user_highest_perm = {}
                     
-                    # Go through permissions in order of hierarchy
+                    # Build permissions summary
+                    user_highest_perm = {}
                     for perm_level in ["admin", "write", "create", "read"]:
                         users = permissions.get(perm_level, [])
                         for user in users:
                             if user not in user_highest_perm:
                                 user_highest_perm[user] = perm_level
                     
-                    # Group by permission level for display
                     perm_groups = {}
                     for user, perm in user_highest_perm.items():
                         if perm not in perm_groups:
                             perm_groups[perm] = []
                         perm_groups[perm].append(user)
                     
-                    # Build summary lines
                     for perm_level in ["admin", "write", "create", "read"]:
                         if perm_level in perm_groups:
                             users = perm_groups[perm_level]
@@ -267,36 +256,30 @@ class Files:
                             else:
                                 user_list = ", ".join(users)
                             permissions_summary.append(f"{perm_level}: {user_list}")
-
                 except Exception:
                     permissions = {}
                     has_yaml = False
                     permissions_summary = []
-
+                
                 # Get file extension
-                file_ext = file_path.suffix if file_path.suffix else ".txt"
-
-                # Get datasite owner
-                datasite_owner = (
-                    str(relative_path).split("/")[0] if "/" in str(relative_path) else ""
-                )
-
+                file_ext = path.suffix if path.suffix else ".txt"
+                
                 files.append(
                     {
                         "name": str(relative_path),
-                        "path": str(file_path),
+                        "path": str(path),
                         "is_dir": False,
                         "permissions": permissions,
                         "is_user_datasite": is_user_datasite,
                         "has_yaml": has_yaml,
-                        "size": file_path.stat().st_size if file_path.exists() else 0,
-                        "modified": file_path.stat().st_mtime if file_path.exists() else 0,
+                        "size": path.stat().st_size if path.exists() else 0,
+                        "modified": path.stat().st_mtime if path.exists() else 0,
                         "extension": file_ext,
                         "datasite_owner": datasite_owner,
                         "permissions_summary": permissions_summary,
                     }
                 )
-
+        
         # Sort by name
         files.sort(key=lambda x: x["name"])
         return files
@@ -721,7 +704,7 @@ class Files:
                                 <span class="truncate">{modified}</span>
                             </div>
                         </td>
-                        <td><span class="type-badge" style="{'background: #dbeafe; color: #3b82f6;' if is_dir else ''}">{file_ext if not is_dir else '📁 folder'}</span></td>
+                        <td><span class="type-badge">{file_ext if not is_dir else 'folder'}</span></td>
                         <td><span style="color: #6b7280;">{size_str}</span></td>
                         <td>
                             <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">
@@ -819,21 +802,40 @@ class Files:
                 if (statusEl) statusEl.textContent = message;
             }}
             
-            // Calculate total size
+            // Calculate total size (files only)
             function calculateTotalSize() {{
                 var totalSize = 0;
                 filteredFiles.forEach(function(file) {{
-                    totalSize += file.size || 0;
+                    if (!file.is_dir) {{
+                        totalSize += file.size || 0;
+                    }}
                 }});
                 return totalSize;
             }}
             
-            // Update status with file count and size
+            // Update status with file and folder counts and size
             function updateStatus() {{
+                var fileCount = 0;
+                var folderCount = 0;
+                
+                filteredFiles.forEach(function(item) {{
+                    if (item.is_dir) {{
+                        folderCount++;
+                    }} else {{
+                        fileCount++;
+                    }}
+                }});
+                
                 var totalSize = calculateTotalSize();
                 var sizeStr = formatSize(totalSize);
-                var fileCount = filteredFiles.length;
-                showStatus(fileCount + ' files, ' + sizeStr + ' total');
+                
+                var statusText = fileCount + ' files';
+                if (folderCount > 0) {{
+                    statusText += ', ' + folderCount + ' folders';
+                }}
+                statusText += ', ' + sizeStr + ' total';
+                
+                showStatus(statusText);
             }}
 
             // Render table
@@ -897,7 +899,7 @@ class Files:
                                 '<span class="truncate">' + modified + '</span>' +
                             '</div>' +
                         '</td>' +
-                        '<td><span class="type-badge"' + (isDir ? ' style="background: #dbeafe; color: #3b82f6;"' : '') + '>' + (isDir ? '📁 folder' : fileExt) + '</span></td>' +
+                        '<td><span class="type-badge">' + (isDir ? 'folder' : fileExt) + '</span></td>' +
                         '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
                         '<td>' +
                             '<div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">';
