@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.63"
+__version__ = "0.3.65"
 
 __all__ = [
     "open",
@@ -154,8 +154,7 @@ class Files:
 
                 # Get permissions for this file using sp.open()
                 has_yaml = False
-                user_permission = None
-                permission_reason = ""
+                permissions_summary = []
                 try:
                     # Use open() to get the file object with all permissions
                     syft_obj = open(file_path)
@@ -169,38 +168,22 @@ class Files:
                     elif any(users for users in permissions.values()):
                         has_yaml = True
 
-                    # Determine current user's highest permission level
-                    # Check permissions in order of hierarchy: admin > write > create > read
-                    if user_email:
-                        for perm_level in ["admin", "write", "create", "read"]:
-                            if hasattr(syft_obj, f"has_{perm_level}_access"):
-                                has_access = getattr(syft_obj, f"has_{perm_level}_access")(
-                                    user_email
-                                )
-                                if has_access:
-                                    user_permission = perm_level
-                                    # Try to get the reason
-                                    if hasattr(syft_obj, "_check_permission_with_reasons"):
-                                        _, reasons = syft_obj._check_permission_with_reasons(
-                                            user_email, perm_level
-                                        )
-                                        permission_reason = reasons[0] if reasons else "Granted"
-                                    else:
-                                        permission_reason = (
-                                            f"{perm_level.capitalize()} access granted"
-                                        )
-                                    break
-
-                    # If no permission found but file exists, user might have implicit read
-                    if not user_permission and file_path.exists():
-                        user_permission = "read"
-                        permission_reason = "Implicit read access"
+                    # Build permissions summary
+                    # Go through each permission level and collect users
+                    for perm_level in ["admin", "write", "create", "read"]:
+                        users = permissions.get(perm_level, [])
+                        if users:
+                            # Format users (limit to first 2 if many)
+                            if len(users) > 2:
+                                user_list = f"{users[0]}, {users[1]}, +{len(users)-2}"
+                            else:
+                                user_list = ", ".join(users)
+                            permissions_summary.append(f"{perm_level}: {user_list}")
 
                 except Exception:
                     permissions = {}
                     has_yaml = False
-                    user_permission = None
-                    permission_reason = "Permission check failed"
+                    permissions_summary = []
 
                 # Get file extension
                 file_ext = file_path.suffix if file_path.suffix else ".txt"
@@ -222,8 +205,7 @@ class Files:
                         "modified": file_path.stat().st_mtime if file_path.exists() else 0,
                         "extension": file_ext,
                         "datasite_owner": datasite_owner,
-                        "user_permission": user_permission,
-                        "permission_reason": permission_reason,
+                        "permissions_summary": permissions_summary,
                     }
                 )
 
@@ -625,9 +607,20 @@ class Files:
                         <td><span class="type-badge">{file_ext}</span></td>
                         <td><span style="color: #6b7280;">{size_str}</span></td>
                         <td>
-                            <div style="display: flex; flex-direction: column; gap: 0.125rem;">
-                                <span style="font-weight: 500; color: #059669;">{file.get('user_permission', 'none').upper()}</span>
-                                <span style="font-size: 0.625rem; color: #6b7280;">{html_module.escape(file.get('permission_reason', 'No permission'))}</span>
+                            <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">
+            """
+            
+            # Add each permission line
+            perms = file.get('permissions_summary', [])
+            if perms:
+                for perm_line in perms[:3]:  # Limit to 3 lines
+                    html += f'                                <span>{html_module.escape(perm_line)}</span>\n'
+                if len(perms) > 3:
+                    html += f'                                <span>+{len(perms) - 3} more...</span>\n'
+            else:
+                html += '                                <span style="color: #9ca3af;">No permissions</span>\n'
+                
+            html += """
                             </div>
                         </td>
                         <td>
@@ -768,10 +761,22 @@ class Files:
                         '<td><span class="type-badge">' + fileExt + '</span></td>' +
                         '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
                         '<td>' +
-                            '<div style="display: flex; flex-direction: column; gap: 0.125rem;">' +
-                                '<span style="font-weight: 500; color: #059669;">' + (file.user_permission || 'none').toUpperCase() + '</span>' +
-                                '<span style="font-size: 0.625rem; color: #6b7280;">' + escapeHtml(file.permission_reason || 'No permission') + '</span>' +
-                            '</div>' +
+                            '<div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">';
+                    
+                    // Add permission lines
+                    var perms = file.permissions_summary || [];
+                    if (perms.length > 0) {{
+                        for (var j = 0; j < Math.min(perms.length, 3); j++) {{
+                            html += '<span>' + escapeHtml(perms[j]) + '</span>';
+                        }}
+                        if (perms.length > 3) {{
+                            html += '<span>+' + (perms.length - 3) + ' more...</span>';
+                        }}
+                    }} else {{
+                        html += '<span style="color: #9ca3af;">No permissions</span>';
+                    }}
+                    
+                    html += '</div>' +
                         '</td>' +
                         '<td>' +
                             '<div style="display: flex; gap: 0.125rem;">' +
