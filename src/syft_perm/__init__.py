@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.82"
+__version__ = "0.3.83"
 
 __all__ = [
     "open",
@@ -424,9 +424,24 @@ class Files:
         
         # Show loading animation with real progress tracking
         loading_html = f"""
+        <style>
+        @keyframes float {{
+            0%, 100% {{ transform: translateY(0px); }}
+            50% {{ transform: translateY(-8px); }}
+        }}
+        .syftbox-logo {{
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+        }}
+        .progress-bar-gradient {{
+            background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+            transition: width 0.4s ease-out;
+            border-radius: 3px;
+        }}
+        </style>
         <div id="loading-container-{container_id}" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
-            <div style="margin-bottom: 20px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="62" height="72" viewBox="0 0 311 360" fill="none">
+            <div style="margin-bottom: 28px;">
+                <svg class="syftbox-logo" xmlns="http://www.w3.org/2000/svg" width="62" height="72" viewBox="0 0 311 360" fill="none">
                     <g clip-path="url(#clip0_7523_4240)">
                         <path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_7523_4240)"></path>
                         <path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_7523_4240)"></path>
@@ -460,11 +475,11 @@ class Files:
                     </defs>
                 </svg>
             </div>
-            <div style="font-size: 18px; color: #666; margin-bottom: 15px;">Loading the internet of private data...</div>
-            <div style="width: 300px; height: 4px; background-color: #e5e7eb; border-radius: 2px; margin: 0 auto; overflow: hidden;">
-                <div id="loading-bar-{container_id}" style="width: 0%; height: 100%; background-color: #6b7280; transition: width 0.3s ease;"></div>
+            <div style="font-size: 20px; font-weight: 600; color: #666; margin-bottom: 12px;">Loading the internet of private data...</div>
+            <div style="width: 340px; height: 6px; background-color: #e5e7eb; border-radius: 3px; margin: 0 auto; overflow: hidden;">
+                <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
             </div>
-            <div id="loading-status-{container_id}" style="margin-top: 10px; color: #9ca3af; font-size: 12px;">Scanning <span id="current-count-{container_id}">0</span> of {total_datasites} datasites...</div>
+            <div id="loading-status-{container_id}" style="margin-top: 12px; color: #9ca3af; opacity: 0.7; font-size: 12px;">Scanning <span id="current-count-{container_id}">0</span> of {total_datasites} datasites...</div>
         </div>
         """
         display(HTML(loading_html))
@@ -484,13 +499,17 @@ class Files:
                 var currentCount = document.getElementById('current-count-{container_id}');
                 var loadingStatus = document.getElementById('loading-status-{container_id}');
                 
-                if (loadingBar) loadingBar.style.width = '{progress_percent:.1f}%';
+                if (loadingBar) {{
+                    loadingBar.style.width = '{progress_percent:.1f}%';
+                    loadingBar.className = 'progress-bar-gradient';
+                }}
                 if (currentCount) currentCount.textContent = '{current}';
                 if (loadingStatus) loadingStatus.innerHTML = '{status} - <span id="current-count-{container_id}">{current}</span> of {total} datasites...';
             }})();
             </script>
             """
             display(HTML(update_html))
+            time.sleep(0.01)  # Small delay to make progress visible
 
         # Scan files with progress tracking
         all_files = self._scan_files(progress_callback=update_progress)
