@@ -79,6 +79,7 @@ class Files:
         self._cache = None
         self._initial_page = 1  # Default to first page
         self._items_per_page = 50  # Default items per page
+        self._show_ascii_progress = True  # Whether to show ASCII progress in __repr__
 
     def _scan_files(self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False) -> list:
         """Scan SyftBox directory for files with permissions."""
@@ -551,12 +552,25 @@ class Files:
         new_files._items_per_page = items_per_page
         return new_files
 
+    def _repr_pretty_(self, p, cycle):
+        """Called by IPython for pretty printing. We disable ASCII progress here."""
+        if cycle:
+            p.text('...')
+            return
+        # Temporarily disable ASCII progress for IPython pretty printing
+        old_progress = self._show_ascii_progress
+        self._show_ascii_progress = False
+        try:
+            p.text(str(self))
+        finally:
+            self._show_ascii_progress = old_progress
+    
     def __repr__(self) -> str:
         """Generate ASCII table representation of files."""
         from datetime import datetime
         
-        # Get files with ASCII progress bar
-        all_files = self._scan_files(show_ascii_progress=True)
+        # Get files with ASCII progress bar when appropriate
+        all_files = self._scan_files(show_ascii_progress=self._show_ascii_progress)
         
         if not all_files:
             return "No files found in SyftBox/datasites directory"
