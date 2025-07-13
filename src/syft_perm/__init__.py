@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.37"
+__version__ = "0.3.38"
 
 __all__ = [
     "open",
@@ -239,16 +239,19 @@ class Files:
         html = f"""
         <div id="{container_id}" style="{div_style}">
             <!-- Search Header -->
-            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb; position: relative;">
-                <input id="{container_id}-search" type="text" placeholder="🔍 Search files... (use Tab for autocomplete)"
+            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb;
+                        position: relative;">
+                <input id="{container_id}-search" type="text"
+                       placeholder="🔍 Search files... (use Tab for autocomplete)"
                        style="{input_style}"
                        oninput="searchFiles_{container_id}(this.value)"
                        onkeydown="handleKeyDown_{container_id}(event)"
                        autocomplete="off">
-                <div id="{container_id}-suggestions" style="display: none; position: absolute; top: 100%; left: 12px; right: 12px;
-                                                              background: white; border: 1px solid #d1d5db; border-top: none;
-                                                              border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
-                                                              z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                <div id="{container_id}-suggestions"
+                     style="display: none; position: absolute; top: 100%; left: 12px; right: 12px;
+                            background: white; border: 1px solid #d1d5db; border-top: none;
+                            border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
+                            z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
             </div>
 
             <!-- Table Container -->
@@ -294,7 +297,7 @@ class Files:
                     <tr style="border-bottom: 1px solid #f3f4f6;">
                         <td style="padding: 10px; font-family: 'SF Mono', Monaco, monospace;
                                    word-break: break-all;">
-                            {html_module.escape(file['name'])}
+                            syft://{html_module.escape(file['name'])}
                         </td>
                         <td style="padding: 10px; color: #6b7280;">
                             {size_str}
@@ -346,7 +349,8 @@ class Files:
                     if (users && users.length > 0) {{
                         var userStr;
                         if (users.length > 2) {{
-                            userStr = users.slice(0, 2).join(', ') + '... (+' + (users.length - 2) + ')';
+                            userStr = users.slice(0, 2).join(', ') + '... (+' +
+                                     (users.length - 2) + ')';
                         }} else {{
                             userStr = users.join(', ');
                         }}
@@ -355,6 +359,9 @@ class Files:
                 }}
                 return permItems.length > 0 ? permItems.join('<br>') : '<em>No permissions</em>';
             }}
+
+            var selectedSuggestionIndex = -1;
+            var currentSuggestions = [];
 
             window.searchFiles_{container_id} = function(searchTerm) {{
                 var tbody = document.getElementById('{container_id}-tbody');
@@ -381,18 +388,133 @@ class Files:
                     var tr = document.createElement('tr');
                     tr.style.borderBottom = '1px solid #f3f4f6';
                     tr.innerHTML =
-                        '<td style="padding: 10px; font-family: \\'SF Mono\\', Monaco, monospace; ' +
-                        'word-break: break-all;">' + escapeHtml(file.name) + '</td>' +
+                        '<td style="padding: 10px; font-family: monospace; ' +
+                        'word-break: break-all;">syft://' + escapeHtml(file.name) + '</td>' +
                         '<td style="padding: 10px; color: #6b7280;">' + sizeStr + '</td>' +
-                        '<td style="padding: 10px; font-size: 12px; line-height: 1.4;">' + permStr + '</td>';
+                        '<td style="padding: 10px; font-size: 12px; line-height: 1.4;">' +
+                        permStr + '</td>';
                     tbody.appendChild(tr);
                 }}
 
                 // Update status
                 var statusText = searchTerm ?
-                    'Showing ' + displayFiles.length + ' of ' + filteredFiles.length + ' matching files' :
-                    'Showing ' + displayFiles.length + ' of ' + allFiles.length + ' files in datasites';
+                    'Showing ' + displayFiles.length + ' of ' + filteredFiles.length +
+                    ' matching files' :
+                    'Showing ' + displayFiles.length + ' of ' + allFiles.length +
+                    ' files in datasites';
                 status.textContent = statusText;
+            }};
+
+            function getPathSuggestions(input) {{
+                var suggestions = new Set();
+                var inputLower = input.toLowerCase();
+
+                // Get all path segments that match the input
+                allFiles.forEach(function(file) {{
+                    var parts = file.name.split('/');
+                    var currentPath = '';
+
+                    for (var i = 0; i < parts.length; i++) {{
+                        if (i > 0) currentPath += '/';
+                        currentPath += parts[i];
+
+                        if (currentPath.toLowerCase().startsWith(inputLower) &&
+                            currentPath !== input) {{
+                            suggestions.add(currentPath);
+                        }}
+                    }}
+                }});
+
+                return Array.from(suggestions).sort().slice(0, 10);
+            }}
+
+            function showSuggestions(suggestions) {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                if (!suggestionsDiv) return;
+
+                if (suggestions.length === 0) {{
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }}
+
+                suggestionsDiv.innerHTML = '';
+                currentSuggestions = suggestions;
+                selectedSuggestionIndex = -1;
+
+                suggestions.forEach(function(suggestion, index) {{
+                    var div = document.createElement('div');
+                    div.textContent = suggestion;
+                    div.style.cssText = 'padding: 8px 12px; cursor: pointer; ' +
+                                        'border-bottom: 1px solid #f3f4f6;';
+                    div.onclick = function() {{
+                        document.getElementById('{container_id}-search').value = suggestion;
+                        searchFiles_{container_id}(suggestion);
+                        suggestionsDiv.style.display = 'none';
+                    }};
+                    div.onmouseover = function() {{
+                        selectedSuggestionIndex = index;
+                        updateSuggestionHighlight();
+                    }};
+                    suggestionsDiv.appendChild(div);
+                }});
+
+                suggestionsDiv.style.display = 'block';
+            }}
+
+            function updateSuggestionHighlight() {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                if (!suggestionsDiv) return;
+
+                var items = suggestionsDiv.children;
+                for (var i = 0; i < items.length; i++) {{
+                    if (i === selectedSuggestionIndex) {{
+                        items[i].style.backgroundColor = '#e5f3ff';
+                    }} else {{
+                        items[i].style.backgroundColor = 'transparent';
+                    }}
+                }}
+            }}
+
+            window.handleKeyDown_{container_id} = function(event) {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                var isVisible = suggestionsDiv && suggestionsDiv.style.display !== 'none';
+
+                if (event.key === 'Tab') {{
+                    event.preventDefault();
+                    var input = event.target;
+                    var suggestions = getPathSuggestions(input.value);
+
+                    if (suggestions.length > 0) {{
+                        if (!isVisible) {{
+                            showSuggestions(suggestions);
+                        }} else {{
+                            // Cycle through suggestions
+                            selectedSuggestionIndex = (selectedSuggestionIndex + 1) %
+                                                    suggestions.length;
+                            updateSuggestionHighlight();
+                            input.value = currentSuggestions[selectedSuggestionIndex];
+                        }}
+                    }}
+                }} else if (isVisible) {{
+                    if (event.key === 'ArrowDown') {{
+                        event.preventDefault();
+                        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1,
+                                                          currentSuggestions.length - 1);
+                        updateSuggestionHighlight();
+                    }} else if (event.key === 'ArrowUp') {{
+                        event.preventDefault();
+                        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+                        updateSuggestionHighlight();
+                    }} else if (event.key === 'Enter' && selectedSuggestionIndex >= 0) {{
+                        event.preventDefault();
+                        var selected = currentSuggestions[selectedSuggestionIndex];
+                        event.target.value = selected;
+                        searchFiles_{container_id}(selected);
+                        suggestionsDiv.style.display = 'none';
+                    }} else if (event.key === 'Escape') {{
+                        suggestionsDiv.style.display = 'none';
+                    }}
+                }}
             }};
         }})();
         </script>
