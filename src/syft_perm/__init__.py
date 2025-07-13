@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.65"
+__version__ = "0.3.67"
 
 __all__ = [
     "open",
@@ -168,12 +168,27 @@ class Files:
                     elif any(users for users in permissions.values()):
                         has_yaml = True
 
-                    # Build permissions summary
-                    # Go through each permission level and collect users
+                    # Build permissions summary - only show highest permission per user
+                    user_highest_perm = {}
+                    
+                    # Go through permissions in order of hierarchy
                     for perm_level in ["admin", "write", "create", "read"]:
                         users = permissions.get(perm_level, [])
-                        if users:
-                            # Format users (limit to first 2 if many)
+                        for user in users:
+                            if user not in user_highest_perm:
+                                user_highest_perm[user] = perm_level
+                    
+                    # Group by permission level for display
+                    perm_groups = {}
+                    for user, perm in user_highest_perm.items():
+                        if perm not in perm_groups:
+                            perm_groups[perm] = []
+                        perm_groups[perm].append(user)
+                    
+                    # Build summary lines
+                    for perm_level in ["admin", "write", "create", "read"]:
+                        if perm_level in perm_groups:
+                            users = perm_groups[perm_level]
                             if len(users) > 2:
                                 user_list = f"{users[0]}, {users[1]}, +{len(users)-2}"
                             else:
@@ -547,13 +562,13 @@ class Files:
                     <thead>
                         <tr>
                             <th style="width: 1.5rem;">☑</th>
-                            <th style="width: 2rem;">#</th>
-                            <th style="width: 20rem;">Name</th>
-                            <th style="width: 8rem;">Admin</th>
-                            <th style="width: 7rem;">Modified</th>
-                            <th style="width: 2.5rem;">Type</th>
-                            <th style="width: 3rem;">Size</th>
-                            <th style="width: 10rem;">Permissions</th>
+                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
+                            <th style="width: 20rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">Name ↕</th>
+                            <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('admin')">Admin ↕</th>
+                            <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
+                            <th style="width: 2.5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
+                            <th style="width: 3rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
+                            <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
                             <th style="width: 15rem;">Actions</th>
                         </tr>
                     </thead>
@@ -649,7 +664,7 @@ class Files:
 
             <div class="pagination">
                 <div></div>
-                <span class="status" id="{container_id}-status">Loaded {len(files[:50])} of {total} files</span>
+                <span class="status" id="{container_id}-status">Loading...</span>
                 <div class="pagination-controls">
                     <button onclick="changePage_{container_id}(-1)" id="{container_id}-prev-btn" disabled>Previous</button>
                     <span class="page-info" id="{container_id}-page-info">Page 1 of {(total + 49) // 50}</span>
@@ -665,6 +680,10 @@ class Files:
             var filteredFiles = allFiles.slice();
             var currentPage = 1;
             var itemsPerPage = 50;
+            var sortColumn = 'name';
+            var sortDirection = 'asc';
+            var searchHistory = [];
+            var adminHistory = [];
 
             // Helper function to escape HTML
             function escapeHtml(text) {{
@@ -696,6 +715,23 @@ class Files:
             function showStatus(message) {{
                 var statusEl = document.getElementById('{container_id}-status');
                 if (statusEl) statusEl.textContent = message;
+            }}
+            
+            // Calculate total size
+            function calculateTotalSize() {{
+                var totalSize = 0;
+                filteredFiles.forEach(function(file) {{
+                    totalSize += file.size || 0;
+                }});
+                return totalSize;
+            }}
+            
+            // Update status with file count and size
+            function updateStatus() {{
+                var totalSize = calculateTotalSize();
+                var sizeStr = formatSize(totalSize);
+                var fileCount = filteredFiles.length;
+                showStatus(fileCount + ' files, ' + sizeStr + ' total');
             }}
 
             // Render table
@@ -813,7 +849,7 @@ class Files:
                 
                 currentPage = 1;
                 renderTable();
-                showStatus('Found ' + filteredFiles.length + ' files');
+                updateStatus();
             }};
 
             // Clear search
@@ -823,7 +859,7 @@ class Files:
                 filteredFiles = allFiles.slice();
                 currentPage = 1;
                 renderTable();
-                showStatus('Showing ' + filteredFiles.length + ' files');
+                updateStatus();
             }};
 
             // Change page
@@ -851,7 +887,7 @@ class Files:
                     
                     showStatus('Copied to clipboard: ' + command);
                     setTimeout(function() {{
-                        showStatus('Showing ' + filteredFiles.length + ' files');
+                        updateStatus();
                     }}, 2000);
                 }}).catch(function() {{
                     showStatus('Failed to copy to clipboard');
@@ -903,6 +939,123 @@ class Files:
                 }}, 1000);
             }};
 
+            // Sort table
+            window.sortTable_{container_id} = function(column) {{
+                if (sortColumn === column) {{
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                }} else {{
+                    sortColumn = column;
+                    sortDirection = 'asc';
+                }}
+                
+                filteredFiles.sort(function(a, b) {{
+                    var aVal, bVal;
+                    
+                    switch(column) {{
+                        case 'index':
+                            aVal = allFiles.indexOf(a);
+                            bVal = allFiles.indexOf(b);
+                            break;
+                        case 'name':
+                            aVal = a.name.toLowerCase();
+                            bVal = b.name.toLowerCase();
+                            break;
+                        case 'admin':
+                            aVal = (a.datasite_owner || '').toLowerCase();
+                            bVal = (b.datasite_owner || '').toLowerCase();
+                            break;
+                        case 'modified':
+                            aVal = a.modified || 0;
+                            bVal = b.modified || 0;
+                            break;
+                        case 'type':
+                            aVal = (a.extension || '').toLowerCase();
+                            bVal = (b.extension || '').toLowerCase();
+                            break;
+                        case 'size':
+                            aVal = a.size || 0;
+                            bVal = b.size || 0;
+                            break;
+                        case 'permissions':
+                            aVal = (a.permissions_summary || []).length;
+                            bVal = (b.permissions_summary || []).length;
+                            break;
+                        default:
+                            return 0;
+                    }}
+                    
+                    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                }});
+                
+                currentPage = 1;
+                renderTable();
+            }};
+            
+            // Tab completion
+            function setupTabCompletion(inputEl, getOptions) {{
+                var currentIndex = -1;
+                var currentOptions = [];
+                
+                inputEl.addEventListener('keydown', function(e) {{
+                    if (e.key === 'Tab') {{
+                        e.preventDefault();
+                        
+                        var value = inputEl.value.toLowerCase();
+                        if (currentOptions.length === 0 || currentIndex === -1) {{
+                            currentOptions = getOptions().filter(function(opt) {{
+                                return opt.toLowerCase().startsWith(value);
+                            }});
+                            currentIndex = 0;
+                        }} else {{
+                            currentIndex = (currentIndex + 1) % currentOptions.length;
+                        }}
+                        
+                        if (currentOptions.length > 0) {{
+                            inputEl.value = currentOptions[currentIndex];
+                        }}
+                    }} else {{
+                        currentIndex = -1;
+                        currentOptions = [];
+                    }}
+                }});
+            }}
+            
+            // Get unique file names for tab completion
+            function getFileNames() {{
+                var names = [];
+                var seen = {{}};;
+                allFiles.forEach(function(file) {{
+                    var parts = file.name.split('/');
+                    parts.forEach(function(part) {{
+                        if (part && !seen[part]) {{
+                            seen[part] = true;
+                            names.push(part);
+                        }}
+                    }});
+                }});
+                return names.sort();
+            }}
+            
+            // Get unique admins for tab completion
+            function getAdmins() {{
+                var admins = [];
+                var seen = {{}};;
+                allFiles.forEach(function(file) {{
+                    var admin = file.datasite_owner;
+                    if (admin && !seen[admin]) {{
+                        seen[admin] = true;
+                        admins.push(admin);
+                    }}
+                }});
+                return admins.sort();
+            }}
+            
+            // Setup tab completion for search inputs
+            setupTabCompletion(document.getElementById('{container_id}-search'), getFileNames);
+            setupTabCompletion(document.getElementById('{container_id}-admin-filter'), getAdmins);
+            
             // Add enter key support for search
             document.getElementById('{container_id}-search').addEventListener('keypress', function(e) {{
                 if (e.key === 'Enter') searchFiles_{container_id}();
@@ -910,6 +1063,9 @@ class Files:
             document.getElementById('{container_id}-admin-filter').addEventListener('keypress', function(e) {{
                 if (e.key === 'Enter') searchFiles_{container_id}();
             }});
+            
+            // Initial status update
+            updateStatus();
         }})();
         </script>
         """
