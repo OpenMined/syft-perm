@@ -24,7 +24,8 @@
       "Bash(uv add:*)",
       "Bash(git clone:*)",
       "Bash(python:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

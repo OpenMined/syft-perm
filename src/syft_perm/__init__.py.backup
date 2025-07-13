@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.43"
+__version__ = "0.3.42"
 
 __all__ = [
     "open",
@@ -28,19 +28,13 @@ def open(path: _Union[str, _Path]) -> _Union[_SyftFile, _SyftFolder]:
     Raises:
         ValueError: If path cannot be resolved or doesn't exist
     """
-    from ._utils import resolve_path
-
-    # Resolve syft:// URLs to local paths
-    resolved_path = resolve_path(path)
-    if resolved_path is None:
-        raise ValueError(f"Could not resolve path: {path}")
-
+    resolved_path = _Path(path)
     if not resolved_path.exists():
-        raise ValueError(f"Path does not exist: {path} (resolved to: {resolved_path})")
+        raise ValueError(f"Path does not exist: {path}")
 
     if resolved_path.is_dir():
-        return _SyftFolder(resolved_path)
-    return _SyftFile(resolved_path)
+        return _SyftFolder(path)
+    return _SyftFile(path)
 
 
 def get_editor_url(path: _Union[str, _Path]) -> str:
@@ -159,7 +153,7 @@ class Files:
 
                     syft_file = SyftFile(file_path)
                     permissions = syft_file.permissions_dict
-
+                    
                     # Check if there are any syft.pub.yaml files in the path hierarchy
                     # Walk up the directory tree from the file to the datasite root
                     current = file_path.parent
