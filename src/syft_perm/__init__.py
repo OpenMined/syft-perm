@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.74"
+__version__ = "0.3.75"
 
 __all__ = [
     "open",
@@ -1207,7 +1207,8 @@ class Files:
                 }});
                 
                 inputEl.addEventListener('input', function() {{
-                    hideDropdown();
+                    // Don't hide dropdown on input to allow real-time search
+                    // hideDropdown();
                 }});
             }}
             
@@ -1252,7 +1253,15 @@ class Files:
             setupTabCompletion(document.getElementById('{container_id}-search'), getFileNames);
             setupTabCompletion(document.getElementById('{container_id}-admin-filter'), getAdmins);
             
-            // Add enter key support for search
+            // Add real-time search on every keystroke
+            document.getElementById('{container_id}-search').addEventListener('input', function() {{
+                searchFiles_{container_id}();
+            }});
+            document.getElementById('{container_id}-admin-filter').addEventListener('input', function() {{
+                searchFiles_{container_id}();
+            }});
+            
+            // Add enter key support for search (redundant but kept for compatibility)
             document.getElementById('{container_id}-search').addEventListener('keypress', function(e) {{
                 if (e.key === 'Enter') searchFiles_{container_id}();
             }});
