@@ -374,18 +374,8 @@ if _SERVER_AVAILABLE:
         scan_progress["total"] = 0
         scan_progress["message"] = "Starting scan..."
         
-        # Define progress callback with rate limiting
-        last_update_time = time.time()
-        
+        # Define progress callback without rate limiting
         def progress_callback(current: int, total: int, message: str):
-            nonlocal last_update_time
-            current_time = time.time()
-            
-            # Rate limit: ensure at least 1ms between datasites (1000 per second max)
-            time_since_last = current_time - last_update_time
-            if time_since_last < 0.001:  # 1ms = 0.001s
-                time.sleep(0.001 - time_since_last)
-            
             scan_progress["current"] = current
             scan_progress["total"] = total
             
@@ -397,8 +387,6 @@ if _SERVER_AVAILABLE:
             elif current % 10 == 0:  # Update every 10 datasites
                 scan_progress["message"] = f"Scanning datasites... ({current}/{total})"
             # Keep existing message for other updates
-            
-            last_update_time = time.time()
         
         # Run scan in a thread to not block async endpoint
         loop = asyncio.get_event_loop()
@@ -1621,14 +1609,12 @@ def get_files_widget_html(
                 }});
                 
                 // Hide loading screen and show widget
-                setTimeout(function() {{
-                    document.getElementById('loading-container-{container_id}').style.display = 'none';
-                    document.getElementById('{container_id}').style.display = 'flex';
-                    
-                    // Initial render
-                    renderTable();
-                    updateStatus();
-                }}, 500);
+                document.getElementById('loading-container-{container_id}').style.display = 'none';
+                document.getElementById('{container_id}').style.display = 'flex';
+                
+                // Initial render
+                renderTable();
+                updateStatus();
                 
             }} catch (error) {{
                 console.error('Error loading files:', error);

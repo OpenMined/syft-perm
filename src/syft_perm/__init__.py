@@ -600,7 +600,39 @@ class Files:
     def __getitem__(self, key) -> "Files":
         """Support slice notation sp.files[x:y] for range selection by chronological #."""
         if isinstance(key, slice):
-            # Get all files first
+            # Check if server is available
+            server_url = self._check_server()
+            if server_url:
+                # Server is available, use it for slicing
+                try:
+                    # Convert slice to start/end parameters for server
+                    start = key.start
+                    end = key.stop
+                    
+                    # Create FastAPIFiles and use server for slicing
+                    api_files = FastAPIFiles(server_url)
+                    
+                    # Build URL with start/end parameters
+                    import urllib.parse
+                    params = {}
+                    if start is not None:
+                        params['start'] = start
+                    if end is not None:
+                        params['end'] = end
+                    
+                    url = f"{server_url}/files-widget"
+                    if params:
+                        url += "?" + urllib.parse.urlencode(params)
+                    
+                    # Return FastAPIFiles instance for iframe display
+                    result = FastAPIFiles(server_url)
+                    result._url = url
+                    return result
+                except:
+                    # If server fails, fall back to local
+                    pass
+            
+            # Fall back to local processing
             all_files = self._scan_files()
             
             # Sort by modified date to get chronological order (newest first)
