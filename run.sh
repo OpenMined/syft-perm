@@ -7,7 +7,7 @@ set -e
 echo "Starting syft-perm SyftBox app..."
 
 # Get assigned port from SyftBox or use default
-SYFTBOX_ASSIGNED_PORT=${SYFTBOX_ASSIGNED_PORT:-8080}
+SYFTBOX_ASSIGNED_PORT=${SYFTBOX_ASSIGNED_PORT:-8005}
 echo "Using port: $SYFTBOX_ASSIGNED_PORT"
 
 # Save port to config file for discovery
@@ -69,8 +69,8 @@ server.serve_forever()
 DISCOVERY_PID=$!
 echo "Discovery server started with PID $DISCOVERY_PID"
 
-# Launch the syft-perm app server
-echo "Launching syft-perm server on port $SYFTBOX_ASSIGNED_PORT..."
+# Launch the syft-perm app server with auto-reload
+echo "Launching syft-perm server on port $SYFTBOX_ASSIGNED_PORT with auto-reload..."
 export SYFTBOX_PORT=$SYFTBOX_ASSIGNED_PORT
 export DISCOVERY_PORT=$DISCOVERY_PORT
-uv run python -m syft_perm.syftbox_app
+uv run uvicorn syft_perm.server:app --host 0.0.0.0 --port $SYFTBOX_ASSIGNED_PORT --reload

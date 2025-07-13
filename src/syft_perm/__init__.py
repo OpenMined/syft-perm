@@ -1181,6 +1181,7 @@ class Files:
             width: 100%;
             border-collapse: collapse;
             font-size: 0.75rem;
+            table-layout: fixed;
         }}
 
         #{container_id} thead {{
@@ -1439,7 +1440,7 @@ class Files:
 
             # Get chronological ID based on modified date
             file_key = f"{file['name']}|{file['path']}"
-            chrono_id = chronological_ids.get(file_key, i + 1)
+            chrono_id = chronological_ids.get(file_key, i)
 
             # Format size
             if size > 1024 * 1024:
@@ -1537,15 +1538,15 @@ class Files:
             
             // Create chronological index based on modified date (newest first)
             var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                return (b.modified || 0) - (a.modified || 0);
+                return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
             }});
             
-            // Assign chronological IDs
+            // Assign chronological IDs (oldest = 0)
             var chronologicalIds = {{}};
             for (var i = 0; i < sortedByDate.length; i++) {{
                 var file = sortedByDate[i];
                 var fileKey = file.name + '|' + file.path; // Unique key for each file
-                chronologicalIds[fileKey] = i + 1;
+                chronologicalIds[fileKey] = i;  // Start from 0
             }}
             
             var filteredFiles = allFiles.slice();
@@ -1677,7 +1678,7 @@ class Files:
                     
                     // Get chronological ID based on modified date
                     var fileKey = file.name + '|' + file.path;
-                    var chronoId = chronologicalIds[fileKey] || (i + 1);
+                    var chronoId = chronologicalIds[fileKey] !== undefined ? chronologicalIds[fileKey] : i;
                     
                     html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                         '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
@@ -2348,22 +2349,28 @@ class FilteredFiles(Files):
         from IPython.display import HTML, clear_output, display
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
+        
+        # Check if Jupyter is in dark mode
+        is_dark_mode = is_dark()
 
         # Use the filtered files directly
         all_files = self._filtered_files
         
-        # Create chronological index based on modified date (newest first)
-        sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+        # Create chronological index based on modified date (oldest first)
+        sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0))  # Ascending order
         chronological_ids = {}
         for i, file in enumerate(sorted_by_date):
             file_key = f"{file['name']}|{file['path']}"
-            chronological_ids[file_key] = i + 1
+            chronological_ids[file_key] = i  # Start from 0
 
+        # Sort files by modified date (newest first) for display
+        sorted_files = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+        
         # Apply pagination if specified
         if self._limit:
-            files = all_files[self._offset:self._offset + self._limit]
+            files = sorted_files[self._offset:self._offset + self._limit]
         else:
-            files = all_files[:100]  # Default limit for display
+            files = sorted_files[:100]  # Default limit for display
         
         total = len(all_files)
 
@@ -2429,6 +2436,7 @@ class FilteredFiles(Files):
             width: 100%;
             border-collapse: collapse;
             font-size: 0.75rem;
+            table-layout: fixed;
         }}
 
         #{container_id} thead {{
@@ -2599,7 +2607,7 @@ class FilteredFiles(Files):
 
             # Get chronological ID based on modified date
             file_key = f"{file['name']}|{file['path']}"
-            chrono_id = chronological_ids.get(file_key, i + 1)
+            chrono_id = chronological_ids.get(file_key, i)
 
             # Format size
             if size > 1024 * 1024:
@@ -2614,15 +2622,6 @@ class FilteredFiles(Files):
                         <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
                         <td>{chrono_id}</td>
                         <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(full_syft_path)}">{html_module.escape(full_syft_path)}</div></td>
-                        <td>
-                            <div class="admin-email">
-                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="12" cy="7" r="4"></circle>
-                                </svg>
-                                <span class="truncate">{html_module.escape(datasite_owner)}</span>
-                            </div>
-                        </td>
                         <td>
                             <div class="date-text">
                                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -72,6 +72,14 @@ if _SERVER_AVAILABLE:
         has_more: bool
         syftbox_path: Optional[str]
 
+    # Global progress tracking
+    scan_progress = {
+        "current": 0,
+        "total": 0,
+        "status": "idle",
+        "message": ""
+    }
+    
     app = FastAPI(
         title="SyftPerm Permission Editor",
         description="Google Drive-style permission editor for SyftBox",
@@ -321,6 +329,66 @@ if _SERVER_AVAILABLE:
         """Serve the files widget interface."""
         # Generate the widget HTML directly for web serving
         return get_files_widget_html()
+    
+    @app.get("/api/scan-progress")  # type: ignore[misc]
+    async def get_scan_progress() -> Dict[str, Any]:
+        """Get current scan progress."""
+        return scan_progress.copy()
+    
+    @app.get("/api/files-data")  # type: ignore[misc]
+    async def get_files_data() -> Dict[str, Any]:
+        """Get files data for the widget."""
+        import asyncio
+        from . import files as sp_files
+        
+        # Reset progress
+        scan_progress["status"] = "scanning"
+        scan_progress["current"] = 0
+        scan_progress["total"] = 0
+        scan_progress["message"] = "Starting scan..."
+        
+        # Define progress callback with rate limiting
+        last_update_time = time.time()
+        
+        def progress_callback(current: int, total: int, message: str):
+            nonlocal last_update_time
+            current_time = time.time()
+            
+            # Rate limit: ensure at least 1ms between datasites (1000 per second max)
+            time_since_last = current_time - last_update_time
+            if time_since_last < 0.001:  # 1ms = 0.001s
+                time.sleep(0.001 - time_since_last)
+            
+            scan_progress["current"] = current
+            scan_progress["total"] = total
+            
+            # Update message less frequently to avoid showing individual datasite names
+            if current == 0:
+                scan_progress["message"] = "Starting scan..."
+            elif current == total:
+                scan_progress["message"] = f"Completed scanning {total} datasites"
+            elif current % 10 == 0:  # Update every 10 datasites
+                scan_progress["message"] = f"Scanning datasites... ({current}/{total})"
+            # Keep existing message for other updates
+            
+            last_update_time = time.time()
+        
+        # Run scan in a thread to not block async endpoint
+        loop = asyncio.get_event_loop()
+        all_files = await loop.run_in_executor(
+            None, 
+            lambda: sp_files._scan_files(progress_callback=progress_callback)
+        )
+        
+        # Mark as complete
+        scan_progress["status"] = "complete"
+        scan_progress["message"] = "Scan complete"
+        
+        # Return the data as JSON
+        return {
+            "files": all_files,
+            "total": len(all_files)
+        }
 
 
 def get_editor_html(path: str) -> str:
@@ -936,110 +1004,7 @@ def get_files_widget_html() -> str:
     footer_tip = random.choice(tips)
     show_footer_tip = random.random() < 0.5  # 50% chance
     
-    # Scan files - for web context, we'll scan synchronously
-    all_files = sp_files._scan_files()
-    
-    # Get initial display files
-    files = all_files[:100]
-    total = len(all_files)
-    
-    if not files:
-        return """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SyftBox Files</title>
-</head>
-<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-    <div style='padding: 40px; text-align: center; color: #666;'>
-        No files found in SyftBox/datasites directory
-    </div>
-</body>
-</html>
-"""
-    
-    # Generate the initial table rows HTML
-    table_rows_html = ""
-    sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
-    chronological_ids = {}
-    for i, file in enumerate(sorted_by_date):
-        file_key = f"{file['name']}|{file['path']}"
-        chronological_ids[file_key] = i + 1
-    
-    for file in files[:50]:  # First page only
-        file_name = file['name']
-        file_key = f"{file['name']}|{file['path']}"
-        chrono_id = chronological_ids.get(file_key, 0)
-        modified = datetime.fromtimestamp(file.get('modified', 0)).strftime('%m/%d/%Y %H:%M')
-        size = file.get('size', 0)
-        
-        # Truncate URL to match notebook display (60 chars)
-        display_name = file_name
-        if len(display_name) > 60:
-            display_name = display_name[:57] + "..."
-        
-        # Format size
-        if size > 1024 * 1024:
-            size_str = f"{size / (1024 * 1024):.1f} MB"
-        elif size > 1024:
-            size_str = f"{size / 1024:.1f} KB"
-        else:
-            size_str = f"{size} B"
-        
-        # Get permissions summary
-        perms = file.get('permissions_summary', [])
-        perms_html = ""
-        if perms:
-            for i, perm in enumerate(perms[:3]):
-                perms_html += f'<span>{html_module.escape(perm)}</span>'
-            if len(perms) > 3:
-                perms_html += f'<span>+{len(perms) - 3} more...</span>'
-        else:
-            perms_html = '<span style="color: #9ca3af;">No permissions</span>'
-        
-        table_rows_html += f"""
-        <tr onclick="copyPath_{container_id}('syft://{file_name}', this)">
-            <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
-            <td>{chrono_id}</td>
-            <td><div class="truncate" style="font-weight: 500;" title="syft://{html_module.escape(file_name)}">syft://{html_module.escape(display_name)}</div></td>
-            <td>
-                <div class="date-text">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
-                        <line x1="16" x2="16" y1="2" y2="6"></line>
-                        <line x1="8" x2="8" y1="2" y2="6"></line>
-                        <line x1="3" x2="21" y1="10" y2="10"></line>
-                    </svg>
-                    <span class="truncate">{modified}</span>
-                </div>
-            </td>
-            <td><span class="type-badge">{'folder' if file.get('is_dir') else file.get('extension', '.txt')}</span></td>
-            <td><span style="color: #6b7280;">{size_str}</span></td>
-            <td>
-                <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">
-                    {perms_html}
-                </div>
-            </td>
-            <td>
-                <div style="display: flex; gap: 0.125rem;">
-                    <button class="btn btn-gray" title="Open in editor">File</button>
-                    <button class="btn btn-blue" title="View file info">Info</button>
-                    <button class="btn btn-purple" title="Copy path">Copy</button>
-                    <button class="btn btn-red" title="Delete file">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 6h18"></path>
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                            <line x1="10" x2="10" y1="11" y2="17"></line>
-                            <line x1="14" x2="14" y1="11" y2="17"></line>
-                        </svg>
-                    </button>
-                </div>
-            </td>
-        </tr>
-        """
+    # Don't scan files initially - let JavaScript handle it
     
     # Generate CSS based on theme - matching Jupyter widget exactly
     if is_dark_mode:
@@ -1086,6 +1051,22 @@ def get_files_widget_html() -> str:
         margin: 0;
         padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }}
+    
+    @keyframes float {{
+        0%, 100% {{ transform: translateY(0px); }}
+        50% {{ transform: translateY(-8px); }}
+    }}
+    
+    .syftbox-logo {{
+        animation: float 3s ease-in-out infinite;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+    }}
+    
+    .progress-bar-gradient {{
+        background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+        transition: width 0.4s ease-out;
+        border-radius: 3px;
     }}
     
     #{container_id} * {{
@@ -1142,6 +1123,7 @@ def get_files_widget_html() -> str:
         width: 100%;
         border-collapse: collapse;
         font-size: 0.75rem;
+        table-layout: fixed;
     }}
 
     #{container_id} thead {{
@@ -1372,7 +1354,64 @@ def get_files_widget_html() -> str:
     </style>
 </head>
 <body>
-    <div id="{container_id}">
+    <!-- Loading container -->
+    <div id="loading-container-{container_id}" style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: {bg_color};">
+        <!-- SyftBox Logo -->
+        <svg class="syftbox-logo" width="120" height="139" viewBox="0 0 311 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g clip-path="url(#clip0_7523_4240)">
+                <path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_7523_4240)"></path>
+                <path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_7523_4240)"></path>
+                <path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear_7523_4240)"></path>
+            </g>
+            <defs>
+                <linearGradient id="paint0_linear_7523_4240" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#DC7A6E"></stop>
+                    <stop offset="0.251496" stop-color="#F6A464"></stop>
+                    <stop offset="0.501247" stop-color="#FDC577"></stop>
+                    <stop offset="0.753655" stop-color="#EFC381"></stop>
+                    <stop offset="1" stop-color="#B9D599"></stop>
+                </linearGradient>
+                <linearGradient id="paint1_linear_7523_4240" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#BFCD94"></stop>
+                    <stop offset="0.245025" stop-color="#B2D69E"></stop>
+                    <stop offset="0.504453" stop-color="#8DCCA6"></stop>
+                    <stop offset="0.745734" stop-color="#5CB8B7"></stop>
+                    <stop offset="1" stop-color="#4CA5B8"></stop>
+                </linearGradient>
+                <linearGradient id="paint2_linear_7523_4240" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#D7686D"></stop>
+                    <stop offset="0.225" stop-color="#C64B77"></stop>
+                    <stop offset="0.485" stop-color="#A2638E"></stop>
+                    <stop offset="0.703194" stop-color="#758AA8"></stop>
+                    <stop offset="1" stop-color="#639EAF"></stop>
+                </linearGradient>
+                <clipPath id="clip0_7523_4240">
+                    <rect width="311" height="360" fill="white"></rect>
+                </clipPath>
+            </defs>
+        </svg>
+        
+        <div style="font-size: 20px; font-weight: 600; color: {text_color}; margin-top: 2rem; text-align: center;">
+            loading your view of <br />the internet of private data...
+        </div>
+        
+        <div style="width: 340px; height: 6px; background-color: {'#2d2d30' if is_dark_mode else '#e5e5e5'}; border-radius: 3px; margin: 1.5rem auto; overflow: hidden;">
+            <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
+        </div>
+        
+        <div id="loading-status-{container_id}" style="color: {status_color}; font-size: 0.875rem; margin-top: 0.5rem;">
+            Initializing...
+        </div>
+        
+        <div style="margin-top: 3rem; padding: 0 2rem; max-width: 500px; text-align: center;">
+            <div style="color: {page_info_color}; font-size: 0.875rem; font-style: italic;">
+                💡 Tip: {footer_tip}
+            </div>
+        </div>
+    </div>
+
+    <!-- Main widget container (hidden initially) -->
+    <div id="{container_id}" style="display: none;">
         <div class="search-controls">
             <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
             <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." style="flex: 1;">
@@ -1387,7 +1426,7 @@ def get_files_widget_html() -> str:
                     <tr>
                         <th style="width: 2rem; padding-left: 0.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
                         <th style="width: 2.5rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
-                        <th style="width: 18rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
+                        <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
                         <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
                         <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
                         <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
@@ -1396,7 +1435,7 @@ def get_files_widget_html() -> str:
                     </tr>
                 </thead>
                 <tbody id="{container_id}-tbody">
-                    {table_rows_html}
+                    <!-- Table rows will be populated by JavaScript -->
                 </tbody>
             </table>
         </div>
@@ -1406,7 +1445,7 @@ def get_files_widget_html() -> str:
             <span class="status" id="{container_id}-status">Loading...</span>
             <div class="pagination-controls">
                 <button onclick="changePage_{container_id}(-1)" id="{container_id}-prev-btn" disabled>Previous</button>
-                <span class="page-info" id="{container_id}-page-info">Page 1 of {max(1, (total + 49) // 50)}</span>
+                <span class="page-info" id="{container_id}-page-info">Page 1 of 1</span>
                 <button onclick="changePage_{container_id}(1)" id="{container_id}-next-btn">Next</button>
             </div>
         </div>
@@ -1414,26 +1453,108 @@ def get_files_widget_html() -> str:
 
     <script>
     (function() {{
-        // Store all files data
-        var allFiles = {json.dumps(all_files)};
-        
-        // Create chronological index
-        var sortedByDate = allFiles.slice().sort(function(a, b) {{
-            return (b.modified || 0) - (a.modified || 0);
-        }});
-        
-        var chronologicalIds = {{}};
-        for (var i = 0; i < sortedByDate.length; i++) {{
-            var file = sortedByDate[i];
-            var fileKey = file.name + '|' + file.path;
-            chronologicalIds[fileKey] = i + 1;
-        }}
-        
-        var filteredFiles = allFiles.slice();
+        // Initialize variables
+        var allFiles = [];
+        var filteredFiles = [];
         var currentPage = 1;
         var itemsPerPage = 50;
-        var sortColumn = 'modified';
-        var sortDirection = 'desc';
+        var sortColumn = 'modified';  // Default sort by modified date
+        var sortDirection = 'desc';    // Default descending (newest first)
+        var chronologicalIds = {{}};
+        
+        // Update progress
+        function updateProgress(percent, status) {{
+            var loadingBar = document.getElementById('loading-bar-{container_id}');
+            var loadingStatus = document.getElementById('loading-status-{container_id}');
+            
+            if (loadingBar) {{
+                loadingBar.style.width = percent + '%';
+            }}
+            if (loadingStatus) {{
+                loadingStatus.innerHTML = status;
+            }}
+        }}
+        
+        // Load files data asynchronously
+        async function loadFiles() {{
+            try {{
+                // Initial progress
+                updateProgress(10, 'Finding SyftBox directory...');
+                
+                // Start fetching files data (this will trigger the scan)
+                const filesPromise = fetch('/api/files-data');
+                
+                // Poll for progress updates
+                let progressInterval = setInterval(async () => {{
+                    try {{
+                        const progressResponse = await fetch('/api/scan-progress');
+                        const progress = await progressResponse.json();
+                        
+                        if (progress.status === 'scanning' && progress.total > 0) {{
+                            // Calculate percentage based on actual scan progress
+                            const percent = Math.min(90, 10 + (progress.current / progress.total) * 80);
+                            updateProgress(percent, progress.message || 'Scanning datasites...');
+                        }}
+                    }} catch (e) {{
+                        console.error('Error fetching progress:', e);
+                    }}
+                }}, 200); // Poll every 200ms
+                
+                // Wait for files data
+                const response = await filesPromise;
+                const data = await response.json();
+                
+                // Stop polling
+                clearInterval(progressInterval);
+                
+                updateProgress(90, 'Processing ' + data.total + ' files...');
+                
+                // Store files data
+                allFiles = data.files;
+                filteredFiles = allFiles.slice();
+                
+                // Create chronological IDs (oldest = 1, newest = highest)
+                var sortedByDate = allFiles.slice().sort(function(a, b) {{
+                    return (a.modified || 0) - (b.modified || 0);  // Ascending order (oldest first)
+                }});
+                
+                chronologicalIds = {{}};
+                sortedByDate.forEach(function(file, index) {{
+                    var fileKey = file.name + '|' + file.path;
+                    chronologicalIds[fileKey] = index;  // Start from 0
+                }});
+                
+                // Add chronological IDs to files
+                allFiles.forEach(function(file) {{
+                    var fileKey = file.name + '|' + file.path;
+                    file.chronoId = chronologicalIds[fileKey] || 0;
+                }});
+                
+                updateProgress(100, 'Complete!');
+                
+                // Sort files by modified date (newest first) before initial render
+                filteredFiles.sort(function(a, b) {{
+                    var aVal = a.modified || 0;
+                    var bVal = b.modified || 0;
+                    return bVal - aVal;  // Descending order (newest first)
+                }});
+                
+                // Hide loading screen and show widget
+                setTimeout(function() {{
+                    document.getElementById('loading-container-{container_id}').style.display = 'none';
+                    document.getElementById('{container_id}').style.display = 'flex';
+                    
+                    // Initial render
+                    renderTable();
+                    updateStatus();
+                }}, 500);
+                
+            }} catch (error) {{
+                console.error('Error loading files:', error);
+                updateProgress(0, 'Error loading files. Please refresh the page.');
+            }}
+        }}
+        
         var showFooterTip = {'true' if show_footer_tip else 'false'};
         var footerTip = {json.dumps(footer_tip)};
 
@@ -1542,8 +1663,7 @@ def get_files_widget_html() -> str:
                 var sizeStr = formatSize(file.size || 0);
                 var isDir = file.is_dir || false;
                 
-                var fileKey = file.name + '|' + file.path;
-                var chronoId = chronologicalIds[fileKey] || (i + 1);
+                var chronoId = file.chronoId !== undefined ? file.chronoId : i;
                 
                 html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                     '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
@@ -1782,16 +1902,8 @@ def get_files_widget_html() -> str:
             searchFiles_{container_id}();
         }});
         
-        // Apply initial sort
-        filteredFiles.sort(function(a, b) {{
-            var aVal = a.modified || 0;
-            var bVal = b.modified || 0;
-            return bVal - aVal;
-        }});
-        
-        // Initial render
-        renderTable();
-        updateStatus();
+        // Start loading files when page loads
+        loadFiles();
     }})();
     </script>
 </body>
