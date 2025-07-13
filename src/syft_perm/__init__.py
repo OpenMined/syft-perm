@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.80"
+__version__ = "0.3.81"
 
 __all__ = [
     "open",
@@ -425,6 +425,41 @@ class Files:
         # Show loading animation with real progress tracking
         loading_html = f"""
         <div id="loading-container-{container_id}" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+            <div style="margin-bottom: 20px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="62" height="72" viewBox="0 0 311 360" fill="none">
+                    <g clip-path="url(#clip0_7523_4240)">
+                        <path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_7523_4240)"></path>
+                        <path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_7523_4240)"></path>
+                        <path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear_7523_4240)"></path>
+                    </g>
+                    <defs>
+                        <linearGradient id="paint0_linear_7523_4240" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#DC7A6E"></stop>
+                            <stop offset="0.251496" stop-color="#F6A464"></stop>
+                            <stop offset="0.501247" stop-color="#FDC577"></stop>
+                            <stop offset="0.753655" stop-color="#EFC381"></stop>
+                            <stop offset="1" stop-color="#B9D599"></stop>
+                        </linearGradient>
+                        <linearGradient id="paint1_linear_7523_4240" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#BFCD94"></stop>
+                            <stop offset="0.245025" stop-color="#B2D69E"></stop>
+                            <stop offset="0.504453" stop-color="#8DCCA6"></stop>
+                            <stop offset="0.745734" stop-color="#5CB8B7"></stop>
+                            <stop offset="1" stop-color="#4CA5B8"></stop>
+                        </linearGradient>
+                        <linearGradient id="paint2_linear_7523_4240" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#D7686D"></stop>
+                            <stop offset="0.225" stop-color="#C64B77"></stop>
+                            <stop offset="0.485" stop-color="#A2638E"></stop>
+                            <stop offset="0.703194" stop-color="#758AA8"></stop>
+                            <stop offset="1" stop-color="#639EAF"></stop>
+                        </linearGradient>
+                        <clipPath id="clip0_7523_4240">
+                            <rect width="311" height="360" fill="white"></rect>
+                        </clipPath>
+                    </defs>
+                </svg>
+            </div>
             <div style="font-size: 18px; color: #666; margin-bottom: 15px;">Loading the internet of private data...</div>
             <div style="width: 300px; height: 4px; background-color: #e5e7eb; border-radius: 2px; margin: 0 auto; overflow: hidden;">
                 <div id="loading-bar-{container_id}" style="width: 0%; height: 100%; background-color: #6b7280; transition: width 0.3s ease;"></div>
