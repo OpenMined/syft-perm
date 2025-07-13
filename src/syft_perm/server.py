@@ -315,6 +315,30 @@ if _SERVER_AVAILABLE:
     async def permission_editor(path: str) -> str:
         """Serve the Google Drive-style permission editor."""
         return get_editor_html(path)
+    
+    @app.get("/files-widget", response_class=HTMLResponse)  # type: ignore[misc]
+    async def files_widget() -> str:
+        """Serve the files widget exactly like sp.files._repr_html_()."""
+        # Import the Files class to generate the exact same HTML
+        from . import files as sp_files
+        
+        # Get the HTML by calling _repr_html_() on the files instance
+        html_content = sp_files._repr_html_()
+        
+        # Wrap it in a basic HTML page structure
+        return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyftBox Files</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    {html_content}
+</body>
+</html>
+"""
 
 
 def get_editor_html(path: str) -> str:
@@ -942,3 +966,15 @@ def get_editor_url(path: str) -> str:
         server_url = start_server()
 
     return f"{server_url}/editor/{path}"
+
+
+def get_files_widget_url() -> str:
+    """Get the URL for the files widget interface."""
+    if not _SERVER_AVAILABLE:
+        return "Server not available - install with: pip install 'syft-perm[server]'"
+
+    server_url = get_server_url()
+    if not server_url:
+        server_url = start_server()
+
+    return f"{server_url}/files-widget"

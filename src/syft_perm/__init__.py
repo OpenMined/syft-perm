@@ -11,6 +11,7 @@ __version__ = "0.3.89"
 __all__ = [
     "open",
     "get_editor_url",
+    "get_files_widget_url",
     "files",
     "is_dark",
 ]
@@ -57,6 +58,18 @@ def get_editor_url(path: _Union[str, _Path]) -> str:
     from .server import get_editor_url as _get_editor_url
 
     return _get_editor_url(str(path))
+
+
+def get_files_widget_url() -> str:
+    """
+    Get the URL for the files widget interface (identical to sp.files in Jupyter).
+    
+    Returns:
+        URL to the files widget
+    """
+    from .server import get_files_widget_url as _get_files_widget_url
+    
+    return _get_files_widget_url()
 
 
 class Files:
