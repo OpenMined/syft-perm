@@ -995,179 +995,328 @@ class SyftFile:
         """
 
     def _repr_html_(self) -> str:
-        """Return Google Drive-style permissions interface for Jupyter notebooks."""
-        import hashlib
-        import os
+        """Generate simple widget with working search functionality for Jupyter."""
+        import html as html_module
+        import json
+        import uuid
 
-        # Get permission data
-        permissions_data = self._get_all_permissions()
+        container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
 
-        # Function to generate consistent avatar colors based on email hash
-        def get_avatar_color(email):
-            # OpenMined/SyftBox color palette from box.svg gradients
-            colors = [
-                "#DC7A6E",  # coral/salmon from top gradient
-                "#F6A464",  # orange from top gradient
-                "#FDC577",  # yellow from top gradient
-                "#EFC381",  # light yellow from top gradient
-                "#B9D599",  # light green from top gradient
-                "#BFCD94",  # sage green from right gradient
-                "#B2D69E",  # light green from right gradient
-                "#8DCCA6",  # mint green from right gradient
-                "#5CB8B7",  # teal from right gradient
-                "#4CA5B8",  # blue from right gradient
-                "#D7686D",  # coral from left gradient
-                "#C64B77",  # pink from left gradient
-                "#A2638E",  # purple from left gradient
-                "#758AA8",  # blue-gray from left gradient
-                "#639EAF",  # teal-blue from left gradient
-            ]
-            hash_obj = hashlib.md5(email.encode())
-            return colors[int(hash_obj.hexdigest(), 16) % len(colors)]
+        # Get permissions for this file
+        permissions = self.permissions_dict
 
-        # Function to get initials from email
-        def get_initials(email):
-            if email == "*":
-                return "PU"  # Public
-            parts = email.split("@")[0].split(".")
-            if len(parts) >= 2:
-                return (parts[0][0] + parts[1][0]).upper()
-            return email[0:2].upper()
+        # Create a list of people with permissions
+        people_with_permissions = []
+        for permission_type, users in permissions.items():
+            for user in users:
+                people_with_permissions.append(
+                    {"name": user, "permission_type": permission_type, "file_path": str(self._path)}
+                )
 
-        # Function to get highest syft permission level
-        def get_highest_permission(permissions):
-            if "admin" in permissions:
-                return "Admin"
-            elif "write" in permissions:
-                return "Write"
-            elif "create" in permissions:
-                return "Create"
-            elif "read" in permissions:
-                return "Read"
-            return "No access"
+        if not people_with_permissions:
+            return (
+                "<div style='padding: 20px; color: #666;'>"
+                f"No permissions found for file: {self._path.name}</div>"
+            )
 
-        # Collect all users with their permissions
-        all_users = set()
-        for perm_type, users in permissions_data.items():
-            all_users.update(users)
+        # Use permissions data for search
+        all_files = people_with_permissions
 
-        # Build user list with their highest permission level
-        user_permissions = {}
-        for user in all_users:
-            user_perms = []
-            for perm_type, users in permissions_data.items():
-                if user in users:
-                    user_perms.append(perm_type)
-            user_permissions[user] = user_perms
+        # Build HTML template
+        div_style = (
+            "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, "
+            "sans-serif; border: 1px solid #e5e7eb; border-radius: 8px; "
+            "overflow: hidden; max-width: 100%;"
+        )
+        input_style = (
+            "width: calc(100% - 24px); padding: 8px 12px; border: 1px solid #d1d5db; "
+            "border-radius: 6px; font-size: 14px; outline: none; box-sizing: border-box;"
+        )
+        th_style = (
+            "text-align: left; padding: 10px; font-weight: 600; "
+            "border-bottom: 1px solid #e5e7eb;"
+        )
 
-        # Get current user (file owner)
-        current_user = os.path.basename(os.path.expanduser("~"))
-
-        # Create hybrid interface with syft-objects styling and Google Drive layout
         html = f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    font-size: 0.75rem; background: #ffffff; border: 1px solid #e5e7eb;
-                    border-radius: 0.25rem; margin: 8px 0; height: 200px;
-                    display: flex; flex-direction: column;">
-            <div style="background: #f8f9fa; padding: 0.375rem 0.5rem;
-                        border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
-                        position: sticky; top: 0; z-index: 10;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 0.25rem;">
-                        <svg width="20" height="20" viewBox="0 0 311 360" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0)"><path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear)"/><path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear)"/><path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear)"/></g><defs><linearGradient id="paint0_linear" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse"><stop stop-color="#DC7A6E"/><stop offset="0.251496" stop-color="#F6A464"/><stop offset="0.501247" stop-color="#FDC577"/><stop offset="0.753655" stop-color="#EFC381"/><stop offset="1" stop-color="#B9D599"/></linearGradient><linearGradient id="paint1_linear" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse"><stop stop-color="#BFCD94"/><stop offset="0.245025" stop-color="#B2D69E"/><stop offset="0.504453" stop-color="#8DCCA6"/><stop offset="0.745734" stop-color="#5CB8B7"/><stop offset="1" stop-color="#4CA5B8"/></linearGradient><linearGradient id="paint2_linear" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse"><stop stop-color="#D7686D"/><stop offset="0.225" stop-color="#C64B77"/><stop offset="0.485" stop-color="#A2638E"/><stop offset="0.703194" stop-color="#758AA8"/><stop offset="1" stop-color="#639EAF"/></linearGradient><clipPath id="clip0"><rect width="311" height="360" fill="white"/></clipPath></defs></svg>  # noqa: E501
-                        <div>
-                            <div style="font-size: 0.875rem; font-weight: 500; color: #374151;">
-                                {self._path.name}
-                            </div>
-                            <div style="font-size: 0.75rem; color: #6b7280;">
-                                Owner: {current_user}
-                            </div>
-                        </div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: #6b7280; font-weight: 500;">
-                        PERMISSIONS
-                    </div>
-                </div>
+        <div id="{container_id}" style="{div_style}">
+            <!-- Search Header -->
+            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb;
+                        position: relative;">
+                <input id="{container_id}-search" type="text"
+                       placeholder="🔍 Search permissions... (use Tab for autocomplete)"
+                       style="{input_style}"
+                       oninput="searchFiles_{container_id}(this.value)"
+                       onkeydown="handleKeyDown_{container_id}(event)"
+                       autocomplete="off">
+                <div id="{container_id}-suggestions"
+                     style="display: none; position: absolute; top: 100%; left: 12px; right: 12px;
+                            background: white; border: 1px solid #d1d5db; border-top: none;
+                            border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
+                            z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
             </div>
 
-            <!-- Search Bar -->
-            <div style="padding: 0.5rem; background: #f8f9fa; border-bottom: 1px solid #e5e7eb;">
-                <input type="text" placeholder="🔍 Search users..."
-                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db;
-                              border-radius: 0.25rem; font-size: 0.75rem; outline: none;
-                              background: white;">
-            </div>
-
-            <div style="flex: 1; overflow-y: auto; padding: 0;">
+            <!-- Table Container -->
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead style="background: #f8f9fa; position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="{th_style} width: 40%;">User</th>
+                            <th style="{th_style} width: 35%;">Permission Type</th>
+                            <th style="{th_style} width: 25%;">File</th>
+                        </tr>
+                    </thead>
+                    <tbody id="{container_id}-tbody">
         """
 
-        # Add each user
-        for user in sorted(user_permissions.keys()):
-            permissions = user_permissions[user]
-            role = get_highest_permission(permissions)
-            initials = get_initials(user)
-            color = get_avatar_color(user)
-
-            # Determine if this is public access
-            display_name = "Anyone with the link" if user == "*" else user
-
-            # Get permission reasons for this user
-            has_permission, reasons = self._check_permission_with_reasons(user, role.lower())
-            reason_text = (
-                "; ".join(reasons[:2]) if reasons else "Direct permission"
-            )  # Limit to 2 reasons
+        # Initial table rows - show first 20 permissions
+        for permission in people_with_permissions[:20]:
+            user_name = html_module.escape(permission["name"])
+            permission_type = html_module.escape(permission["permission_type"])
+            file_name = html_module.escape(self._path.name)
 
             html += f"""
-                <div style="display: flex; align-items: center; padding: 0.375rem 0.5rem;
-                            gap: 0.5rem; border-bottom: 1px solid #f3f4f6;
-                            transition: background-color 0.15s; cursor: pointer;"
-                     onmouseover="this.style.background='rgba(0, 0, 0, 0.03)'"
-                     onmouseout="this.style.background='transparent'">
-                    <div style="width: 1.25rem; height: 1.25rem; border-radius: 50%;
-                                background: {color}; display: flex; align-items: center;
-                                justify-content: center; flex-shrink: 0;">
-                        <span style="color: white; font-size: 0.625rem; font-weight: 500;">
-                            {initials}
-                        </span>
-                    </div>
-                    <div style="flex: 1; min-width: 0; display: flex;
-                                align-items: center; gap: 0.75rem;">
-                        <div style="font-size: 0.75rem; color: #374151; font-weight: 500;
-                                    overflow: hidden; text-overflow: ellipsis;
-                                    white-space: nowrap; min-width: 0;">
-                            {display_name}
-                        </div>
-                        <div style="font-size: 0.625rem; color: #6b7280;
-                                    overflow: hidden; text-overflow: ellipsis;
-                                    white-space: nowrap; flex: 1; min-width: 0;">
-                            {reason_text}
-                        </div>
-                    </div>
-                    <div style="margin-left: 0.5rem;">
-                        <span style="display: inline-flex; align-items: center;
-                                     padding: 0.125rem 0.375rem; border-radius: 0.25rem;
-                                     font-size: 0.625rem; font-weight: 500;
-                                     background: #f3f4f6; color: #374151;">
-                            {role.upper()}
-                        </span>
-                    </div>
-                </div>
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 10px; text-align: left;">
+                            {user_name}
+                        </td>
+                        <td style="padding: 10px; text-align: left;">
+                            <span style="background: #e5f3ff; color: #0066cc; padding: 2px 6px;
+                                         border-radius: 4px; font-size: 11px; font-weight: 500;">
+                                {permission_type}
+                            </span>
+                        </td>
+                        <td style="padding: 10px; font-family: 'SF Mono', Monaco, monospace;
+                                   word-break: break-all; text-align: left; cursor: pointer;"
+                            onclick="copyToClipboard_{container_id}('syft://{html_module.escape(str(self._path))}')"
+                            title="Click to copy sp.open() command">
+                            {file_name}
+                        </td>
+                    </tr>
             """
 
-        # If no users have access
-        if not user_permissions:
-            html += """
-                <div style="text-align: center; padding: 1rem; color: #6b7280;">
-                    <div style="font-size: 0.75rem; font-weight: 500;">No permissions set</div>
-                    <div style="font-size: 0.75rem; margin-top: 0.125rem;">
-                        Only the owner has access
-                    </div>
-                </div>
-            """
+        html += f"""
+                    </tbody>
+                </table>
+            </div>
 
-        html += """
+            <!-- Footer -->
+            <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #e5e7eb;
+                        font-size: 12px; color: #6b7280; text-align: center;">
+                <span id="{container_id}-status">
+                    Showing {min(20, len(people_with_permissions))} of
+                    {len(people_with_permissions)} permissions for {self._path.name}
+                </span>
+                <span id="{container_id}-size" style="margin-left: 10px;"></span>
             </div>
         </div>
+
+        <script>
+        (function() {{
+            // Store all files data in a way that's compatible with Jupyter
+            var allFiles = {json.dumps(all_files)};
+            var container = document.getElementById('{container_id}');
+
+            function escapeHtml(text) {{
+                var div = document.createElement('div');
+                div.textContent = text || '';
+                return div.innerHTML;
+            }}
+
+            window.copyToClipboard_{container_id} = function(path) {{
+                var command = 'sp.open("' + path + '")';
+
+                // Create temporary textarea to copy text
+                var textarea = document.createElement('textarea');
+                textarea.value = command;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+
+                // Select and copy
+                textarea.select();
+                try {{
+                    document.execCommand('copy');
+                    // Optional: Show brief feedback
+                    var originalTitle = event.target.title;
+                    event.target.title = 'Copied!';
+                    event.target.style.color = '#10b981';
+                    setTimeout(function() {{
+                        event.target.title = originalTitle;
+                        event.target.style.color = '';
+                    }}, 1000);
+                }} catch (err) {{
+                    console.error('Failed to copy:', err);
+                }}
+
+                document.body.removeChild(textarea);
+            }}
+
+
+            var selectedSuggestionIndex = -1;
+            var currentSuggestions = [];
+
+            window.searchFiles_{container_id} = function(searchTerm) {{
+                var tbody = document.getElementById('{container_id}-tbody');
+                var status = document.getElementById('{container_id}-status');
+
+                if (!tbody || !status) return;
+
+                searchTerm = searchTerm.toLowerCase();
+                var filteredPermissions = allFiles.filter(function(permission) {{
+                    return !searchTerm ||
+                           permission.name.toLowerCase().includes(searchTerm) ||
+                           permission.permission_type.toLowerCase().includes(searchTerm);
+                }});
+
+                // Clear current table
+                tbody.innerHTML = '';
+
+                // Show first 50 filtered results
+                var displayPermissions = filteredPermissions.slice(0, 50);
+
+                for (var i = 0; i < displayPermissions.length; i++) {{
+                    var permission = displayPermissions[i];
+
+                    var tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid #f3f4f6';
+                    tr.innerHTML =
+                        '<td style="padding: 10px; text-align: left;">' +
+                        escapeHtml(permission.name) + '</td>' +
+                        '<td style="padding: 10px; text-align: left;">' +
+                        '<span style="background: #e5f3ff; color: #0066cc; padding: 2px 6px; ' +
+                        'border-radius: 4px; font-size: 11px; font-weight: 500;">' +
+                        escapeHtml(permission.permission_type) + '</span></td>' +
+                        '<td style="padding: 10px; font-family: monospace; ' +
+                        'word-break: break-all; text-align: left; cursor: pointer;" ' +
+                        'onclick="copyToClipboard_' + '{container_id}' + '(\\'' +
+                        'syft://' + permission.file_path + '\\')" ' +
+                        'title="Click to copy sp.open() command">' +
+                        escapeHtml('{self._path.name}') + '</td>';
+                    tbody.appendChild(tr);
+                }}
+
+                // Update status
+                var statusText = searchTerm ?
+                    'Showing ' + displayPermissions.length + ' of ' + filteredPermissions.length +
+                    ' matching permissions' :
+                    'Showing ' + displayPermissions.length + ' of ' + allFiles.length +
+                    ' permissions';
+                status.textContent = statusText;
+            }};
+
+            function getPermissionSuggestions(input) {{
+                var suggestions = new Set();
+                var inputLower = input.toLowerCase();
+
+                // Get user names and permission types that match the input
+                allFiles.forEach(function(permission) {{
+                    // Add user names that match
+                    if (permission.name.toLowerCase().startsWith(inputLower) &&
+                        permission.name !== input) {{
+                        suggestions.add(permission.name);
+                    }}
+
+                    // Add permission types that match
+                    if (permission.permission_type.toLowerCase().startsWith(inputLower) &&
+                        permission.permission_type !== input) {{
+                        suggestions.add(permission.permission_type);
+                    }}
+                }});
+
+                return Array.from(suggestions).sort().slice(0, 10);
+            }}
+
+            function showSuggestions(suggestions) {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                if (!suggestionsDiv) return;
+
+                if (suggestions.length === 0) {{
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }}
+
+                suggestionsDiv.innerHTML = '';
+                currentSuggestions = suggestions;
+                selectedSuggestionIndex = -1;
+
+                suggestions.forEach(function(suggestion, index) {{
+                    var div = document.createElement('div');
+                    div.textContent = suggestion;
+                    div.style.cssText = 'padding: 8px 12px; cursor: pointer; ' +
+                                        'border-bottom: 1px solid #f3f4f6;';
+                    div.onclick = function() {{
+                        document.getElementById('{container_id}-search').value = suggestion;
+                        searchFiles_{container_id}(suggestion);
+                        suggestionsDiv.style.display = 'none';
+                    }};
+                    div.onmouseover = function() {{
+                        selectedSuggestionIndex = index;
+                        updateSuggestionHighlight();
+                    }};
+                    suggestionsDiv.appendChild(div);
+                }});
+
+                suggestionsDiv.style.display = 'block';
+            }}
+
+            function updateSuggestionHighlight() {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                if (!suggestionsDiv) return;
+
+                var items = suggestionsDiv.children;
+                for (var i = 0; i < items.length; i++) {{
+                    if (i === selectedSuggestionIndex) {{
+                        items[i].style.backgroundColor = '#e5f3ff';
+                    }} else {{
+                        items[i].style.backgroundColor = 'transparent';
+                    }}
+                }}
+            }}
+
+            window.handleKeyDown_{container_id} = function(event) {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                var isVisible = suggestionsDiv && suggestionsDiv.style.display !== 'none';
+
+                if (event.key === 'Tab') {{
+                    event.preventDefault();
+                    var input = event.target;
+                    var suggestions = getPermissionSuggestions(input.value);
+
+                    if (suggestions.length > 0) {{
+                        if (!isVisible) {{
+                            showSuggestions(suggestions);
+                        }} else {{
+                            // Cycle through suggestions
+                            selectedSuggestionIndex = (selectedSuggestionIndex + 1) %
+                                                    suggestions.length;
+                            updateSuggestionHighlight();
+                            input.value = currentSuggestions[selectedSuggestionIndex];
+                        }}
+                    }}
+                }} else if (isVisible) {{
+                    if (event.key === 'ArrowDown') {{
+                        event.preventDefault();
+                        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1,
+                                                          currentSuggestions.length - 1);
+                        updateSuggestionHighlight();
+                    }} else if (event.key === 'ArrowUp') {{
+                        event.preventDefault();
+                        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+                        updateSuggestionHighlight();
+                    }} else if (event.key === 'Enter' && selectedSuggestionIndex >= 0) {{
+                        event.preventDefault();
+                        var selected = currentSuggestions[selectedSuggestionIndex];
+                        event.target.value = selected;
+                        searchFiles_{container_id}(selected);
+                        suggestionsDiv.style.display = 'none';
+                    }} else if (event.key === 'Escape') {{
+                        suggestionsDiv.style.display = 'none';
+                    }}
+                }}
+            }};
+        }})();
+
+        </script>
         """
 
         return html
@@ -1745,6 +1894,11 @@ class SyftFolder:
         """Get the folder name"""
         return self._path.name
 
+    @property
+    def permissions_dict(self) -> Dict[str, List[str]]:
+        """Get all permissions for this folder as a dictionary."""
+        return self._get_all_permissions()
+
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this folder using old syftbox nearest-node algorithm."""
         # Check cache first
@@ -2181,179 +2335,328 @@ class SyftFolder:
         """
 
     def _repr_html_(self) -> str:
-        """Return Google Drive-style permissions interface for Jupyter notebooks."""
-        import hashlib
-        import os
+        """Generate simple widget with working search functionality for Jupyter."""
+        import html as html_module
+        import json
+        import uuid
 
-        # Get permission data
-        permissions_data = self._get_all_permissions()
+        container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
 
-        # Function to generate consistent avatar colors based on email hash
-        def get_avatar_color(email):
-            # OpenMined/SyftBox color palette from box.svg gradients
-            colors = [
-                "#DC7A6E",  # coral/salmon from top gradient
-                "#F6A464",  # orange from top gradient
-                "#FDC577",  # yellow from top gradient
-                "#EFC381",  # light yellow from top gradient
-                "#B9D599",  # light green from top gradient
-                "#BFCD94",  # sage green from right gradient
-                "#B2D69E",  # light green from right gradient
-                "#8DCCA6",  # mint green from right gradient
-                "#5CB8B7",  # teal from right gradient
-                "#4CA5B8",  # blue from right gradient
-                "#D7686D",  # coral from left gradient
-                "#C64B77",  # pink from left gradient
-                "#A2638E",  # purple from left gradient
-                "#758AA8",  # blue-gray from left gradient
-                "#639EAF",  # teal-blue from left gradient
-            ]
-            hash_obj = hashlib.md5(email.encode())
-            return colors[int(hash_obj.hexdigest(), 16) % len(colors)]
+        # Get permissions for this file
+        permissions = self.permissions_dict
 
-        # Function to get initials from email
-        def get_initials(email):
-            if email == "*":
-                return "PU"  # Public
-            parts = email.split("@")[0].split(".")
-            if len(parts) >= 2:
-                return (parts[0][0] + parts[1][0]).upper()
-            return email[0:2].upper()
+        # Create a list of people with permissions
+        people_with_permissions = []
+        for permission_type, users in permissions.items():
+            for user in users:
+                people_with_permissions.append(
+                    {"name": user, "permission_type": permission_type, "file_path": str(self._path)}
+                )
 
-        # Function to get highest syft permission level
-        def get_highest_permission(permissions):
-            if "admin" in permissions:
-                return "Admin"
-            elif "write" in permissions:
-                return "Write"
-            elif "create" in permissions:
-                return "Create"
-            elif "read" in permissions:
-                return "Read"
-            return "No access"
+        if not people_with_permissions:
+            return (
+                "<div style='padding: 20px; color: #666;'>"
+                f"No permissions found for file: {self._path.name}</div>"
+            )
 
-        # Collect all users with their permissions
-        all_users = set()
-        for perm_type, users in permissions_data.items():
-            all_users.update(users)
+        # Use permissions data for search
+        all_files = people_with_permissions
 
-        # Build user list with their highest permission level
-        user_permissions = {}
-        for user in all_users:
-            user_perms = []
-            for perm_type, users in permissions_data.items():
-                if user in users:
-                    user_perms.append(perm_type)
-            user_permissions[user] = user_perms
+        # Build HTML template
+        div_style = (
+            "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, "
+            "sans-serif; border: 1px solid #e5e7eb; border-radius: 8px; "
+            "overflow: hidden; max-width: 100%;"
+        )
+        input_style = (
+            "width: calc(100% - 24px); padding: 8px 12px; border: 1px solid #d1d5db; "
+            "border-radius: 6px; font-size: 14px; outline: none; box-sizing: border-box;"
+        )
+        th_style = (
+            "text-align: left; padding: 10px; font-weight: 600; "
+            "border-bottom: 1px solid #e5e7eb;"
+        )
 
-        # Get current user (folder owner)
-        current_user = os.path.basename(os.path.expanduser("~"))
-
-        # Create hybrid interface with syft-objects styling and Google Drive layout
         html = f"""
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    font-size: 0.75rem; background: #ffffff; border: 1px solid #e5e7eb;
-                    border-radius: 0.25rem; margin: 8px 0; height: 200px;
-                    display: flex; flex-direction: column;">
-            <div style="background: #f8f9fa; padding: 0.375rem 0.5rem;
-                        border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
-                        position: sticky; top: 0; z-index: 10;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 0.25rem;">
-                        <svg width="20" height="20" viewBox="0 0 311 360" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_folder)"><path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_folder)"/><path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_folder)"/><path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear_folder)"/></g><defs><linearGradient id="paint0_linear_folder" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse"><stop stop-color="#DC7A6E"/><stop offset="0.251496" stop-color="#F6A464"/><stop offset="0.501247" stop-color="#FDC577"/><stop offset="0.753655" stop-color="#EFC381"/><stop offset="1" stop-color="#B9D599"/></linearGradient><linearGradient id="paint1_linear_folder" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse"><stop stop-color="#BFCD94"/><stop offset="0.245025" stop-color="#B2D69E"/><stop offset="0.504453" stop-color="#8DCCA6"/><stop offset="0.745734" stop-color="#5CB8B7"/><stop offset="1" stop-color="#4CA5B8"/></linearGradient><linearGradient id="paint2_linear_folder" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse"><stop stop-color="#D7686D"/><stop offset="0.225" stop-color="#C64B77"/><stop offset="0.485" stop-color="#A2638E"/><stop offset="0.703194" stop-color="#758AA8"/><stop offset="1" stop-color="#639EAF"/></linearGradient><clipPath id="clip0_folder"><rect width="311" height="360" fill="white"/></clipPath></defs></svg>  # noqa: E501
-                        <div>
-                            <div style="font-size: 0.875rem; font-weight: 500; color: #374151;">
-                                {self._path.name or 'Root Folder'}
-                            </div>
-                            <div style="font-size: 0.75rem; color: #6b7280;">
-                                Owner: {current_user}
-                            </div>
-                        </div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: #6b7280; font-weight: 500;">
-                        PERMISSIONS
-                    </div>
-                </div>
+        <div id="{container_id}" style="{div_style}">
+            <!-- Search Header -->
+            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #e5e7eb;
+                        position: relative;">
+                <input id="{container_id}-search" type="text"
+                       placeholder="🔍 Search permissions... (use Tab for autocomplete)"
+                       style="{input_style}"
+                       oninput="searchFiles_{container_id}(this.value)"
+                       onkeydown="handleKeyDown_{container_id}(event)"
+                       autocomplete="off">
+                <div id="{container_id}-suggestions"
+                     style="display: none; position: absolute; top: 100%; left: 12px; right: 12px;
+                            background: white; border: 1px solid #d1d5db; border-top: none;
+                            border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
+                            z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
             </div>
 
-            <!-- Search Bar -->
-            <div style="padding: 0.5rem; background: #f8f9fa; border-bottom: 1px solid #e5e7eb;">
-                <input type="text" placeholder="🔍 Search users..."
-                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db;
-                              border-radius: 0.25rem; font-size: 0.75rem; outline: none;
-                              background: white;">
-            </div>
-
-            <div style="flex: 1; overflow-y: auto; padding: 0;">
+            <!-- Table Container -->
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead style="background: #f8f9fa; position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="{th_style} width: 40%;">User</th>
+                            <th style="{th_style} width: 35%;">Permission Type</th>
+                            <th style="{th_style} width: 25%;">File</th>
+                        </tr>
+                    </thead>
+                    <tbody id="{container_id}-tbody">
         """
 
-        # Add each user
-        for user in sorted(user_permissions.keys()):
-            permissions = user_permissions[user]
-            role = get_highest_permission(permissions)
-            initials = get_initials(user)
-            color = get_avatar_color(user)
-
-            # Determine if this is public access
-            display_name = "Anyone with the link" if user == "*" else user
-
-            # Get permission reasons for this user
-            has_permission, reasons = self._check_permission_with_reasons(user, role.lower())
-            reason_text = (
-                "; ".join(reasons[:2]) if reasons else "Direct permission"
-            )  # Limit to 2 reasons
+        # Initial table rows - show first 20 permissions
+        for permission in people_with_permissions[:20]:
+            user_name = html_module.escape(permission["name"])
+            permission_type = html_module.escape(permission["permission_type"])
+            file_name = html_module.escape(self._path.name)
 
             html += f"""
-                <div style="display: flex; align-items: center; padding: 0.375rem 0.5rem;
-                            gap: 0.5rem; border-bottom: 1px solid #f3f4f6;
-                            transition: background-color 0.15s; cursor: pointer;"
-                     onmouseover="this.style.background='rgba(0, 0, 0, 0.03)'"
-                     onmouseout="this.style.background='transparent'">
-                    <div style="width: 1.25rem; height: 1.25rem; border-radius: 50%;
-                                background: {color}; display: flex; align-items: center;
-                                justify-content: center; flex-shrink: 0;">
-                        <span style="color: white; font-size: 0.625rem; font-weight: 500;">
-                            {initials}
-                        </span>
-                    </div>
-                    <div style="flex: 1; min-width: 0; display: flex;
-                                align-items: center; gap: 0.75rem;">
-                        <div style="font-size: 0.75rem; color: #374151; font-weight: 500;
-                                    overflow: hidden; text-overflow: ellipsis;
-                                    white-space: nowrap; min-width: 0;">
-                            {display_name}
-                        </div>
-                        <div style="font-size: 0.625rem; color: #6b7280;
-                                    overflow: hidden; text-overflow: ellipsis;
-                                    white-space: nowrap; flex: 1; min-width: 0;">
-                            {reason_text}
-                        </div>
-                    </div>
-                    <div style="margin-left: 0.5rem;">
-                        <span style="display: inline-flex; align-items: center;
-                                     padding: 0.125rem 0.375rem; border-radius: 0.25rem;
-                                     font-size: 0.625rem; font-weight: 500;
-                                     background: #f3f4f6; color: #374151;">
-                            {role.upper()}
-                        </span>
-                    </div>
-                </div>
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 10px; text-align: left;">
+                            {user_name}
+                        </td>
+                        <td style="padding: 10px; text-align: left;">
+                            <span style="background: #e5f3ff; color: #0066cc; padding: 2px 6px;
+                                         border-radius: 4px; font-size: 11px; font-weight: 500;">
+                                {permission_type}
+                            </span>
+                        </td>
+                        <td style="padding: 10px; font-family: 'SF Mono', Monaco, monospace;
+                                   word-break: break-all; text-align: left; cursor: pointer;"
+                            onclick="copyToClipboard_{container_id}('syft://{html_module.escape(str(self._path))}')"
+                            title="Click to copy sp.open() command">
+                            {file_name}
+                        </td>
+                    </tr>
             """
 
-        # If no users have access
-        if not user_permissions:
-            html += """
-                <div style="text-align: center; padding: 1rem; color: #6b7280;">
-                    <div style="font-size: 0.75rem; font-weight: 500;">No permissions set</div>
-                    <div style="font-size: 0.75rem; margin-top: 0.125rem;">
-                        Only the owner has access
-                    </div>
-                </div>
-            """
+        html += f"""
+                    </tbody>
+                </table>
+            </div>
 
-        html += """
+            <!-- Footer -->
+            <div style="background: #f8f9fa; padding: 10px; border-top: 1px solid #e5e7eb;
+                        font-size: 12px; color: #6b7280; text-align: center;">
+                <span id="{container_id}-status">
+                    Showing {min(20, len(people_with_permissions))} of
+                    {len(people_with_permissions)} permissions for {self._path.name}
+                </span>
+                <span id="{container_id}-size" style="margin-left: 10px;"></span>
             </div>
         </div>
+
+        <script>
+        (function() {{
+            // Store all files data in a way that's compatible with Jupyter
+            var allFiles = {json.dumps(all_files)};
+            var container = document.getElementById('{container_id}');
+
+            function escapeHtml(text) {{
+                var div = document.createElement('div');
+                div.textContent = text || '';
+                return div.innerHTML;
+            }}
+
+            window.copyToClipboard_{container_id} = function(path) {{
+                var command = 'sp.open("' + path + '")';
+
+                // Create temporary textarea to copy text
+                var textarea = document.createElement('textarea');
+                textarea.value = command;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+
+                // Select and copy
+                textarea.select();
+                try {{
+                    document.execCommand('copy');
+                    // Optional: Show brief feedback
+                    var originalTitle = event.target.title;
+                    event.target.title = 'Copied!';
+                    event.target.style.color = '#10b981';
+                    setTimeout(function() {{
+                        event.target.title = originalTitle;
+                        event.target.style.color = '';
+                    }}, 1000);
+                }} catch (err) {{
+                    console.error('Failed to copy:', err);
+                }}
+
+                document.body.removeChild(textarea);
+            }}
+
+
+            var selectedSuggestionIndex = -1;
+            var currentSuggestions = [];
+
+            window.searchFiles_{container_id} = function(searchTerm) {{
+                var tbody = document.getElementById('{container_id}-tbody');
+                var status = document.getElementById('{container_id}-status');
+
+                if (!tbody || !status) return;
+
+                searchTerm = searchTerm.toLowerCase();
+                var filteredPermissions = allFiles.filter(function(permission) {{
+                    return !searchTerm ||
+                           permission.name.toLowerCase().includes(searchTerm) ||
+                           permission.permission_type.toLowerCase().includes(searchTerm);
+                }});
+
+                // Clear current table
+                tbody.innerHTML = '';
+
+                // Show first 50 filtered results
+                var displayPermissions = filteredPermissions.slice(0, 50);
+
+                for (var i = 0; i < displayPermissions.length; i++) {{
+                    var permission = displayPermissions[i];
+
+                    var tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid #f3f4f6';
+                    tr.innerHTML =
+                        '<td style="padding: 10px; text-align: left;">' +
+                        escapeHtml(permission.name) + '</td>' +
+                        '<td style="padding: 10px; text-align: left;">' +
+                        '<span style="background: #e5f3ff; color: #0066cc; padding: 2px 6px; ' +
+                        'border-radius: 4px; font-size: 11px; font-weight: 500;">' +
+                        escapeHtml(permission.permission_type) + '</span></td>' +
+                        '<td style="padding: 10px; font-family: monospace; ' +
+                        'word-break: break-all; text-align: left; cursor: pointer;" ' +
+                        'onclick="copyToClipboard_' + '{container_id}' + '(\\'' +
+                        'syft://' + permission.file_path + '\\')" ' +
+                        'title="Click to copy sp.open() command">' +
+                        escapeHtml('{self._path.name}') + '</td>';
+                    tbody.appendChild(tr);
+                }}
+
+                // Update status
+                var statusText = searchTerm ?
+                    'Showing ' + displayPermissions.length + ' of ' + filteredPermissions.length +
+                    ' matching permissions' :
+                    'Showing ' + displayPermissions.length + ' of ' + allFiles.length +
+                    ' permissions';
+                status.textContent = statusText;
+            }};
+
+            function getPermissionSuggestions(input) {{
+                var suggestions = new Set();
+                var inputLower = input.toLowerCase();
+
+                // Get user names and permission types that match the input
+                allFiles.forEach(function(permission) {{
+                    // Add user names that match
+                    if (permission.name.toLowerCase().startsWith(inputLower) &&
+                        permission.name !== input) {{
+                        suggestions.add(permission.name);
+                    }}
+
+                    // Add permission types that match
+                    if (permission.permission_type.toLowerCase().startsWith(inputLower) &&
+                        permission.permission_type !== input) {{
+                        suggestions.add(permission.permission_type);
+                    }}
+                }});
+
+                return Array.from(suggestions).sort().slice(0, 10);
+            }}
+
+            function showSuggestions(suggestions) {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                if (!suggestionsDiv) return;
+
+                if (suggestions.length === 0) {{
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }}
+
+                suggestionsDiv.innerHTML = '';
+                currentSuggestions = suggestions;
+                selectedSuggestionIndex = -1;
+
+                suggestions.forEach(function(suggestion, index) {{
+                    var div = document.createElement('div');
+                    div.textContent = suggestion;
+                    div.style.cssText = 'padding: 8px 12px; cursor: pointer; ' +
+                                        'border-bottom: 1px solid #f3f4f6;';
+                    div.onclick = function() {{
+                        document.getElementById('{container_id}-search').value = suggestion;
+                        searchFiles_{container_id}(suggestion);
+                        suggestionsDiv.style.display = 'none';
+                    }};
+                    div.onmouseover = function() {{
+                        selectedSuggestionIndex = index;
+                        updateSuggestionHighlight();
+                    }};
+                    suggestionsDiv.appendChild(div);
+                }});
+
+                suggestionsDiv.style.display = 'block';
+            }}
+
+            function updateSuggestionHighlight() {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                if (!suggestionsDiv) return;
+
+                var items = suggestionsDiv.children;
+                for (var i = 0; i < items.length; i++) {{
+                    if (i === selectedSuggestionIndex) {{
+                        items[i].style.backgroundColor = '#e5f3ff';
+                    }} else {{
+                        items[i].style.backgroundColor = 'transparent';
+                    }}
+                }}
+            }}
+
+            window.handleKeyDown_{container_id} = function(event) {{
+                var suggestionsDiv = document.getElementById('{container_id}-suggestions');
+                var isVisible = suggestionsDiv && suggestionsDiv.style.display !== 'none';
+
+                if (event.key === 'Tab') {{
+                    event.preventDefault();
+                    var input = event.target;
+                    var suggestions = getPermissionSuggestions(input.value);
+
+                    if (suggestions.length > 0) {{
+                        if (!isVisible) {{
+                            showSuggestions(suggestions);
+                        }} else {{
+                            // Cycle through suggestions
+                            selectedSuggestionIndex = (selectedSuggestionIndex + 1) %
+                                                    suggestions.length;
+                            updateSuggestionHighlight();
+                            input.value = currentSuggestions[selectedSuggestionIndex];
+                        }}
+                    }}
+                }} else if (isVisible) {{
+                    if (event.key === 'ArrowDown') {{
+                        event.preventDefault();
+                        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1,
+                                                          currentSuggestions.length - 1);
+                        updateSuggestionHighlight();
+                    }} else if (event.key === 'ArrowUp') {{
+                        event.preventDefault();
+                        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+                        updateSuggestionHighlight();
+                    }} else if (event.key === 'Enter' && selectedSuggestionIndex >= 0) {{
+                        event.preventDefault();
+                        var selected = currentSuggestions[selectedSuggestionIndex];
+                        event.target.value = selected;
+                        searchFiles_{container_id}(selected);
+                        suggestionsDiv.style.display = 'none';
+                    }} else if (event.key === 'Escape') {{
+                        suggestionsDiv.style.display = 'none';
+                    }}
+                }}
+            }};
+        }})();
+
+        </script>
         """
 
         return html
