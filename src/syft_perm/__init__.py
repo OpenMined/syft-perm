@@ -733,12 +733,24 @@ class Files:
 
         # Check if server is available
         try:
-            import requests
-            import os
+            import urllib.request
+            import urllib.error
             import json
             
             server_available = False
             server_port = None
+            
+            def check_server(port):
+                try:
+                    with urllib.request.urlopen(f"http://localhost:{port}/", timeout=0.5) as response:
+                        if response.status == 200:
+                            content = response.read().decode('utf-8')
+                            return "SyftPerm" in content
+                except:
+                    pass
+                return False
+            
+            tried_ports = []
             
             # First, try to read port from config file
             config_path = Path.home() / ".syftperm" / "config.json"
@@ -748,39 +760,28 @@ class Files:
                         config = json.load(f)
                         configured_port = config.get('port')
                         if configured_port:
-                            # Verify the server is actually running on this port
-                            try:
-                                response = requests.get(f"http://localhost:{configured_port}/", timeout=0.5)
-                                if response.status_code == 200:
-                                    # Check if response contains syft-perm identifier
-                                    if "SyftPerm" in response.text:
-                                        server_available = True
-                                        server_port = configured_port
-                            except:
-                                pass
+                            tried_ports.append(configured_port)
+                            if check_server(configured_port):
+                                server_available = True
+                                server_port = configured_port
                 except:
                     pass
             
-            # If not found via config, fall back to checking common ports
+            # If not found via config, fall back to scanning ports 8000-8100
             if not server_available:
-                for port in [8080, 8765, 5000]:
-                    try:
-                        response = requests.get(f"http://localhost:{port}/", timeout=0.5)
-                        if response.status_code == 200:
-                            # Check if response contains syft-perm identifier
-                            if "SyftPerm" in response.text:
-                                server_available = True
-                                server_port = port
-                                break
-                    except:
-                        pass
+                for port in range(8000, 8101):
+                    tried_ports.append(port)
+                    if check_server(port):
+                        server_available = True
+                        server_port = port
+                        break
             
             if server_available:
                 print(f"Server available on port {server_port}")
             else:
-                print("Server not available")
-        except ImportError:
-            # requests not available
+                ports_str = ", ".join(map(str, tried_ports))
+                print(f"Server not available (tried ports: {ports_str})")
+        except Exception:
             print("Server not available")
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"

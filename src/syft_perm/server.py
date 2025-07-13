@@ -1848,10 +1848,10 @@ def get_editor_url(path: str) -> str:
     if configured_port:
         # Verify the server is running on this port
         try:
-            import requests
-            response = requests.get(f"http://localhost:{configured_port}/", timeout=0.5)
-            if response.status_code == 200:
-                return f"http://localhost:{configured_port}/editor/{path}"
+            import urllib.request
+            with urllib.request.urlopen(f"http://localhost:{configured_port}/", timeout=0.5) as response:
+                if response.status == 200:
+                    return f"http://localhost:{configured_port}/editor/{path}"
         except Exception:
             pass
 
@@ -1889,10 +1889,10 @@ def get_files_widget_url() -> str:
     if configured_port:
         # Verify the server is running on this port
         try:
-            import requests
-            response = requests.get(f"http://localhost:{configured_port}/", timeout=0.5)
-            if response.status_code == 200:
-                return f"http://localhost:{configured_port}/files-widget"
+            import urllib.request
+            with urllib.request.urlopen(f"http://localhost:{configured_port}/", timeout=0.5) as response:
+                if response.status == 200:
+                    return f"http://localhost:{configured_port}/files-widget"
         except Exception:
             pass
 
