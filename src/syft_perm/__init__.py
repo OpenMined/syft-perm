@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.78"
+__version__ = "0.3.79"
 
 __all__ = [
     "open",
@@ -129,52 +129,54 @@ class Files:
         # First pass: collect all unique paths (files and folders)
         for root, dirs, file_names in os.walk(datasites_path):
             root_path = Path(root)
-            
+
             # Skip hidden directories
             dirs[:] = [d for d in dirs if not d.startswith(".")]
-            
+
             # Add current directory
             if root_path != datasites_path:  # Don't add the datasites folder itself
                 all_paths.add(root_path)
-            
+
             # Add all files
             for file_name in file_names:
                 if not file_name.startswith(".") and file_name != "syft.pub.yaml":
                     all_paths.add(root_path / file_name)
-        
+
         # Second pass: process all paths and create entries
         for path in sorted(all_paths):
             relative_path = path.relative_to(datasites_path)
-            
+
             # Apply search filter
             if search and search.lower() not in str(relative_path).lower():
                 continue
-                
+
             # Process the path (either file or folder)
             if path.is_dir():
                 # It's a folder
                 datasite_owner = (
-                    str(relative_path).split("/")[0] if "/" in str(relative_path) else str(relative_path)
+                    str(relative_path).split("/")[0]
+                    if "/" in str(relative_path)
+                    else str(relative_path)
                 )
-                
+
                 is_user_datasite = user_email and datasite_owner == user_email
-                
+
                 # Get permissions for this folder
                 permissions_summary = []
                 limits_info = {
                     "max_file_size": None,
                     "allow_dirs": True,
                     "allow_symlinks": True,
-                    "has_limits": False
+                    "has_limits": False,
                 }
                 try:
                     syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
-                    
+
                     # Get limits info
                     if hasattr(syft_obj, "get_file_limits"):
                         limits_info = syft_obj.get_file_limits()
-                    
+
                     # Build permissions summary
                     user_highest_perm = {}
                     for perm_level in ["admin", "write", "create", "read"]:
@@ -182,13 +184,13 @@ class Files:
                         for user in users:
                             if user not in user_highest_perm:
                                 user_highest_perm[user] = perm_level
-                    
+
                     perm_groups = {}
                     for user, perm in user_highest_perm.items():
                         if perm not in perm_groups:
                             perm_groups[perm] = []
                         perm_groups[perm].append(user)
-                    
+
                     for perm_level in ["admin", "write", "create", "read"]:
                         if perm_level in perm_groups:
                             users = perm_groups[perm_level]
@@ -199,7 +201,7 @@ class Files:
                             permissions_summary.append(f"{perm_level}: {user_list}")
                 except Exception:
                     permissions_summary = []
-                
+
                 # Calculate folder size
                 folder_size = 0
                 try:
@@ -208,7 +210,7 @@ class Files:
                             folder_size += item.stat().st_size
                 except Exception:
                     folder_size = 0
-                
+
                 files.append(
                     {
                         "name": str(relative_path),
@@ -233,9 +235,9 @@ class Files:
                 datasite_owner = (
                     str(relative_path).split("/")[0] if "/" in str(relative_path) else ""
                 )
-                
+
                 is_user_datasite = user_email and datasite_owner == user_email
-                
+
                 # Get permissions for this file
                 has_yaml = False
                 permissions_summary = []
@@ -243,21 +245,21 @@ class Files:
                     "max_file_size": None,
                     "allow_dirs": True,
                     "allow_symlinks": True,
-                    "has_limits": False
+                    "has_limits": False,
                 }
                 try:
                     syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
-                    
+
                     # Get limits info
                     if hasattr(syft_obj, "get_file_limits"):
                         limits_info = syft_obj.get_file_limits()
-                    
+
                     if hasattr(syft_obj, "has_yaml"):
                         has_yaml = syft_obj.has_yaml
                     elif any(users for users in permissions.values()):
                         has_yaml = True
-                    
+
                     # Build permissions summary
                     user_highest_perm = {}
                     for perm_level in ["admin", "write", "create", "read"]:
@@ -265,13 +267,13 @@ class Files:
                         for user in users:
                             if user not in user_highest_perm:
                                 user_highest_perm[user] = perm_level
-                    
+
                     perm_groups = {}
                     for user, perm in user_highest_perm.items():
                         if perm not in perm_groups:
                             perm_groups[perm] = []
                         perm_groups[perm].append(user)
-                    
+
                     for perm_level in ["admin", "write", "create", "read"]:
                         if perm_level in perm_groups:
                             users = perm_groups[perm_level]
@@ -284,10 +286,10 @@ class Files:
                     permissions = {}
                     has_yaml = False
                     permissions_summary = []
-                
+
                 # Get file extension
                 file_ext = path.suffix if path.suffix else ".txt"
-                
+
                 files.append(
                     {
                         "name": str(relative_path),
@@ -307,7 +309,7 @@ class Files:
                         "has_limits": limits_info.get("has_limits", False),
                     }
                 )
-        
+
         # Sort by name
         files.sort(key=lambda x: x["name"])
         return files
@@ -376,27 +378,50 @@ class Files:
         import json
         import uuid
         from datetime import datetime
-        from IPython.display import display, HTML, clear_output
-        import time
+        from pathlib import Path
+
+        from IPython.display import HTML, clear_output, display
+
+        # Count datasites first
+        syftbox_dirs = [
+            Path.home() / "SyftBox",
+            Path.home() / ".syftbox",
+            Path("/tmp/SyftBox"),
+        ]
+
+        datasites_path = None
+        for path in syftbox_dirs:
+            if path.exists():
+                datasites_path = path / "datasites"
+                if datasites_path.exists():
+                    break
+
+        total_datasites = 0
+        if datasites_path and datasites_path.exists():
+            total_datasites = len(
+                [d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+            )
 
         # Show loading animation
-        loading_html = """
+        loading_html = f"""
         <div id="loading-container" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
             <div style="font-size: 18px; color: #666; margin-bottom: 15px;">Loading the internet of private data...</div>
             <div style="width: 300px; height: 4px; background-color: #e5e7eb; border-radius: 2px; margin: 0 auto; overflow: hidden;">
                 <div id="loading-bar" style="width: 0%; height: 100%; background-color: #6b7280; transition: width 0.3s ease;"></div>
             </div>
-            <div id="loading-status" style="margin-top: 10px; color: #9ca3af; font-size: 12px;">Scanning directories...</div>
+            <div id="loading-status" style="margin-top: 10px; color: #9ca3af; font-size: 12px;">Scanning <span id="current-count">0</span> of {total_datasites} datasites...</div>
         </div>
         <script>
-        (function() {
-            var progress = 0;
-            var interval = setInterval(function() {
-                progress += Math.random() * 15;
-                if (progress > 90) progress = 90;
+        (function() {{
+            var totalDatasites = {total_datasites};
+            var currentCount = 0;
+            var interval = setInterval(function() {{
+                currentCount = Math.min(currentCount + Math.floor(Math.random() * 3) + 1, totalDatasites - 1);
+                var progress = (currentCount / totalDatasites) * 100;
                 document.getElementById('loading-bar').style.width = progress + '%';
-            }, 200);
-        })();
+                document.getElementById('current-count').textContent = currentCount;
+            }}, 200);
+        }})();
         </script>
         """
         display(HTML(loading_html))
@@ -416,7 +441,7 @@ class Files:
 
         # Get all files for search
         all_files = self._scan_files()
-        
+
         # Clear loading animation
         clear_output()
 
@@ -709,10 +734,10 @@ class Files:
                             <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
                             <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
                             <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
-                            <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('max_file_size')">Max Size ↕</th>
-                            <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('allow_dirs')">Dirs? ↕</th>
-                            <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('allow_symlinks')">Symlinks? ↕</th>
-                            <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('has_limits')">Limits? ↕</th>
+                            <th style="width: 3rem; cursor: pointer;" onclick="sortTable_{container_id}('max_file_size')">Max ↕</th>
+                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('allow_dirs')">D? ↕</th>
+                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('allow_symlinks')">S? ↕</th>
+                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('has_limits')">L? ↕</th>
                             <th style="width: 15rem;">Actions</th>
                         </tr>
                     </thead>
@@ -722,7 +747,6 @@ class Files:
         # Initial table rows - show first 50 files
         for i, file in enumerate(files[:50]):
             # Format file info
-            file_name = file["name"].split("/")[-1]  # Just the filename
             file_path = file["name"]
             full_syft_path = f"syft://{file_path}"  # Full syft:// path
             datasite_owner = file.get("datasite_owner", "unknown")
@@ -742,7 +766,7 @@ class Files:
                 size_str = f"{size / 1024:.1f} KB"
             else:
                 size_str = f"{size} B"
-                
+
             # Format max file size
             if max_file_size:
                 if max_file_size > 1024 * 1024:
@@ -784,21 +808,23 @@ class Files:
                         <td>
                             <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">
             """
-            
+
             # Add each permission line
-            perms = file.get('permissions_summary', [])
+            perms = file.get("permissions_summary", [])
             if perms:
                 for perm_line in perms[:3]:  # Limit to 3 lines
-                    html += f'                                <span>{html_module.escape(perm_line)}</span>\n'
+                    html += f"                                <span>{html_module.escape(perm_line)}</span>\n"
                 if len(perms) > 3:
-                    html += f'                                <span>+{len(perms) - 3} more...</span>\n'
+                    html += (
+                        f"                                <span>+{len(perms) - 3} more...</span>\n"
+                    )
             else:
                 html += '                                <span style="color: #9ca3af;">No permissions</span>\n'
-                
+
             html += f"""
                             </div>
                         </td>
-                        <td><span style="font-size: 0.625rem; color: #6b7280;">{max_size_str}</span></td>
+                        <td><span style="font-size: 0.5rem; color: #6b7280;">{max_size_str}</span></td>
                         <td><span style="font-size: 0.625rem; color: {'#059669' if allow_dirs else '#dc2626'};">{'✓' if allow_dirs else '✗'}</span></td>
                         <td><span style="font-size: 0.625rem; color: {'#059669' if allow_symlinks else '#dc2626'};">{'✓' if allow_symlinks else '✗'}</span></td>
                         <td><span style="font-size: 0.625rem; color: {'#dc2626' if has_limits else '#6b7280'};">{'✓' if has_limits else '-'}</span></td>
@@ -1004,7 +1030,7 @@ class Files:
                     
                     html += '</div>' +
                         '</td>' +
-                        '<td><span style="font-size: 0.625rem; color: #6b7280;">' + formatSize(maxFileSize) + '</span></td>' +
+                        '<td><span style="font-size: 0.5rem; color: #6b7280;">' + formatSize(maxFileSize) + '</span></td>' +
                         '<td><span style="font-size: 0.625rem; color: ' + (allowDirs ? '#059669' : '#dc2626') + ';">' + (allowDirs ? '✓' : '✗') + '</span></td>' +
                         '<td><span style="font-size: 0.625rem; color: ' + (allowSymlinks ? '#059669' : '#dc2626') + ';">' + (allowSymlinks ? '✓' : '✗') + '</span></td>' +
                         '<td><span style="font-size: 0.625rem; color: ' + (hasLimits ? '#dc2626' : '#6b7280') + ';">' + (hasLimits ? '✓' : '-') + '</span></td>' +
