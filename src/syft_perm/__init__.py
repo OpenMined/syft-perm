@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.67"
+__version__ = "0.3.68"
 
 __all__ = [
     "open",
@@ -513,6 +513,33 @@ class Files:
             width: 0.5rem;
             height: 0.5rem;
         }}
+        
+        #{container_id} .autocomplete-dropdown {{
+            position: absolute;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }}
+        
+        #{container_id} .autocomplete-dropdown.show {{
+            display: block;
+        }}
+        
+        #{container_id} .autocomplete-option {{
+            padding: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }}
+        
+        #{container_id} .autocomplete-option:hover,
+        #{container_id} .autocomplete-option.selected {{
+            background: #f3f4f6;
+        }}
 
         #{container_id} .type-badge {{
             display: inline-flex;
@@ -993,32 +1020,90 @@ class Files:
                 renderTable();
             }};
             
-            // Tab completion
+            // Tab completion with dropdown
             function setupTabCompletion(inputEl, getOptions) {{
+                var dropdown = document.createElement('div');
+                dropdown.className = 'autocomplete-dropdown';
+                dropdown.id = inputEl.id + '-dropdown';
+                inputEl.parentNode.style.position = 'relative';
+                inputEl.parentNode.appendChild(dropdown);
+                
                 var currentIndex = -1;
                 var currentOptions = [];
+                var isDropdownOpen = false;
+                
+                function updateDropdown() {{
+                    dropdown.innerHTML = '';
+                    currentOptions.forEach(function(option, index) {{
+                        var div = document.createElement('div');
+                        div.className = 'autocomplete-option';
+                        if (index === currentIndex) div.classList.add('selected');
+                        div.textContent = option;
+                        div.onclick = function() {{
+                            inputEl.value = option;
+                            hideDropdown();
+                        }};
+                        dropdown.appendChild(div);
+                    }});
+                    
+                    // Position dropdown
+                    var rect = inputEl.getBoundingClientRect();
+                    var parentRect = inputEl.parentNode.getBoundingClientRect();
+                    dropdown.style.top = (rect.bottom - parentRect.top) + 'px';
+                    dropdown.style.left = '0px';
+                    dropdown.style.width = rect.width + 'px';
+                }}
+                
+                function showDropdown() {{
+                    if (currentOptions.length > 0) {{
+                        dropdown.classList.add('show');
+                        isDropdownOpen = true;
+                        updateDropdown();
+                    }}
+                }}
+                
+                function hideDropdown() {{
+                    dropdown.classList.remove('show');
+                    isDropdownOpen = false;
+                    currentIndex = -1;
+                }}
                 
                 inputEl.addEventListener('keydown', function(e) {{
-                    if (e.key === 'Tab') {{
+                    if (e.key === 'Tab' || (e.key === 'ArrowDown' && !isDropdownOpen)) {{
                         e.preventDefault();
                         
                         var value = inputEl.value.toLowerCase();
-                        if (currentOptions.length === 0 || currentIndex === -1) {{
-                            currentOptions = getOptions().filter(function(opt) {{
-                                return opt.toLowerCase().startsWith(value);
-                            }});
-                            currentIndex = 0;
-                        }} else {{
-                            currentIndex = (currentIndex + 1) % currentOptions.length;
-                        }}
+                        currentOptions = getOptions().filter(function(opt) {{
+                            return opt.toLowerCase().includes(value);
+                        }}).slice(0, 10); // Limit to 10 options
                         
                         if (currentOptions.length > 0) {{
-                            inputEl.value = currentOptions[currentIndex];
+                            currentIndex = 0;
+                            showDropdown();
                         }}
-                    }} else {{
-                        currentIndex = -1;
-                        currentOptions = [];
+                    }} else if (e.key === 'ArrowDown' && isDropdownOpen) {{
+                        e.preventDefault();
+                        currentIndex = Math.min(currentIndex + 1, currentOptions.length - 1);
+                        updateDropdown();
+                    }} else if (e.key === 'ArrowUp' && isDropdownOpen) {{
+                        e.preventDefault();
+                        currentIndex = Math.max(currentIndex - 1, 0);
+                        updateDropdown();
+                    }} else if (e.key === 'Enter' && isDropdownOpen && currentIndex >= 0) {{
+                        e.preventDefault();
+                        inputEl.value = currentOptions[currentIndex];
+                        hideDropdown();
+                    }} else if (e.key === 'Escape') {{
+                        hideDropdown();
                     }}
+                }});
+                
+                inputEl.addEventListener('blur', function() {{
+                    setTimeout(hideDropdown, 200); // Delay to allow click on dropdown
+                }});
+                
+                inputEl.addEventListener('input', function() {{
+                    hideDropdown();
                 }});
             }}
             
