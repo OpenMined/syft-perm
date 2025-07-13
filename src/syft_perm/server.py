@@ -1526,8 +1526,8 @@ def get_files_widget_html(
         // Initialize variables
         var allFiles = [];
         var filteredFiles = [];
-        var currentPage = 1;
-        var itemsPerPage = 50;
+        var currentPage = {page};
+        var itemsPerPage = {items_per_page};
         var sortColumn = 'modified';  // Default sort by modified date
         var sortDirection = 'desc';    // Default descending (newest first)
         var chronologicalIds = {{}};

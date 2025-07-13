@@ -121,11 +121,11 @@ class Files:
             if 8005 not in ports_to_check:
                 ports_to_check.append(8005)
             
-            # Try each port with very short timeout
+            # Try each port with 20 second timeout
             for port in ports_to_check:
                 try:
                     url = f"http://localhost:{port}"
-                    with urllib.request.urlopen(url, timeout=0.2) as response:
+                    with urllib.request.urlopen(url, timeout=20) as response:
                         if response.status == 200:
                             content = response.read().decode('utf-8')
                             if "SyftPerm" in content:
@@ -446,35 +446,17 @@ class Files:
             offset: Starting index (default: 0)
 
         Returns:
-            New Files instance with filtered results
+            New Files instance with filtered results or FastAPIFiles with iframe
         """
         # Check if server is available
         server_url = self._check_server()
         if server_url:
-            # Server is available, use it
+            # Server is available, return FastAPIFiles instance that will show iframe
             try:
-                import urllib.request
-                import urllib.parse
-                import json
-                
-                # Build URL with parameters
-                params = {}
-                if files:
-                    params['search'] = files
-                if admin:
-                    params['admin'] = admin
-                
-                url = f"{server_url}/api/files-data"
-                if params:
-                    url += "?" + urllib.parse.urlencode(params)
-                
-                # Fetch from server with 1 second timeout
-                with urllib.request.urlopen(url, timeout=1) as response:
-                    data = json.loads(response.read().decode('utf-8'))
-                    server_files = data.get('files', [])
-                    
-                    # Return FilteredFiles with server data
-                    return FilteredFiles(server_files, limit=limit, offset=offset)
+                # Server is available, return FastAPIFiles for iframe display
+                # Don't test the API endpoint as it may be slow
+                api_files = FastAPIFiles(server_url)
+                return api_files.search(files=files, admin=admin, limit=limit, offset=offset)
             except:
                 # If server fails, fall back to local
                 pass
@@ -489,18 +471,34 @@ class Files:
         result = FilteredFiles(filtered_files, limit=limit, offset=offset)
         return result
 
-    def filter(self, folders: _Union[list, None] = None) -> "Files":
+    def filter(self, folders: _Union[list, str, None] = None) -> "Files":
         """
         Filter files by folder paths.
 
         Args:
-            folders: List of file or folder paths to include
+            folders: List of file or folder paths to include, or a single string
 
         Returns:
-            New Files instance with filtered results
+            New Files instance with filtered results or FastAPIFiles with iframe
         """
-        # Get all files first
+        # Check if server is available
+        server_url = self._check_server()
+        if server_url:
+            # Server is available, return FastAPIFiles instance that will show iframe
+            try:
+                # Server is available, return FastAPIFiles for iframe display
+                api_files = FastAPIFiles(server_url)
+                return api_files.filter(folders=folders)
+            except:
+                # If server fails, fall back to local
+                pass
+        
+        # Fall back to local scanning
         all_files = self._scan_files()
+        
+        # Convert string to list if needed for local processing
+        if isinstance(folders, str):
+            folders = [folders]
         
         # Apply folder filter
         filtered_files = self._apply_folder_filter(all_files, folders=folders)
@@ -620,21 +618,33 @@ class Files:
         else:
             raise TypeError("Files indexing only supports slice notation, e.g., files[1:10]")
 
-    def page(self, page_number: int, items_per_page: int = 50) -> "Files":
+    def page(self, page_number: int = 2, items_per_page: int = 50) -> "Files":
         """
         Return a Files instance that will display starting at a specific page.
         
         Args:
-            page_number: The page number to jump to (1-based indexing)
+            page_number: The page number to jump to (1-based indexing, defaults to 2)
             items_per_page: Number of items per page (default: 50)
         
         Returns:
-            Files instance that will render starting at the requested page
+            Files instance with full table or FastAPIFiles with iframe
         """
         if page_number < 1:
             raise ValueError("Page number must be >= 1")
-            
-        # Create a new Files instance with the initial page set
+        
+        # Check if server is available
+        server_url = self._check_server()
+        if server_url:
+            # Server is available, return FastAPIFiles instance that will show iframe
+            try:
+                # Server is available, return FastAPIFiles for iframe display
+                api_files = FastAPIFiles(server_url)
+                return api_files.page(page_number=page_number, items_per_page=items_per_page)
+            except:
+                # If server fails, fall back to local
+                pass
+        
+        # Fall back to local - create a new Files instance with the initial page set
         new_files = Files()
         new_files._initial_page = page_number
         new_files._items_per_page = items_per_page
@@ -2742,6 +2752,29 @@ class FilteredFiles(Files):
                 </table>
             </div>
         </div>
+        
+        <script>
+        // Copy path with rainbow animation
+        window.copyPath_{container_id} = function(path, rowElement) {{
+            var command = 'sp.open("' + path + '")';
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(command).then(function() {{
+                // Add rainbow animation
+                if (rowElement) {{
+                    rowElement.classList.add('rainbow-flash');
+                    setTimeout(function() {{
+                        rowElement.classList.remove('rainbow-flash');
+                    }}, 800);
+                }}
+            }}).catch(function() {{
+                console.error('Failed to copy to clipboard');
+            }});
+        }};
+        
+        // Stub functions for other actions (not implemented in FilteredFiles)
+        window.updateSelectAllState_{container_id} = function() {{}};
+        </script>
         """
 
         return html
@@ -2924,18 +2957,22 @@ class FastAPIFiles(Files):
         result._url = url
         return result
     
-    def filter(self, folders: _Union[list, None] = None) -> "FastAPIFiles":
+    def filter(self, folders: _Union[list, str, None] = None) -> "FastAPIFiles":
         """
         Generate URL for folder filter.
         
         Args:
-            folders: List of file or folder paths to include
+            folders: List of file or folder paths to include, or a single string
             
         Returns:
             FastAPIFiles instance with URL
         """
         if not folders:
             return self
+        
+        # Convert string to list if needed
+        if isinstance(folders, str):
+            folders = [folders]
             
         # Convert folders list to comma-separated string
         folders_str = ",".join(str(f) for f in folders)
