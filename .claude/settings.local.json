@@ -28,7 +28,8 @@
       "Bash(cp:*)",
       "Bash(awk:*)",
       "Bash(mkdir:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(uv pip install:*)"
     ],
     "deny": []
   }

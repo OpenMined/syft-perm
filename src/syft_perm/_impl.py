@@ -655,6 +655,21 @@ class SyftFile:
 
             current_path = parent_dir
 
+        # Add owner permissions: datasite owner gets full admin access
+        path_str = str(self._path)
+        if "datasites" in path_str:
+            # Extract datasite owner from path like: /path/to/SyftBox/datasites/user@domain.com/...
+            parts = path_str.split("datasites")
+            if len(parts) > 1:
+                datasites_relative = parts[-1].lstrip("/\\")
+                path_segments = datasites_relative.split("/")
+                if path_segments and "@" in path_segments[0]:
+                    datasite_owner = path_segments[0]
+                    # Grant full permissions to datasite owner
+                    for perm_type in ["read", "create", "write", "admin"]:
+                        if datasite_owner not in nearest_permissions[perm_type]:
+                            nearest_permissions[perm_type].append(datasite_owner)
+
         # Cache and return the effective permissions
         _permission_cache.set(cache_key, nearest_permissions)
         return nearest_permissions
@@ -1899,6 +1914,45 @@ class SyftFolder:
         """Get all permissions for this folder as a dictionary."""
         return self._get_all_permissions()
 
+    def get_terminal(self) -> bool:
+        """Check if this folder is a terminal node (blocks inheritance)."""
+        syftpub_path = self._path / "syft.pub.yaml"
+        if not syftpub_path.exists():
+            return False
+
+        try:
+            with open(syftpub_path, "r") as f:
+                content = yaml.safe_load(f) or {}
+            return content.get("terminal", False)
+        except Exception:
+            return False
+
+    def set_terminal(self, value: bool) -> None:
+        """Set terminal status for this folder."""
+        syftpub_path = self._path / "syft.pub.yaml"
+
+        # Read existing content or create new
+        content = {"rules": []}
+        if syftpub_path.exists():
+            try:
+                with open(syftpub_path, "r") as f:
+                    content = yaml.safe_load(f) or {"rules": []}
+            except Exception:
+                content = {"rules": []}
+
+        # Set terminal value
+        content["terminal"] = value
+
+        # Ensure directory exists
+        syftpub_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write back to file
+        with open(syftpub_path, "w") as f:
+            yaml.dump(content, f, default_flow_style=False, sort_keys=False)
+
+        # Clear cache since we modified the file
+        _permission_cache.invalidate(str(self._path))
+
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this folder from its own syft.pub.yaml file."""
         # Check cache first
@@ -2032,6 +2086,21 @@ class SyftFolder:
                         pass
 
                 current_path = parent_dir
+
+        # Add owner permissions: datasite owner gets full admin access
+        path_str = str(self._path)
+        if "datasites" in path_str:
+            # Extract datasite owner from path like: /path/to/SyftBox/datasites/user@domain.com/...
+            parts = path_str.split("datasites")
+            if len(parts) > 1:
+                datasites_relative = parts[-1].lstrip("/\\")
+                path_segments = datasites_relative.split("/")
+                if path_segments and "@" in path_segments[0]:
+                    datasite_owner = path_segments[0]
+                    # Grant full permissions to datasite owner
+                    for perm_type in ["read", "create", "write", "admin"]:
+                        if datasite_owner not in folder_permissions[perm_type]:
+                            folder_permissions[perm_type].append(datasite_owner)
 
         # Cache and return the effective permissions
         _permission_cache.set(cache_key, folder_permissions)

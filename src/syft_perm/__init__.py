@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.54"
+__version__ = "0.3.58"
 
 __all__ = [
     "open",
@@ -157,7 +157,7 @@ class Files:
                 try:
                     # Use open() to get the file object with all permissions
                     syft_obj = open(file_path)
-                    permissions = syft_obj.permissions_dict
+                    permissions = syft_obj.permissions_dict.copy()
 
                     # Check if syft-perm found any yaml files
                     # If has_yaml property exists and returns True, yaml files were found
@@ -325,7 +325,6 @@ class Files:
 
             # Format permissions
             perms = file.get("permissions", {})
-            has_yaml = file.get("has_yaml", False)
 
             perm_items = []
             for perm_type, users in perms.items():
@@ -341,11 +340,8 @@ class Files:
             if perm_items:
                 perm_str = "<br>".join(perm_items)
             else:
-                # Show message based on whether permissions are actually unknown
-                if not has_yaml:
-                    perm_str = "<em style='color: #6b7280;'>Unknown — but you have read</em>"
-                else:
-                    perm_str = "<em style='color: #9ca3af;'>No explicit permissions</em>"
+                # Show that no explicit permissions were found
+                perm_str = "<em style='color: #9ca3af;'>No explicit permissions</em>"
 
             html += f"""
                     <tr style="border-bottom: 1px solid #f3f4f6;">
@@ -446,12 +442,8 @@ class Files:
                 if (permItems.length > 0) {{
                     return permItems.join('<br>');
                 }} else {{
-                    // Show message based on whether permissions are actually unknown
-                    if (!hasYaml) {{
-                        return '<em style="color: #6b7280;">Unknown — but you have read</em>';
-                    }} else {{
-                        return '<em style="color: #9ca3af;">No explicit permissions</em>';
-                    }}
+                    // Show that no explicit permissions were found
+                    return '<em style="color: #9ca3af;">No explicit permissions</em>';
                 }}
             }}
 
