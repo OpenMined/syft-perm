@@ -521,11 +521,17 @@ class SyftFile:
     @property
     def has_yaml(self) -> bool:
         """Check if this file has any associated yaml permission files."""
-        # Use the same logic as _get_all_permissions to find yaml files
-        # This ensures consistency with how permissions are actually resolved
+        # Check if any yaml files were found during permission resolution
+        # This is simpler: if we have ANY permissions (including "*"), then yaml files exist
         perms = self._get_all_permissions()
-        # If we have any permissions set (not just empty lists), then yaml files exist
-        return any(users for users in perms.values())
+
+        # Check each permission type
+        for permission_type, users in perms.items():
+            if users:  # If there are any users (including "*")
+                return True
+
+        # No permissions found means no yaml files processed this file
+        return False
 
     def _get_all_permissions(self) -> Dict[str, List[str]]:
         """Get all permissions for this file using old syftbox nearest-node algorithm."""

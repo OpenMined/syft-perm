@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.46"
+__version__ = "0.3.47"
 
 __all__ = [
     "open",
@@ -159,11 +159,12 @@ class Files:
                     syft_obj = open(file_path)
                     permissions = syft_obj.permissions_dict
 
-                    # Check if syft-perm found any permission reasons (indicates yaml files exist)
-                    if hasattr(syft_obj, "permission_reasons") and syft_obj.permission_reasons:
-                        has_yaml = True
-                    elif permissions:
-                        # If we have any permissions, yaml files must exist
+                    # Check if syft-perm found any yaml files
+                    # If has_yaml property exists and returns True, yaml files were found
+                    if hasattr(syft_obj, "has_yaml"):
+                        has_yaml = syft_obj.has_yaml
+                    # Fallback: if we have any permissions with actual users, yaml files must exist
+                    elif any(users for users in permissions.values()):
                         has_yaml = True
 
                 except Exception:
