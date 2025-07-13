@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.87"
+__version__ = "0.3.88"
 
 __all__ = [
     "open",
@@ -346,19 +346,159 @@ class Files:
         """
         return self._scan_files(search)
 
-    def search(self, term: str, limit: int = 50, offset: int = 0) -> dict:
+    def search(self, files: _Union[str, None] = None, admin: _Union[str, None] = None, limit: int = 50, offset: int = 0) -> "Files":
         """
-        Search for files by name.
+        Search and filter files by query and admin.
 
         Args:
-            term: Search term for file names
+            files: Search term for file names (same as textbar search)
+            admin: Filter by admin email
             limit: Number of items per page (default: 50)
             offset: Starting index (default: 0)
 
         Returns:
-            Dictionary with search results
+            New Files instance with filtered results
         """
-        return self.get(limit=limit, offset=offset, search=term)
+        # Get all files first
+        all_files = self._scan_files()
+        
+        # Apply filters
+        filtered_files = self._apply_filters(all_files, files_query=files, admin=admin)
+        
+        # Create new Files instance with filtered data
+        result = FilteredFiles(filtered_files, limit=limit, offset=offset)
+        return result
+
+    def filter(self, folders: _Union[list, None] = None) -> "Files":
+        """
+        Filter files by folder paths.
+
+        Args:
+            folders: List of file or folder paths to include
+
+        Returns:
+            New Files instance with filtered results
+        """
+        # Get all files first
+        all_files = self._scan_files()
+        
+        # Apply folder filter
+        filtered_files = self._apply_folder_filter(all_files, folders=folders)
+        
+        # Create new Files instance with filtered data
+        result = FilteredFiles(filtered_files)
+        return result
+
+    def _apply_filters(self, files: list, files_query: _Union[str, None] = None, admin: _Union[str, None] = None) -> list:
+        """Apply search and admin filters to file list."""
+        filtered = files.copy()
+        
+        # Apply files search filter (same as textbar search)
+        if files_query:
+            # Parse search terms to handle quoted phrases (same logic as in JS)
+            search_terms = self._parse_search_terms(files_query)
+            
+            filtered = [
+                file for file in filtered
+                if self._matches_search_terms(file, search_terms)
+            ]
+        
+        # Apply admin filter
+        if admin:
+            filtered = [
+                file for file in filtered
+                if file.get("datasite_owner", "").lower() == admin.lower()
+            ]
+        
+        return filtered
+
+    def _apply_folder_filter(self, files: list, folders: _Union[list, None] = None) -> list:
+        """Apply folder path filter to file list."""
+        if not folders:
+            return files
+        
+        # Normalize folder paths
+        normalized_folders = []
+        for folder in folders:
+            # Remove syft:// prefix if present
+            if isinstance(folder, str) and folder.startswith("syft://"):
+                folder = folder[7:]  # Remove "syft://"
+            normalized_folders.append(str(folder).strip())
+        
+        # Filter files that match any of the folder paths
+        filtered = []
+        for file in files:
+            file_path = file.get("name", "")
+            for folder_path in normalized_folders:
+                if file_path.startswith(folder_path):
+                    filtered.append(file)
+                    break
+        
+        return filtered
+
+    def _parse_search_terms(self, search: str) -> list:
+        """Parse search string into terms, handling quoted phrases."""
+        terms = []
+        current_term = ''
+        in_quotes = False
+        quote_char = ''
+        
+        for char in search:
+            if (char == '"' or char == "'") and not in_quotes:
+                # Start of quoted string
+                in_quotes = True
+                quote_char = char
+            elif char == quote_char and in_quotes:
+                # End of quoted string
+                in_quotes = False
+                if current_term.strip():
+                    terms.append(current_term.strip())
+                    current_term = ''
+                quote_char = ''
+            elif char.isspace() and not in_quotes:
+                # End of unquoted term
+                if current_term.strip():
+                    terms.append(current_term.strip())
+                    current_term = ''
+            else:
+                current_term += char
+        
+        # Add final term
+        if current_term.strip():
+            terms.append(current_term.strip())
+        
+        return terms
+
+    def _matches_search_terms(self, file: dict, search_terms: list) -> bool:
+        """Check if file matches all search terms."""
+        file_text = f"{file.get('name', '')} {file.get('datasite_owner', '')}".lower()
+        
+        for term in search_terms:
+            if term.lower() not in file_text:
+                return False
+        
+        return True
+
+    def __getitem__(self, key) -> "Files":
+        """Support slice notation sp.files[x:y] for range selection by chronological #."""
+        if isinstance(key, slice):
+            # Get all files first
+            all_files = self._scan_files()
+            
+            # Sort by modified date to get chronological order (newest first)
+            sorted_files = sorted(all_files, key=lambda x: x.get('modified', 0), reverse=True)
+            
+            # Apply slice (convert to 0-based indexing since user expects 1-based)
+            start = (key.start - 1) if key.start is not None and key.start > 0 else key.start
+            stop = (key.stop - 1) if key.stop is not None and key.stop > 0 else key.stop
+            
+            sliced_files = sorted_files[slice(start, stop, key.step)]
+            
+            # Create new Files instance with sliced data
+            result = FilteredFiles(sliced_files)
+            return result
+        else:
+            raise TypeError("Files indexing only supports slice notation, e.g., files[1:10]")
 
     def __repr__(self) -> str:
         """Static string representation."""
@@ -454,7 +594,7 @@ class Files:
                     </defs>
                 </svg>
             </div>
-            <div style="font-size: 20px; font-weight: 600; color: #666; margin-bottom: 12px;">loading the internet of private data...</div>
+            <div style="font-size: 20px; font-weight: 600; color: #666; margin-bottom: 12px;">loading your view of <br />the internet of private data...</div>
             <div style="width: 340px; height: 6px; background-color: #e5e7eb; border-radius: 3px; margin: 0 auto; overflow: hidden;">
                 <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
             </div>
@@ -1512,6 +1652,364 @@ class Files:
         """
 
         return html
+
+
+class FilteredFiles(Files):
+    """
+    Filtered version of Files that works with a predefined set of files.
+    Used for search(), filter(), and slice operations.
+    """
+    
+    def __init__(self, filtered_files: list, limit: int = None, offset: int = 0):
+        super().__init__()
+        self._filtered_files = filtered_files
+        self._limit = limit
+        self._offset = offset
+    
+    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None) -> list:
+        """Return the pre-filtered files instead of scanning."""
+        return self._filtered_files
+    
+    def _repr_html_(self) -> str:
+        """Generate HTML widget with filtered files."""
+        import html as html_module
+        import json
+        import time
+        import uuid
+        from datetime import datetime
+        from pathlib import Path
+
+        from IPython.display import HTML, clear_output, display
+
+        container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
+
+        # Use the filtered files directly
+        all_files = self._filtered_files
+        
+        # Create chronological index based on modified date (newest first)
+        sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+        chronological_ids = {}
+        for i, file in enumerate(sorted_by_date):
+            file_key = f"{file['name']}|{file['path']}"
+            chronological_ids[file_key] = i + 1
+
+        # Apply pagination if specified
+        if self._limit:
+            files = all_files[self._offset:self._offset + self._limit]
+        else:
+            files = all_files[:100]  # Default limit for display
+        
+        total = len(all_files)
+
+        if not files:
+            return (
+                "<div style='padding: 40px; text-align: center; color: #666; "
+                "font-family: -apple-system, BlinkMacSystemFont, sans-serif;'>"
+                f"No files found (filtered from {total} total files)</div>"
+            )
+
+        # Build HTML template (same as original but without loading animation)
+        html = f"""
+        <style>
+        #{container_id} * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        #{container_id} {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            background: #ffffff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin: 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }}
+
+        #{container_id} .search-controls {{
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }}
+
+        #{container_id} .search-controls input {{
+            flex: 1;
+            min-width: 200px;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }}
+
+        #{container_id} .table-container {{
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            background: #ffffff;
+            min-height: 0;
+            max-height: 600px;
+        }}
+
+        #{container_id} table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }}
+
+        #{container_id} thead {{
+            background: #f8f9fa;
+            border-bottom: 1px solid #e5e7eb;
+        }}
+
+        #{container_id} th {{
+            text-align: left;
+            padding: 0.375rem 0.25rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            z-index: 10;
+        }}
+
+        #{container_id} td {{
+            padding: 0.375rem 0.25rem;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: top;
+            font-size: 0.75rem;
+            text-align: left;
+        }}
+
+        #{container_id} tbody tr {{
+            transition: background-color 0.15s;
+            cursor: pointer;
+        }}
+
+        #{container_id} tbody tr:hover {{
+            background: rgba(0, 0, 0, 0.03);
+        }}
+
+        @keyframes rainbow {{
+            0% {{ background-color: #fee2e2; }}
+            16% {{ background-color: #fef3c7; }}
+            33% {{ background-color: #d1fae5; }}
+            50% {{ background-color: #bfdbfe; }}
+            66% {{ background-color: #e0e7ff; }}
+            83% {{ background-color: #ede9fe; }}
+            100% {{ background-color: #ffe9ec; }}
+        }}
+
+        #{container_id} .rainbow-flash {{
+            animation: rainbow 0.8s ease-in-out;
+        }}
+
+        #{container_id} .truncate {{
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }}
+
+        #{container_id} .btn {{
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            border: none;
+            cursor: not-allowed;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.125rem;
+            transition: all 0.15s;
+            opacity: 0.5;
+        }}
+
+        #{container_id} .btn:hover {{
+            opacity: 0.5;
+        }}
+
+        #{container_id} .btn-blue {{
+            background: #dbeafe;
+            color: #3b82f6;
+        }}
+
+        #{container_id} .btn-purple {{
+            background: #e9d5ff;
+            color: #a855f7;
+        }}
+
+        #{container_id} .btn-red {{
+            background: #fee2e2;
+            color: #ef4444;
+        }}
+
+        #{container_id} .btn-green {{
+            background: #d1fae5;
+            color: #10b981;
+        }}
+
+        #{container_id} .btn-gray {{
+            background: #f3f4f6;
+            color: #6b7280;
+        }}
+
+        #{container_id} .icon {{
+            width: 0.5rem;
+            height: 0.5rem;
+        }}
+
+        #{container_id} .type-badge {{
+            display: inline-block;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: #f3f4f6;
+            color: #374151;
+            text-align: center;
+            white-space: nowrap;
+        }}
+
+        #{container_id} .admin-email {{
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #374151;
+        }}
+
+        #{container_id} .date-text {{
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }}
+        </style>
+
+        <div id="{container_id}">
+            <div class="search-controls">
+                <div style="font-size: 0.875rem; color: #6b7280; align-self: center;">
+                    Showing {len(files)} of {total} filtered files
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 1.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
+                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
+                            <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
+                            <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('admin')">Admin ↕</th>
+                            <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
+                            <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
+                            <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
+                            <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
+                            <th style="width: 15rem;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="{container_id}-tbody">
+        """
+
+        # Initial table rows - show files
+        for i, file in enumerate(files[:50]):
+            # Format file info
+            file_path = file["name"]
+            full_syft_path = f"syft://{file_path}"  # Full syft:// path
+            datasite_owner = file.get("datasite_owner", "unknown")
+            modified = datetime.fromtimestamp(file.get("modified", 0)).strftime("%m/%d/%Y %H:%M")
+            file_ext = file.get("extension", ".txt")
+            size = file.get("size", 0)
+            is_dir = file.get("is_dir", False)
+
+            # Get chronological ID based on modified date
+            file_key = f"{file['name']}|{file['path']}"
+            chrono_id = chronological_ids.get(file_key, i + 1)
+
+            # Format size
+            if size > 1024 * 1024:
+                size_str = f"{size / (1024 * 1024):.1f} MB"
+            elif size > 1024:
+                size_str = f"{size / 1024:.1f} KB"
+            else:
+                size_str = f"{size} B"
+
+            html += f"""
+                    <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
+                        <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
+                        <td>{chrono_id}</td>
+                        <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(full_syft_path)}">{html_module.escape(full_syft_path)}</div></td>
+                        <td>
+                            <div class="admin-email">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                <span class="truncate">{html_module.escape(datasite_owner)}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="date-text">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                    <line x1="16" x2="16" y1="2" y2="6"></line>
+                                    <line x1="8" x2="8" y1="2" y2="6"></line>
+                                    <line x1="3" x2="21" y1="10" y2="10"></line>
+                                </svg>
+                                <span>{modified}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="type-badge">
+                                {"DIR" if is_dir else file_ext.upper().replace(".", "")}
+                            </div>
+                        </td>
+                        <td>{size_str}</td>
+                        <td>
+                            <div style="font-size: 0.75rem; color: #6b7280;">
+                                {"; ".join(file.get("permissions_summary", [])[:2])}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 0.125rem;">
+                                <button class="btn btn-gray" title="Open in editor">File</button>
+                                <button class="btn btn-blue" title="View file info">Info</button>
+                                <button class="btn btn-purple" title="Copy path">Copy</button>
+                                <button class="btn btn-red" title="Delete file">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                        <line x1="10" x2="10" y1="11" y2="17"></line>
+                                        <line x1="14" x2="14" y1="11" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+            """
+
+        html += f"""
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        """
+
+        return html
+
+    def __repr__(self) -> str:
+        """String representation showing filtered count."""
+        return f"<FilteredFiles: {len(self._filtered_files)} files>"
 
 
 # Create singleton instance
