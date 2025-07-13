@@ -1671,7 +1671,7 @@ wheels = [
 
 [[package]]
 name = "syft-perm"
-version = "0.3.80"
+version = "0.3.87"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },

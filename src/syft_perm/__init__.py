@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.86"
+__version__ = "0.3.87"
 
 __all__ = [
     "open",
@@ -127,15 +127,19 @@ class Files:
             pass
 
         # Count total datasites for progress tracking
-        datasite_dirs = [d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+        datasite_dirs = [
+            d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")
+        ]
         total_datasites = len(datasite_dirs)
         processed_datasites = 0
 
         # First pass: collect all unique paths (files and folders) per datasite
         for datasite_dir in datasite_dirs:
             if progress_callback:
-                progress_callback(processed_datasites, total_datasites, f"Scanning {datasite_dir.name}")
-            
+                progress_callback(
+                    processed_datasites, total_datasites, f"Scanning {datasite_dir.name}"
+                )
+
             for root, dirs, file_names in os.walk(datasite_dir):
                 root_path = Path(root)
 
@@ -149,12 +153,14 @@ class Files:
                 for file_name in file_names:
                     if not file_name.startswith(".") and file_name != "syft.pub.yaml":
                         all_paths.add(root_path / file_name)
-            
+
             processed_datasites += 1
-            
+
             # Update progress after each datasite is fully processed
             if progress_callback:
-                progress_callback(processed_datasites, total_datasites, f"Completed {datasite_dir.name}")
+                progress_callback(
+                    processed_datasites, total_datasites, f"Completed {datasite_dir.name}"
+                )
 
         # Second pass: process all paths and create entries
         for path in sorted(all_paths):
@@ -362,9 +368,9 @@ class Files:
         """Generate SyftObjects-style widget for Jupyter."""
         import html as html_module
         import json
-        import uuid
         import threading
         import time
+        import uuid
         from datetime import datetime
         from pathlib import Path
 
@@ -391,10 +397,10 @@ class Files:
             )
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-        
+
         # Variables to track progress
         progress_data = {"current": 0, "total": total_datasites, "status": "Starting..."}
-        
+
         # Show loading animation with real progress tracking
         loading_html = f"""
         <style>
@@ -448,7 +454,7 @@ class Files:
                     </defs>
                 </svg>
             </div>
-            <div style="font-size: 20px; font-weight: 600; color: #666; margin-bottom: 12px;">Loading the internet of private data...</div>
+            <div style="font-size: 20px; font-weight: 600; color: #666; margin-bottom: 12px;">loading the internet of private data...</div>
             <div style="width: 340px; height: 6px; background-color: #e5e7eb; border-radius: 3px; margin: 0 auto; overflow: hidden;">
                 <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
             </div>
@@ -460,9 +466,9 @@ class Files:
         # Progress callback function
         def update_progress(current, total, status):
             progress_data["current"] = current
-            progress_data["total"] = total  
+            progress_data["total"] = total
             progress_data["status"] = status
-            
+
             # Update the display
             progress_percent = (current / max(total, 1)) * 100
             update_html = f"""
@@ -486,7 +492,14 @@ class Files:
 
         # Scan files with progress tracking
         all_files = self._scan_files(progress_callback=update_progress)
-        
+
+        # Create chronological index based on modified date (newest first)
+        sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+        chronological_ids = {}
+        for i, file in enumerate(sorted_by_date):
+            file_key = f"{file['name']}|{file['path']}"
+            chronological_ids[file_key] = i + 1
+
         # Get initial display files
         data = {"files": all_files[:100], "total_count": len(all_files)}
         files = data["files"]
@@ -807,6 +820,10 @@ class Files:
             size = file.get("size", 0)
             is_dir = file.get("is_dir", False)
 
+            # Get chronological ID based on modified date
+            file_key = f"{file['name']}|{file['path']}"
+            chrono_id = chronological_ids.get(file_key, i + 1)
+
             # Format size
             if size > 1024 * 1024:
                 size_str = f"{size / (1024 * 1024):.1f} MB"
@@ -815,11 +832,10 @@ class Files:
             else:
                 size_str = f"{size} B"
 
-
             html += f"""
                     <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
                         <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
-                        <td>{i}</td>
+                        <td>{chrono_id}</td>
                         <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(full_syft_path)}">{html_module.escape(full_syft_path)}</div></td>
                         <td>
                             <div class="admin-email">
@@ -901,6 +917,20 @@ class Files:
         (function() {{
             // Store all files data
             var allFiles = {json.dumps(all_files)};
+            
+            // Create chronological index based on modified date (newest first)
+            var sortedByDate = allFiles.slice().sort(function(a, b) {{
+                return (b.modified || 0) - (a.modified || 0);
+            }});
+            
+            // Assign chronological IDs
+            var chronologicalIds = {{}};
+            for (var i = 0; i < sortedByDate.length; i++) {{
+                var file = sortedByDate[i];
+                var fileKey = file.name + '|' + file.path; // Unique key for each file
+                chronologicalIds[fileKey] = i + 1;
+            }}
+            
             var filteredFiles = allFiles.slice();
             var currentPage = 1;
             var itemsPerPage = 50;
@@ -1016,9 +1046,13 @@ class Files:
                     var sizeStr = formatSize(file.size || 0);
                     var isDir = file.is_dir || false;
                     
+                    // Get chronological ID based on modified date
+                    var fileKey = file.name + '|' + file.path;
+                    var chronoId = chronologicalIds[fileKey] || (i + 1);
+                    
                     html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                         '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
-                        '<td>' + (totalFiles - i - 1) + '</td>' +
+                        '<td>' + chronoId + '</td>' +
                         '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(fullSyftPath) + '">' + escapeHtml(fullSyftPath) + '</div></td>' +
                         '<td>' +
                             '<div class="admin-email">' +
