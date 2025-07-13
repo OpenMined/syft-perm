@@ -1,0 +1,11 @@
+rules:
+- pattern: README.md
+  access:
+    admin:
+    - liamtrask@gmail.com
+    write:
+    - jamesbrown@gmail.com
+    create:
+    - peter@openmined.org
+    read:
+    - '*'

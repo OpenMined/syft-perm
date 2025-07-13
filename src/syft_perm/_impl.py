@@ -1016,16 +1016,16 @@ class SyftFile:
                 return (parts[0][0] + parts[1][0]).upper()
             return email[0:2].upper()
 
-        # Function to map syft permissions to Google Drive roles
-        def get_drive_role(permissions):
+        # Function to get highest syft permission level
+        def get_highest_permission(permissions):
             if "admin" in permissions:
-                return "Owner"
+                return "Admin"
             elif "write" in permissions:
-                return "Editor"
+                return "Write"
             elif "create" in permissions:
-                return "Commenter"
+                return "Create"
             elif "read" in permissions:
-                return "Viewer"
+                return "Read"
             return "No access"
 
         # Collect all users with their permissions
@@ -1045,47 +1045,40 @@ class SyftFile:
         # Get current user (file owner)
         current_user = os.path.basename(os.path.expanduser("~"))
 
-        # Create Google Drive style HTML
+        # Create Jupyter-friendly permissions interface
         html = f"""
-        <div style="font-family: 'Google Sans', 'Segoe UI', Tahoma, sans-serif; 
-                    max-width: 480px; background: white; border-radius: 8px; 
-                    box-shadow: 0 1px 3px rgba(60,64,67,.3); margin: 16px 0;">
-            
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                    background: white; border: 1px solid #e1e4e8;
+                    border-radius: 6px; margin: 8px 0; overflow: hidden;">
+
             <!-- Header -->
-            <div style="padding: 20px 24px 16px; border-bottom: 1px solid #e8eaed;">
+            <div style="background: #f6f8fa; padding: 12px 16px; border-bottom: 1px solid #e1e4e8;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 24px; height: 24px; background: #4285f4; border-radius: 3px;
-                                    display: flex; align-items: center; justify-content: center;">
-                            <span style="color: white; font-size: 14px; font-weight: 500;">📄</span>
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">📄</span>
                         <div>
-                            <div style="font-size: 16px; font-weight: 500; color: #3c4043;">
+                            <div style="font-size: 14px; font-weight: 600; color: #24292e;">
                                 {self._path.name}
                             </div>
-                            <div style="font-size: 12px; color: #5f6368; margin-top: 2px;">
-                                {current_user} • Owner
+                            <div style="font-size: 12px; color: #586069;">
+                                Owner: {current_user}
                             </div>
                         </div>
                     </div>
-                    <button style="background: #1a73e8; color: white; border: none; padding: 8px 16px;
-                                   border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer;">
-                        Share
-                    </button>
+                    <div style="font-size: 12px; color: #586069; font-weight: 600;">
+                        PERMISSIONS
+                    </div>
                 </div>
             </div>
-            
-            <!-- People with access section -->
-            <div style="padding: 16px 24px;">
-                <div style="font-size: 14px; font-weight: 500; color: #3c4043; margin-bottom: 16px;">
-                    People with access
-                </div>
+
+            <!-- Permissions list -->
+            <div style="padding: 8px;">
         """
 
         # Add each user
         for user in sorted(user_permissions.keys()):
             permissions = user_permissions[user]
-            role = get_drive_role(permissions)
+            role = get_highest_permission(permissions)
             initials = get_initials(user)
             color = get_avatar_color(user)
 
@@ -1093,23 +1086,24 @@ class SyftFile:
             display_name = "Anyone with the link" if user == "*" else user
 
             html += f"""
-                <div style="display: flex; align-items: center; padding: 8px 0; gap: 12px;">
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: {color};
+                <div style="display: flex; align-items: center; padding: 6px 8px; gap: 10px;
+                            border-bottom: 1px solid #f6f8fa;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: {color};
                                 display: flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 14px; font-weight: 500;">{initials}</span>
+                        <span style="color: white; font-size: 12px; font-weight: 600;">{initials}</span>
                     </div>
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 14px; color: #3c4043; font-weight: 400;">
+                        <div style="font-size: 13px; color: #24292e; font-weight: 500;">
                             {display_name}
                         </div>
-                        <div style="font-size: 12px; color: #5f6368;">
+                        <div style="font-size: 11px; color: #586069;">
                             {user if user != "*" else "Public access"}
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="background: #f8f9fa; color: #3c4043; padding: 4px 8px;
-                                     border-radius: 4px; font-size: 12px; border: 1px solid #e8eaed;">
-                            {role}
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="background: #f1f3f4; color: #24292e; padding: 2px 6px;
+                                     border-radius: 3px; font-size: 11px; font-weight: 600;">
+                            {role.upper()}
                         </span>
                     </div>
                 </div>
@@ -2204,16 +2198,16 @@ class SyftFolder:
                 return (parts[0][0] + parts[1][0]).upper()
             return email[0:2].upper()
 
-        # Function to map syft permissions to Google Drive roles
-        def get_drive_role(permissions):
+        # Function to get highest syft permission level
+        def get_highest_permission(permissions):
             if "admin" in permissions:
-                return "Owner"
+                return "Admin"
             elif "write" in permissions:
-                return "Editor"
+                return "Write"
             elif "create" in permissions:
-                return "Commenter"
+                return "Create"
             elif "read" in permissions:
-                return "Viewer"
+                return "Read"
             return "No access"
 
         # Collect all users with their permissions
@@ -2273,7 +2267,7 @@ class SyftFolder:
         # Add each user
         for user in sorted(user_permissions.keys()):
             permissions = user_permissions[user]
-            role = get_drive_role(permissions)
+            role = get_highest_permission(permissions)
             initials = get_initials(user)
             color = get_avatar_color(user)
 
@@ -2281,23 +2275,24 @@ class SyftFolder:
             display_name = "Anyone with the link" if user == "*" else user
 
             html += f"""
-                <div style="display: flex; align-items: center; padding: 8px 0; gap: 12px;">
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: {color};
+                <div style="display: flex; align-items: center; padding: 6px 8px; gap: 10px;
+                            border-bottom: 1px solid #f6f8fa;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: {color};
                                 display: flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 14px; font-weight: 500;">{initials}</span>
+                        <span style="color: white; font-size: 12px; font-weight: 600;">{initials}</span>
                     </div>
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 14px; color: #3c4043; font-weight: 400;">
+                        <div style="font-size: 13px; color: #24292e; font-weight: 500;">
                             {display_name}
                         </div>
-                        <div style="font-size: 12px; color: #5f6368;">
+                        <div style="font-size: 11px; color: #586069;">
                             {user if user != "*" else "Public access"}
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="background: #f8f9fa; color: #3c4043; padding: 4px 8px;
-                                     border-radius: 4px; font-size: 12px; border: 1px solid #e8eaed;">
-                            {role}
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="background: #f1f3f4; color: #24292e; padding: 2px 6px;
+                                     border-radius: 3px; font-size: 11px; font-weight: 600;">
+                            {role.upper()}
                         </span>
                     </div>
                 </div>
