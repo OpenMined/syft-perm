@@ -31,20 +31,8 @@ export PATH="$VIRTUAL_ENV/bin:$PATH"
 echo "Installing dependencies..."
 uv sync
 
-# Find available discovery port in range 62050-62100
-DISCOVERY_PORT=""
-for port in {62050..62100}; do
-    if ! lsof -i :$port > /dev/null 2>&1; then
-        DISCOVERY_PORT=$port
-        break
-    fi
-done
-
-if [ -z "$DISCOVERY_PORT" ]; then
-    echo "Warning: No available port found in discovery range 62050-62100"
-    DISCOVERY_PORT=62050
-fi
-
+# Use fixed discovery port for debugging
+DISCOVERY_PORT=62050
 echo "Using discovery port: $DISCOVERY_PORT"
 
 # Start discovery server in background
@@ -54,10 +42,19 @@ import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 class DiscoveryHandler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+        self.end_headers()
+
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
         self.end_headers()
         response = {'main_server_port': $SYFTBOX_ASSIGNED_PORT, 'discovery_port': $DISCOVERY_PORT}
         self.wfile.write(json.dumps(response).encode())
@@ -65,7 +62,7 @@ class DiscoveryHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # Suppress logging
 
-server = HTTPServer(('localhost', $DISCOVERY_PORT), DiscoveryHandler)
+server = HTTPServer(('0.0.0.0', $DISCOVERY_PORT), DiscoveryHandler)
 server.serve_forever()
 " &
 
