@@ -792,7 +792,8 @@ class Files:
                         width="100%" 
                         height="100%" 
                         frameborder="0"
-                        style="border: none;">
+                        style="border: none;"
+                        allow="clipboard-read; clipboard-write">
                     </iframe>
                 </div>
                 """
@@ -2152,11 +2153,16 @@ class Files:
         
         // Background server checking - only run when server was not initially available
         {"" if server_available else f"""
-        let serverFound = false;
-        let checkInterval;
+        // Use a unique variable name to avoid redeclaration errors
+        if (typeof window.syftPermServerFound_{container_id} === 'undefined') {{
+            window.syftPermServerFound_{container_id} = false;
+        }}
+        if (typeof window.syftPermCheckInterval_{container_id} === 'undefined') {{
+            window.syftPermCheckInterval_{container_id} = null;
+        }}
         
-        async function checkDiscoveryServer() {{
-            if (serverFound) return;
+        async function checkDiscoveryServer_{container_id}() {{
+            if (window.syftPermServerFound_{container_id}) return;
             
             console.log('Checking discovery server on port 62050...');
             
@@ -2176,14 +2182,15 @@ class Files:
                     
                     if (data.main_server_port) {{
                         console.log(`✅ FOUND DISCOVERY SERVER on port 62050, main server on port ${{data.main_server_port}}!`);
-                        serverFound = true;
+                        window.syftPermServerFound_{container_id} = true;
                         
                         // Clear the interval to stop checking
-                        if (checkInterval) {{
-                            clearInterval(checkInterval);
+                        if (window.syftPermCheckInterval_{container_id}) {{
+                            clearInterval(window.syftPermCheckInterval_{container_id});
+                            window.syftPermCheckInterval_{container_id} = null;
                         }}
                         
-                        // Replace the widget with iframe
+                        // Replace the widget with iframe with smooth transition
                         const container = document.getElementById('{container_id}');
                         if (container) {{
                             const isDark = document.body.classList.contains('vscode-dark') || 
@@ -2191,17 +2198,51 @@ class Files:
                                          window.matchMedia('(prefers-color-scheme: dark)').matches;
                             const borderColor = isDark ? '#3e3e42' : '#ddd';
                             
-                            container.innerHTML = `
-                                <div style="width: 100%; height: 600px; border: 1px solid ${{borderColor}}; border-radius: 8px; overflow: hidden;">
-                                    <iframe 
-                                        src="http://localhost:${{data.main_server_port}}/files-widget" 
-                                        width="100%" 
-                                        height="100%" 
-                                        frameborder="0"
-                                        style="border: none;">
-                                    </iframe>
-                                </div>
+                            // Create iframe container with initial opacity 0
+                            const iframeContainer = document.createElement('div');
+                            iframeContainer.style.cssText = `
+                                width: 100%;
+                                height: 600px;
+                                border: 1px solid ${{borderColor}};
+                                border-radius: 8px;
+                                overflow: hidden;
+                                opacity: 0;
+                                transition: opacity 0.8s ease-in-out;
                             `;
+                            
+                            const iframe = document.createElement('iframe');
+                            iframe.src = `http://localhost:${{data.main_server_port}}/files-widget`;
+                            iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+                            iframe.frameBorder = '0';
+                            // Allow clipboard access in iframe
+                            iframe.allow = 'clipboard-read; clipboard-write';
+                            
+                            // Wait for iframe to load before transitioning
+                            iframe.onload = function() {{
+                                // Small delay to ensure content is rendered
+                                setTimeout(() => {{
+                                    // Fade out the existing content
+                                    container.style.transition = 'opacity 0.3s ease-out';
+                                    container.style.opacity = '0';
+                                    
+                                    setTimeout(() => {{
+                                        // Clear the container and add the iframe
+                                        container.innerHTML = '';
+                                        container.appendChild(iframeContainer);
+                                        
+                                        // Reset container opacity and fade in the iframe
+                                        container.style.opacity = '1';
+                                        
+                                        // Trigger the fade in after a brief moment
+                                        setTimeout(() => {{
+                                            iframeContainer.style.opacity = '1';
+                                        }}, 50);
+                                    }}, 300);
+                                }}, 100);
+                            }};
+                            
+                            // Add iframe to container (but don't display yet)
+                            iframeContainer.appendChild(iframe);
                         }}
                         return;
                     }}
@@ -2214,9 +2255,11 @@ class Files:
         }}
         
         // Check for discovery server every 3 seconds
-        checkInterval = setInterval(checkDiscoveryServer, 3000);
-        // Also check once immediately after 1 second
-        setTimeout(checkDiscoveryServer, 1000);
+        if (!window.syftPermCheckInterval_{container_id}) {{
+            window.syftPermCheckInterval_{container_id} = setInterval(checkDiscoveryServer_{container_id}, 3000);
+            // Also check once immediately after 1 second
+            setTimeout(checkDiscoveryServer_{container_id}, 1000);
+        }}
         """}
         </script>
         """
