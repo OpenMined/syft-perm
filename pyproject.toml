@@ -95,6 +95,8 @@ python_functions = ["test_*"]
 dev-dependencies = [
     "autopep8>=2.3.2",
     "mypy>=1.16.1",
+    "nbformat>=5.10.4",
+    "pytest>=8.4.1",
     "types-pyyaml>=6.0.12.20250516",
     "types-tabulate>=0.9.0.20241207",
 ]

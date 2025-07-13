@@ -2433,8 +2433,8 @@ class SyftFolder:
                 f"Use force=True to override this check."
             )
 
-        # Read all existing permissions for this file
-        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
+        # Read all existing permissions for this folder
+        access_dict = read_syftpub_yaml(self._path, "**") or {}
 
         # Update the specific permission
         users = set(access_dict.get(permission, []))
@@ -2446,7 +2446,7 @@ class SyftFolder:
             if perm not in access_dict:
                 access_dict[perm] = []
 
-        update_syftpub_yaml(self._path.parent, self._name, access_dict)
+        update_syftpub_yaml(self._path, "**", access_dict)
 
         # Invalidate cache for this path and its children
         _permission_cache.invalidate(str(self._path))
@@ -2455,7 +2455,7 @@ class SyftFolder:
         self, user: str, permission: Literal["read", "create", "write", "admin"]
     ) -> None:
         """Internal method to revoke permission from a user."""
-        access_dict = read_syftpub_yaml(self._path.parent, self._name) or {}
+        access_dict = read_syftpub_yaml(self._path, "**") or {}
         users = set(access_dict.get(permission, []))
         # Handle revoking from public access
         if user in ["*", "public"]:
@@ -2469,7 +2469,7 @@ class SyftFolder:
             if perm not in access_dict:
                 access_dict[perm] = []
 
-        update_syftpub_yaml(self._path.parent, self._name, access_dict)
+        update_syftpub_yaml(self._path, "**", access_dict)
 
         # Invalidate cache for this path and its children
         _permission_cache.invalidate(str(self._path))
