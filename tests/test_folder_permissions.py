@@ -243,6 +243,33 @@ class TestFolderPermissions(unittest.TestCase):
         self.assertIn("pattern: '**'", content)
         self.assertIn("andrew@openmined.org", content)
 
+        # Test that grandchild file can override inherited permissions
+        # Revoke access specifically for the grandchild file
+        grandchild_file_obj.revoke_read_access("andrew@openmined.org")
+
+        # Verify grandchild file no longer has access
+        self.assertFalse(grandchild_file_obj.has_read_access("andrew@openmined.org"))
+
+        # But direct file should still have access from folder inheritance
+        self.assertTrue(direct_file_obj.has_read_access("andrew@openmined.org"))
+
+        # Check that grandchild explanation shows it was specifically denied
+        override_explanation = grandchild_file_obj.explain_permissions("andrew@openmined.org")
+        self.assertIn("READ: ✗ DENIED", override_explanation)
+        # Should show the specific file pattern that matched for the override
+        self.assertIn("Pattern 'convo2.txt' matched", override_explanation)
+
+        # Verify that a new yaml file was created in the grandchild's directory
+        grandchild_dir_yaml = inner_folder / "syft.pub.yaml"
+        self.assertTrue(
+            grandchild_dir_yaml.exists(), "Grandchild directory should have its own syft.pub.yaml"
+        )
+
+        # Verify the override yaml content
+        override_content = grandchild_dir_yaml.read_text()
+        self.assertIn("pattern: convo2.txt", override_content)
+        self.assertIn("read: []", override_content)  # Empty read permissions (revoked)
+
     def test_multiple_nested_levels_inheritance(self):
         """Test inheritance through multiple nested levels."""
         # Create deep nested structure: root/level1/level2/level3/file.txt
@@ -290,6 +317,72 @@ class TestFolderPermissions(unittest.TestCase):
         self.assertFalse((level1 / "syft.pub.yaml").exists())
         self.assertFalse((level2 / "syft.pub.yaml").exists())
         self.assertFalse((level3 / "syft.pub.yaml").exists())
+
+    def test_file_override_folder_permissions(self):
+        """Test that individual files can override inherited folder permissions."""
+        # Create folder structure
+        test_folder = Path(self.test_dir) / "override_test"
+        test_folder.mkdir()
+
+        subfolder = test_folder / "subfolder"
+        subfolder.mkdir()
+
+        # Create files
+        file1 = test_folder / "file1.txt"
+        file1.write_text("file 1 content")
+
+        file2 = subfolder / "file2.txt"
+        file2.write_text("file 2 content")
+
+        # Grant folder-level permissions
+        folder = syft_perm.open(test_folder)
+        folder.grant_read_access("user@example.com", force=True)
+
+        # Both files should inherit permissions
+        file1_obj = syft_perm.open(file1)
+        file2_obj = syft_perm.open(file2)
+
+        self.assertTrue(file1_obj.has_read_access("user@example.com"))
+        self.assertTrue(file2_obj.has_read_access("user@example.com"))
+
+        # Override permissions for file2 specifically
+        file2_obj.revoke_read_access("user@example.com")
+
+        # file1 should still have access, file2 should not
+        self.assertTrue(file1_obj.has_read_access("user@example.com"))
+        self.assertFalse(file2_obj.has_read_access("user@example.com"))
+
+        # Check explanations
+        file1_explanation = file1_obj.explain_permissions("user@example.com")
+        file2_explanation = file2_obj.explain_permissions("user@example.com")
+
+        # file1 should show inheritance from folder
+        self.assertIn("READ: ✓ GRANTED", file1_explanation)
+        self.assertIn(f"Explicitly granted read in {test_folder}", file1_explanation)
+
+        # file2 should show specific denial
+        self.assertIn("READ: ✗ DENIED", file2_explanation)
+        self.assertIn("Pattern 'file2.txt' matched", file2_explanation)
+
+        # Verify yaml file structure
+        folder_yaml = test_folder / "syft.pub.yaml"
+        subfolder_yaml = subfolder / "syft.pub.yaml"
+
+        self.assertTrue(folder_yaml.exists())
+        self.assertTrue(subfolder_yaml.exists())  # Created by file2 override
+
+        # Test granting different permission to override file
+        file2_obj.grant_write_access("user@example.com", force=True)
+
+        # file2 should now have write (and inherited read, create) but not admin
+        self.assertTrue(file2_obj.has_read_access("user@example.com"))
+        self.assertTrue(file2_obj.has_create_access("user@example.com"))
+        self.assertTrue(file2_obj.has_write_access("user@example.com"))
+        self.assertFalse(file2_obj.has_admin_access("user@example.com"))
+
+        # file1 should still only have read from folder inheritance
+        self.assertTrue(file1_obj.has_read_access("user@example.com"))
+        self.assertFalse(file1_obj.has_write_access("user@example.com"))
 
 
 if __name__ == "__main__":
