@@ -12,6 +12,7 @@ __all__ = [
     "open",
     "get_editor_url",
     "files",
+    "is_dark",
 ]
 
 
@@ -719,6 +720,9 @@ class Files:
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
         
+        # Detect dark mode early for loading animation
+        is_dark_mode = is_dark()
+        
         # Non-obvious tips for users
         tips = [
             'Use quotation marks to search for exact phrases like "machine learning"',
@@ -769,9 +773,9 @@ class Files:
             border-radius: 3px;
         }}
         </style>
-        <div id="loading-container-{container_id}" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+        <div id="loading-container-{container_id}" style="padding: 40px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: {'#1e1e1e' if is_dark_mode else '#ffffff'};">
             <div style="margin-bottom: 28px;">
-                <svg class="syftbox-logo" xmlns="http://www.w3.org/2000/svg" width="62" height="72" viewBox="0 0 311 360" fill="none">
+                <svg class="syftbox-logo" xmlns="http://www.w3.org/2000/svg" width="62" height="72" viewBox="0 0 311 360" fill="none"&gt;
                     <g clip-path="url(#clip0_7523_4240)">
                         <path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_7523_4240)"></path>
                         <path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_7523_4240)"></path>
@@ -805,14 +809,14 @@ class Files:
                     </defs>
                 </svg>
             </div>
-            <div style="font-size: 20px; font-weight: 600; color: #666; margin-bottom: 12px;">loading your view of <br />the internet of private data...</div>
-            <div style="width: 340px; height: 6px; background-color: #e5e7eb; border-radius: 3px; margin: 0 auto; overflow: hidden;">
+            <div style="font-size: 20px; font-weight: 600; color: {'#cccccc' if is_dark_mode else '#666666'}; margin-bottom: 12px;">loading your view of <br />the internet of private data...</div>
+            <div style="width: 340px; height: 6px; background-color: {'#3e3e42' if is_dark_mode else '#e5e7eb'}; border-radius: 3px; margin: 0 auto; overflow: hidden;">
                 <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
             </div>
-            <div id="loading-status-{container_id}" style="margin-top: 12px; color: #9ca3af; opacity: 0.7; font-size: 12px;">Initializing...</div>
-            <div style="margin-top: 20px; padding: 12px 24px; background: #f0f9ff; border-radius: 6px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                <div style="font-size: 12px; color: #0c4a6e; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    <span style="font-weight: 600; color: #0369a1;">💡 TIP:</span> {html_module.escape(loading_tip)}
+            <div id="loading-status-{container_id}" style="margin-top: 12px; color: {'#9ca3af' if is_dark_mode else '#6b7280'}; opacity: 0.7; font-size: 12px;">Initializing...</div>
+            <div style="margin-top: 20px; padding: 12px 24px; background: {'#1e3a5f' if is_dark_mode else '#f0f9ff'}; border-radius: 6px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                <div style="font-size: 12px; color: {'#93c5fd' if is_dark_mode else '#0c4a6e'}; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <span style="font-weight: 600; color: {'#60a5fa' if is_dark_mode else '#0369a1'};">💡 TIP:</span> {html_module.escape(loading_tip)}
                 </div>
             </div>
         </div>
@@ -849,11 +853,111 @@ class Files:
         ]
 
         datasites_path = None
+        syftbox_path = None
         for path in syftbox_dirs:
             if path.exists():
+                syftbox_path = path
                 datasites_path = path / "datasites"
                 if datasites_path.exists():
                     break
+        
+        # Check syft-perm installation status in background
+        def check_syft_perm_status():
+            import subprocess
+            
+            if syftbox_path:
+                syft_perm_path = syftbox_path / "apps" / "syft-perm"
+                if syft_perm_path.exists():
+                    # Get last modified time of the directory
+                    import os
+                    from datetime import datetime
+                    mod_time = os.path.getmtime(syft_perm_path)
+                    last_modified = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
+                    # Found syft-perm (no print)
+                    
+                    # Check if run.sh is running
+                    try:
+                        # Check for running processes containing the syft-perm path
+                        result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
+                        if result.returncode == 0:
+                            processes = result.stdout
+                            if str(syft_perm_path) in processes and 'run.sh' in processes:
+                                pass  # run.sh is running
+                            else:
+                                # run.sh is not running
+                                
+                                # Check if it was cloned/modified recently (within 2 minutes)
+                                import time
+                                current_time = time.time()
+                                time_since_modified = current_time - mod_time
+                                
+                                if time_since_modified < 120:  # 120 seconds = 2 minutes
+                                    # Recently modified - likely still starting up
+                                    return
+                                
+                                # Delete and re-clone only if it's been more than 2 minutes
+                                # Remove non-running installation
+                                try:
+                                    import shutil
+                                    shutil.rmtree(syft_perm_path)
+                                    # Removed old directory
+                                    
+                                    # Re-clone
+                                    # Re-clone syft-perm
+                                    clone_result = subprocess.run(
+                                        ['git', 'clone', 'https://github.com/OpenMined/syft-perm.git', str(syft_perm_path)],
+                                        capture_output=True,
+                                        text=True
+                                    )
+                                    
+                                    if clone_result.returncode == 0:
+                                        # Successfully re-cloned
+                                        
+                                        # Make run.sh executable
+                                        run_sh_path = syft_perm_path / "run.sh"
+                                        if run_sh_path.exists():
+                                            subprocess.run(['chmod', '+x', str(run_sh_path)], capture_output=True)
+                                            pass  # Made executable
+                                    else:
+                                        pass  # Failed to re-clone
+                                except Exception as e:
+                                    pass  # Error during re-clone
+                    except Exception as e:
+                        pass  # Could not check process status
+                else:
+                    # syft-perm not found
+                    
+                    # Clone syft-perm in the background
+                    # Clone syft-perm
+                    try:
+                        # Ensure apps directory exists
+                        apps_dir = syftbox_path / "apps"
+                        apps_dir.mkdir(exist_ok=True)
+                        
+                        # Clone the repository
+                        clone_result = subprocess.run(
+                            ['git', 'clone', 'https://github.com/OpenMined/syft-perm.git', str(syft_perm_path)],
+                            capture_output=True,
+                            text=True
+                        )
+                        
+                        if clone_result.returncode == 0:
+                            # Successfully cloned
+                            
+                            # Make run.sh executable
+                            run_sh_path = syft_perm_path / "run.sh"
+                            if run_sh_path.exists():
+                                subprocess.run(['chmod', '+x', str(run_sh_path)], capture_output=True)
+                                print("✓ Made run.sh executable")
+                        else:
+                            pass  # Failed to clone
+                    except Exception as e:
+                        pass  # Error cloning
+        
+        # Run the check in a background thread
+        import threading
+        background_thread = threading.Thread(target=check_syft_perm_status, daemon=True)
+        background_thread.start()
         
         update_loading_display(5, "Counting datasites...")
         
@@ -952,14 +1056,15 @@ class Files:
         #{container_id} {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 12px;
-            background: #ffffff;
+            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
             overflow: hidden;
             display: flex;
             flex-direction: column;
             width: 100%;
             margin: 0;
-            border: 1px solid #e5e7eb;
+            border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
             border-radius: 8px;
+            color: {'#cccccc' if is_dark_mode else '#000000'};
         }}
 
         #{container_id} .search-controls {{
@@ -967,8 +1072,8 @@ class Files:
             gap: 0.5rem;
             flex-wrap: wrap;
             padding: 0.75rem;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e5e7eb;
+            background: {'#252526' if is_dark_mode else '#f8f9fa'};
+            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
             flex-shrink: 0;
         }}
 
@@ -976,16 +1081,17 @@ class Files:
             flex: 1;
             min-width: 200px;
             padding: 0.5rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid {'#3e3e42' if is_dark_mode else '#d1d5db'};
             border-radius: 0.25rem;
             font-size: 0.875rem;
+            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
         }}
 
         #{container_id} .table-container {{
             flex: 1;
             overflow-y: auto;
             overflow-x: auto;
-            background: #ffffff;
+            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
             min-height: 0;
             max-height: 600px;
         }}
@@ -997,8 +1103,8 @@ class Files:
         }}
 
         #{container_id} thead {{
-            background: #f8f9fa;
-            border-bottom: 1px solid #e5e7eb;
+            background: {'#252526' if is_dark_mode else '#f8f9fa'};
+            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
         }}
 
         #{container_id} th {{
@@ -1006,16 +1112,17 @@ class Files:
             padding: 0.375rem 0.25rem;
             font-weight: 500;
             font-size: 0.75rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
             position: sticky;
             top: 0;
-            background: #f8f9fa;
+            background: {'#252526' if is_dark_mode else '#f8f9fa'};
             z-index: 10;
+            color: {'#cccccc' if is_dark_mode else '#000000'};
         }}
 
         #{container_id} td {{
             padding: 0.375rem 0.25rem;
-            border-bottom: 1px solid #f3f4f6;
+            border-bottom: 1px solid {'#2d2d30' if is_dark_mode else '#f3f4f6'};
             vertical-align: top;
             font-size: 0.75rem;
             text-align: left;
@@ -1027,10 +1134,10 @@ class Files:
         }}
 
         #{container_id} tbody tr:hover {{
-            background: rgba(0, 0, 0, 0.03);
+            background: {'rgba(255, 255, 255, 0.04)' if is_dark_mode else 'rgba(0, 0, 0, 0.03)'};
         }}
 
-        @keyframes rainbow {{
+        @keyframes rainbow-light {{
             0% {{ background-color: #ffe9ec; }}
             14.28% {{ background-color: #fff4ea; }}
             28.57% {{ background-color: #ffffea; }}
@@ -1040,9 +1147,20 @@ class Files:
             85.71% {{ background-color: #ffeaff; }}
             100% {{ background-color: #ffe9ec; }}
         }}
+        
+        @keyframes rainbow-dark {{
+            0% {{ background-color: #3d2c2e; }}
+            14.28% {{ background-color: #3d352c; }}
+            28.57% {{ background-color: #3d3d2c; }}
+            42.86% {{ background-color: #2c3d31; }}
+            57.14% {{ background-color: #2c363d; }}
+            71.43% {{ background-color: #352c3d; }}
+            85.71% {{ background-color: #3d2c3d; }}
+            100% {{ background-color: #3d2c2e; }}
+        }}
 
         #{container_id} .rainbow-flash {{
-            animation: rainbow 0.8s ease-in-out;
+            animation: {'rainbow-dark' if is_dark_mode else 'rainbow-light'} 0.8s ease-in-out;
         }}
 
         #{container_id} .pagination {{
@@ -1050,8 +1168,8 @@ class Files:
             justify-content: space-between;
             align-items: center;
             padding: 0.5rem;
-            border-top: 1px solid #e5e7eb;
-            background: rgba(0, 0, 0, 0.02);
+            border-top: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
+            background: {'rgba(255, 255, 255, 0.02)' if is_dark_mode else 'rgba(0, 0, 0, 0.02)'};
             flex-shrink: 0;
         }}
 
@@ -1059,14 +1177,14 @@ class Files:
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
             font-size: 0.75rem;
-            border: 1px solid #e5e7eb;
-            background: white;
+            border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
+            background: {'#1e1e1e' if is_dark_mode else 'white'};
             cursor: pointer;
             transition: all 0.15s;
         }}
 
         #{container_id} .pagination button:hover:not(:disabled) {{
-            background: #f3f4f6;
+            background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
         }}
 
         #{container_id} .pagination button:disabled {{
@@ -1076,12 +1194,10 @@ class Files:
 
         #{container_id} .pagination .page-info {{
             font-size: 0.75rem;
-            color: #6b7280;
         }}
 
         #{container_id} .pagination .status {{
             font-size: 0.75rem;
-            color: #9ca3af;
             font-style: italic;
             opacity: 0.8;
             text-align: center;
@@ -1118,28 +1234,28 @@ class Files:
         }}
 
         #{container_id} .btn-blue {{
-            background: #dbeafe;
-            color: #3b82f6;
+            background: {'#1e3a5f' if is_dark_mode else '#dbeafe'};
+            color: {'#60a5fa' if is_dark_mode else '#3b82f6'};
         }}
 
         #{container_id} .btn-purple {{
-            background: #e9d5ff;
-            color: #a855f7;
+            background: {'#3b2e4d' if is_dark_mode else '#e9d5ff'};
+            color: {'#c084fc' if is_dark_mode else '#a855f7'};
         }}
 
         #{container_id} .btn-red {{
-            background: #fee2e2;
-            color: #ef4444;
+            background: {'#4d2828' if is_dark_mode else '#fee2e2'};
+            color: {'#f87171' if is_dark_mode else '#ef4444'};
         }}
 
         #{container_id} .btn-green {{
-            background: #d1fae5;
-            color: #10b981;
+            background: {'#1e4032' if is_dark_mode else '#d1fae5'};
+            color: {'#34d399' if is_dark_mode else '#10b981'};
         }}
 
         #{container_id} .btn-gray {{
-            background: #f3f4f6;
-            color: #6b7280;
+            background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
+            color: {'#9ca3af' if is_dark_mode else '#6b7280'};
         }}
 
         #{container_id} .icon {{
@@ -1149,8 +1265,8 @@ class Files:
         
         #{container_id} .autocomplete-dropdown {{
             position: absolute;
-            background: white;
-            border: 1px solid #e5e7eb;
+            background: {'#1e1e1e' if is_dark_mode else 'white'};
+            border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
             border-radius: 0.25rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             max-height: 200px;
@@ -1171,7 +1287,7 @@ class Files:
         
         #{container_id} .autocomplete-option:hover,
         #{container_id} .autocomplete-option.selected {{
-            background: #f3f4f6;
+            background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
         }}
 
         #{container_id} .type-badge {{
@@ -1180,8 +1296,8 @@ class Files:
             border-radius: 0.25rem;
             font-size: 0.75rem;
             font-weight: 500;
-            background: #f3f4f6;
-            color: #374151;
+            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
+            color: {'#d1d5db' if is_dark_mode else '#374151'};
             text-align: center;
             white-space: nowrap;
         }}
@@ -1192,7 +1308,7 @@ class Files:
             gap: 0.25rem;
             font-family: monospace;
             font-size: 0.75rem;
-            color: #374151;
+            color: {'#d1d5db' if is_dark_mode else '#374151'};
         }}
 
         #{container_id} .date-text {{
@@ -1200,7 +1316,6 @@ class Files:
             align-items: center;
             gap: 0.25rem;
             font-size: 0.75rem;
-            color: #6b7280;
         }}
         </style>
 
@@ -1279,9 +1394,9 @@ class Files:
                             </div>
                         </td>
                         <td><span class="type-badge">{file_ext if not is_dir else 'folder'}</span></td>
-                        <td><span style="color: #6b7280;">{size_str}</span></td>
+                        <td><span style="color: {'#9ca3af' if is_dark_mode else '#6b7280'};">{size_str}</span></td>
                         <td>
-                            <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">
+                            <div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: {'#9ca3af' if is_dark_mode else '#6b7280'};">
             """
 
             # Add each permission line
@@ -1294,7 +1409,7 @@ class Files:
                         f"                                <span>+{len(perms) - 3} more...</span>\n"
                     )
             else:
-                html += '                                <span style="color: #9ca3af;">No permissions</span>\n'
+                html += '                                <span style="color: {'#6b7280' if is_dark_mode else '#9ca3af'};">No permissions</span>\n'
 
             html += f"""
                             </div>
@@ -1499,9 +1614,9 @@ class Files:
                             '</div>' +
                         '</td>' +
                         '<td><span class="type-badge">' + (isDir ? 'folder' : fileExt) + '</span></td>' +
-                        '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
+                        '<td><span style="color: {'#9ca3af' if is_dark_mode else '#6b7280'};">' + sizeStr + '</span></td>' +
                         '<td>' +
-                            '<div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">';
+                            '<div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: {'#9ca3af' if is_dark_mode else '#6b7280'};">';
                     
                     // Add permission lines
                     var perms = file.permissions_summary || [];
@@ -1513,7 +1628,7 @@ class Files:
                             html += '<span>+' + (perms.length - 3) + ' more...</span>';
                         }}
                     }} else {{
-                        html += '<span style="color: #9ca3af;">No permissions</span>';
+                        html += '<span style="color: {'#6b7280' if is_dark_mode else '#9ca3af'};">No permissions</span>';
                     }}
                     
                     html += '</div>' +
@@ -2022,14 +2137,15 @@ class FilteredFiles(Files):
         #{container_id} {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 12px;
-            background: #ffffff;
+            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
             overflow: hidden;
             display: flex;
             flex-direction: column;
             width: 100%;
             margin: 0;
-            border: 1px solid #e5e7eb;
+            border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
             border-radius: 8px;
+            color: {'#cccccc' if is_dark_mode else '#000000'};
         }}
 
         #{container_id} .search-controls {{
@@ -2037,8 +2153,8 @@ class FilteredFiles(Files):
             gap: 0.5rem;
             flex-wrap: wrap;
             padding: 0.75rem;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e5e7eb;
+            background: {'#252526' if is_dark_mode else '#f8f9fa'};
+            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
             flex-shrink: 0;
         }}
 
@@ -2046,7 +2162,7 @@ class FilteredFiles(Files):
             flex: 1;
             min-width: 200px;
             padding: 0.5rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid {'#3e3e42' if is_dark_mode else '#d1d5db'};
             border-radius: 0.25rem;
             font-size: 0.875rem;
         }}
@@ -2055,7 +2171,7 @@ class FilteredFiles(Files):
             flex: 1;
             overflow-y: auto;
             overflow-x: auto;
-            background: #ffffff;
+            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
             min-height: 0;
             max-height: 600px;
         }}
@@ -2067,8 +2183,8 @@ class FilteredFiles(Files):
         }}
 
         #{container_id} thead {{
-            background: #f8f9fa;
-            border-bottom: 1px solid #e5e7eb;
+            background: {'#252526' if is_dark_mode else '#f8f9fa'};
+            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
         }}
 
         #{container_id} th {{
@@ -2076,16 +2192,17 @@ class FilteredFiles(Files):
             padding: 0.375rem 0.25rem;
             font-weight: 500;
             font-size: 0.75rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
             position: sticky;
             top: 0;
-            background: #f8f9fa;
+            background: {'#252526' if is_dark_mode else '#f8f9fa'};
             z-index: 10;
+            color: {'#cccccc' if is_dark_mode else '#000000'};
         }}
 
         #{container_id} td {{
             padding: 0.375rem 0.25rem;
-            border-bottom: 1px solid #f3f4f6;
+            border-bottom: 1px solid {'#2d2d30' if is_dark_mode else '#f3f4f6'};
             vertical-align: top;
             font-size: 0.75rem;
             text-align: left;
@@ -2097,7 +2214,7 @@ class FilteredFiles(Files):
         }}
 
         #{container_id} tbody tr:hover {{
-            background: rgba(0, 0, 0, 0.03);
+            background: {'rgba(255, 255, 255, 0.04)' if is_dark_mode else 'rgba(0, 0, 0, 0.03)'};
         }}
 
         @keyframes rainbow {{
@@ -2138,28 +2255,28 @@ class FilteredFiles(Files):
         }}
 
         #{container_id} .btn-blue {{
-            background: #dbeafe;
-            color: #3b82f6;
+            background: {'#1e3a5f' if is_dark_mode else '#dbeafe'};
+            color: {'#60a5fa' if is_dark_mode else '#3b82f6'};
         }}
 
         #{container_id} .btn-purple {{
-            background: #e9d5ff;
-            color: #a855f7;
+            background: {'#3b2e4d' if is_dark_mode else '#e9d5ff'};
+            color: {'#c084fc' if is_dark_mode else '#a855f7'};
         }}
 
         #{container_id} .btn-red {{
-            background: #fee2e2;
-            color: #ef4444;
+            background: {'#4d2828' if is_dark_mode else '#fee2e2'};
+            color: {'#f87171' if is_dark_mode else '#ef4444'};
         }}
 
         #{container_id} .btn-green {{
-            background: #d1fae5;
-            color: #10b981;
+            background: {'#1e4032' if is_dark_mode else '#d1fae5'};
+            color: {'#34d399' if is_dark_mode else '#10b981'};
         }}
 
         #{container_id} .btn-gray {{
-            background: #f3f4f6;
-            color: #6b7280;
+            background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
+            color: {'#9ca3af' if is_dark_mode else '#6b7280'};
         }}
 
         #{container_id} .icon {{
@@ -2173,8 +2290,8 @@ class FilteredFiles(Files):
             border-radius: 0.25rem;
             font-size: 0.75rem;
             font-weight: 500;
-            background: #f3f4f6;
-            color: #374151;
+            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
+            color: {'#d1d5db' if is_dark_mode else '#374151'};
             text-align: center;
             white-space: nowrap;
         }}
@@ -2185,7 +2302,7 @@ class FilteredFiles(Files):
             gap: 0.25rem;
             font-family: monospace;
             font-size: 0.75rem;
-            color: #374151;
+            color: {'#d1d5db' if is_dark_mode else '#374151'};
         }}
 
         #{container_id} .date-text {{
@@ -2193,13 +2310,12 @@ class FilteredFiles(Files):
             align-items: center;
             gap: 0.25rem;
             font-size: 0.75rem;
-            color: #6b7280;
         }}
         </style>
 
         <div id="{container_id}">
             <div class="search-controls">
-                <div style="font-size: 0.875rem; color: #6b7280; align-self: center;">
+                <div style="font-size: 0.875rem; color: {'#9ca3af' if is_dark_mode else '#6b7280'}; align-self: center;">
                     Showing {len(files)} of {total} filtered files
                 </div>
             </div>
@@ -2276,7 +2392,7 @@ class FilteredFiles(Files):
                         </td>
                         <td>{size_str}</td>
                         <td>
-                            <div style="font-size: 0.75rem; color: #6b7280;">
+                            <div style="font-size: 0.75rem; color: {'#9ca3af' if is_dark_mode else '#6b7280'};">
                                 {"; ".join(file.get("permissions_summary", [])[:2])}
                             </div>
                         </td>
@@ -2453,6 +2569,103 @@ class FilteredFiles(Files):
 
 # Create singleton instance
 files = Files()
+
+
+def is_dark():
+    """
+    Check if Jupyter Notebook/Lab is running in dark mode.
+    
+    Returns:
+        bool: True if dark mode is detected, False otherwise
+    """
+    try:
+        import os
+        import json
+        from pathlib import Path
+        import re
+        import builtins
+        
+        # First, try to read JupyterLab theme settings file
+        jupyter_config_paths = [
+            Path.home() / ".jupyter" / "lab" / "user-settings" / "@jupyterlab" / "apputils-extension" / "themes.jupyterlab-settings",
+            Path.home() / ".jupyter" / "lab" / "user-settings" / "@jupyterlab" / "apputils-extension" / "themes.jupyterlab-settings.json",
+        ]
+        
+        for config_path in jupyter_config_paths:
+            if config_path.exists():
+                try:
+                    with builtins.open(config_path, 'r') as f:
+                        content = f.read()
+                        # Remove comments from the JSON (JupyterLab allows comments)
+                        # Remove single-line comments
+                        content = re.sub(r'//.*$', '', content, flags=re.MULTILINE)
+                        # Remove multi-line comments
+                        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+                        
+                        settings = json.loads(content)
+                        theme = settings.get('theme', '').lower()
+                        # Check if it's a dark theme
+                        if 'dark' in theme:
+                            return True
+                        # If theme is explicitly set to light, return False
+                        if 'light' in theme:
+                            return False
+                except Exception:
+                    pass
+        
+        # Check VS Code settings
+        if 'VSCODE_PID' in os.environ:
+            # VS Code Jupyter might have its own theme
+            # Check workspace settings
+            vscode_settings_paths = [
+                Path.cwd() / ".vscode" / "settings.json",
+                Path.home() / ".config" / "Code" / "User" / "settings.json",
+                Path.home() / "Library" / "Application Support" / "Code" / "User" / "settings.json",  # macOS
+            ]
+            
+            for settings_path in vscode_settings_paths:
+                if settings_path.exists():
+                    try:
+                        with builtins.open(settings_path, 'r') as f:
+                            settings = json.load(f)
+                            # Check workbench color theme
+                            theme = settings.get('workbench.colorTheme', '').lower()
+                            if 'dark' in theme:
+                                return True
+                    except Exception:
+                        pass
+        
+        # Try JavaScript detection as fallback
+        try:
+            from IPython import get_ipython
+            ipython = get_ipython()
+            
+            if ipython is not None:
+                # Execute JavaScript to check theme
+                result = ipython.run_cell_magic('javascript', '', '''
+                if (typeof IPython !== 'undefined' && IPython.notebook) {
+                    IPython.notebook.kernel.execute("_is_dark_mode = " + 
+                        (document.body.classList.contains('theme-dark') || 
+                         (document.body.getAttribute('data-jp-theme-name') && 
+                          document.body.getAttribute('data-jp-theme-name').includes('dark'))));
+                }
+                ''')
+                
+                # Check if we got a result
+                import sys
+                if hasattr(sys.modules['__main__'], '_is_dark_mode'):
+                    is_dark = sys.modules['__main__']._is_dark_mode
+                    delattr(sys.modules['__main__'], '_is_dark_mode')
+                    return is_dark
+        except Exception:
+            pass
+            
+        # Default to False (light mode) if we can't detect
+        return False
+        
+    except Exception:
+        # If any error occurs, assume light mode
+        return False
 
 
 # Server will auto-start when _repr_html_ is called in Jupyter notebooks
