@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.60"
+__version__ = "0.3.61"
 
 __all__ = [
     "open",
@@ -549,6 +549,7 @@ class Files:
             # Format file info
             file_name = file["name"].split("/")[-1]  # Just the filename
             file_path = file["name"]
+            full_syft_path = f"syft://{file_path}"  # Full syft:// path
             datasite_owner = file.get("datasite_owner", "unknown")
             modified = datetime.fromtimestamp(file.get("modified", 0)).strftime("%m/%d/%Y")
             file_ext = file.get("extension", ".txt")
@@ -566,7 +567,7 @@ class Files:
                     <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
                         <td><input type="checkbox" onclick="event.stopPropagation()"></td>
                         <td>{i}</td>
-                        <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(file_path)}">{html_module.escape(file_name)}</div></td>
+                        <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(full_syft_path)}">{html_module.escape(full_syft_path)}</div></td>
                         <td>
                             <div class="admin-email">
                                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -694,6 +695,7 @@ class Files:
                     var file = filteredFiles[i];
                     var fileName = file.name.split('/').pop();
                     var filePath = file.name;
+                    var fullSyftPath = 'syft://' + filePath;  // Full syft:// path
                     var datasiteOwner = file.datasite_owner || 'unknown';
                     var modified = formatDate(file.modified || 0);
                     var fileExt = file.extension || '.txt';
@@ -702,7 +704,7 @@ class Files:
                     html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                         '<td><input type="checkbox" onclick="event.stopPropagation()"></td>' +
                         '<td>' + (totalFiles - i - 1) + '</td>' +
-                        '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(filePath) + '">' + escapeHtml(fileName) + '</div></td>' +
+                        '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(fullSyftPath) + '">' + escapeHtml(fullSyftPath) + '</div></td>' +
                         '<td>' +
                             '<div class="admin-email">' +
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
