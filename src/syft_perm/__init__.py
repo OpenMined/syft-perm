@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.31"
+__version__ = "0.3.32"
 
 __all__ = [
     "open",
@@ -202,8 +202,118 @@ class Files:
         return "<Files: SyftBox permissioned files interface>"
 
     def _repr_html_(self) -> str:
-        """Simple HTML representation for Jupyter notebooks."""
-        return "<div>SyftBox Files - use sp.files.all() for full interface</div>"
+        """Interactive HTML representation with search and pagination."""
+        try:
+            data = self.get(limit=20)  # Show first 20 files
+            files = data["files"]
+            total = data["total_count"]
+
+            if not files:
+                return "<div style='padding: 20px; color: #666;'>No files found in SyftBox/datasites directory</div>"
+
+            # Generate unique IDs for this instance
+            widget_id = f"syft_files_{id(self)}"
+
+            html = f"""
+            <div id="{widget_id}" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                        border: 1px solid #e1e5e9; border-radius: 8px; overflow: hidden; max-width: 100%;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                            color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 24px;">📁</div>
+                    <div>
+                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 2px;">SyftBox Datasites</div>
+                        <div style="font-size: 14px; opacity: 0.9;">Showing <span id="{widget_id}_count">{len(files)}</span> of <span id="{widget_id}_total">{total}</span> files</div>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div style="padding: 16px 20px; background: #f8f9fa; border-bottom: 1px solid #e1e5e9;">
+                    <input id="{widget_id}_search" type="text" placeholder="🔍 Search files..." 
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; 
+                                  font-size: 14px; outline: none;" oninput="searchFiles_{widget_id}(this.value)">
+                </div>
+                
+                <!-- Table -->
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #e1e5e9;">
+                                <th style="text-align: left; padding: 12px; font-weight: 600; width: 40%;">File Path</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; width: 15%;">Size</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; width: 45%;">Permissions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="{widget_id}_tbody">
+            """
+
+            for file in files:
+                # Format file size
+                size = file.get("size", 0)
+                if size > 1024 * 1024:
+                    size_str = f"{size / (1024 * 1024):.1f} MB"
+                elif size > 1024:
+                    size_str = f"{size / 1024:.1f} KB"
+                else:
+                    size_str = f"{size} B"
+
+                # Format permissions
+                perms = file.get("permissions", {})
+                perm_items = []
+                for perm_type, users in perms.items():
+                    if users:
+                        if len(users) > 3:
+                            user_str = f"{', '.join(users[:3])}... (+{len(users)-3})"
+                        else:
+                            user_str = ", ".join(users)
+                        perm_items.append(f"<strong>{perm_type}:</strong> {user_str}")
+
+                perm_str = "<br>".join(perm_items) if perm_items else "<em>No permissions</em>"
+
+                html += f"""
+                        <tr>
+                            <td style="padding: 12px; font-family: 'SF Mono', Monaco, monospace; font-size: 13px; 
+                                       text-align: left; word-break: break-all;">
+                                {file['name']}
+                            </td>
+                            <td style="padding: 12px; color: #586069; text-align: left;">
+                                {size_str}
+                            </td>
+                            <td style="padding: 12px; font-size: 12px; line-height: 1.4; text-align: left;">
+                                {perm_str}
+                            </td>
+                        </tr>
+                """
+
+            html += f"""
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div style="padding: 12px 20px; background: #f8f9fa; border-top: 1px solid #e1e5e9; 
+                            display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 14px; color: #586069;">
+                        Page <span id="{widget_id}_page">1</span> of <span id="{widget_id}_pages">{max(1, (total + 19) // 20)}</span>
+                    </div>
+                    <div>
+                        <button id="{widget_id}_prev" onclick="changePage_{widget_id}(-1)" 
+                                style="padding: 6px 12px; margin-right: 8px; border: 1px solid #d1d5db; 
+                                       background: white; border-radius: 4px; font-size: 14px; cursor: pointer;"
+                                disabled>Previous</button>
+                        <button id="{widget_id}_next" onclick="changePage_{widget_id}(1)" 
+                                style="padding: 6px 12px; border: 1px solid #d1d5db; background: white; 
+                                       border-radius: 4px; font-size: 14px; cursor: pointer;"
+                                {'disabled' if total <= 20 else ''}>Next</button>
+                    </div>
+                </div>
+            </div>
+            """
+
+            return html
+
+        except Exception as e:
+            return f"<div style='color: red; padding: 20px;'>Error loading files: {str(e)}</div>"
 
 
 # Create singleton instance
