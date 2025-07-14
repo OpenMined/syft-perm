@@ -6,12 +6,13 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.90"
+__version__ = "0.3.91"
 
 __all__ = [
     "open",
     "get_editor_url",
     "get_files_widget_url",
+    "get_file_editor_url",
     "files",
     "is_dark",
     "FastAPIFiles",
@@ -71,6 +72,23 @@ def get_files_widget_url() -> str:
     from .server import get_files_widget_url as _get_files_widget_url
     
     return _get_files_widget_url()
+
+
+def get_file_editor_url(path: _Union[str, _Path] = None) -> str:
+    """
+    Get the URL for the file editor interface.
+    
+    Args:
+        path: Optional path to open in the editor
+        
+    Returns:
+        URL to the file editor
+    """
+    from .server import get_file_editor_url as _get_file_editor_url
+    
+    if path:
+        return _get_file_editor_url(str(path))
+    return _get_file_editor_url()
 
 
 class Files:
@@ -1708,6 +1726,67 @@ class Files:
             var adminHistory = [];
             var showFooterTip = {'true' if show_footer_tip else 'false'};
             var footerTip = {json.dumps(footer_tip)};
+            
+            // WebSocket for real-time file updates
+            var ws = null;
+            var wsReconnectInterval = null;
+            var wsUrl = window.location.protocol.replace('http', 'ws') + '//' + window.location.host + '/ws/file-updates';
+            
+            function connectWebSocket() {{
+                if (ws && ws.readyState === WebSocket.OPEN) {{
+                    return;
+                }}
+                
+                try {{
+                    ws = new WebSocket(wsUrl);
+                    
+                    ws.onopen = function() {{
+                        console.log('[WebSocket] Connected for file updates');
+                        if (wsReconnectInterval) {{
+                            clearInterval(wsReconnectInterval);
+                            wsReconnectInterval = null;
+                        }}
+                        // Send periodic ping to keep connection alive
+                        setInterval(function() {{
+                            if (ws && ws.readyState === WebSocket.OPEN) {{
+                                ws.send('ping');
+                            }}
+                        }}, 30000); // Every 30 seconds
+                    }};
+                    
+                    ws.onmessage = function(event) {{
+                        if (event.data === 'pong') {{
+                            return; // Ignore pong responses
+                        }}
+                        
+                        try {{
+                            var data = JSON.parse(event.data);
+                            handleFileUpdate(data);
+                        }} catch (e) {{
+                            console.error('[WebSocket] Error parsing message:', e);
+                        }}
+                    }};
+                    
+                    ws.onclose = function() {{
+                        console.log('[WebSocket] Disconnected');
+                        // Try to reconnect every 5 seconds
+                        if (!wsReconnectInterval) {{
+                            wsReconnectInterval = setInterval(connectWebSocket, 5000);
+                        }}
+                    }};
+                    
+                    ws.onerror = function(error) {{
+                        console.error('[WebSocket] Error:', error);
+                    }};
+                }} catch (e) {{
+                    console.error('[WebSocket] Failed to connect:', e);
+                }}
+            }}
+            
+            // Only connect WebSocket if we're running on a server (not file://)
+            if (window.location.protocol !== 'file:') {{
+                connectWebSocket();
+            }}
 
             // Helper function to escape HTML
             function escapeHtml(text) {{
@@ -1787,6 +1866,272 @@ class Files:
                 }}
                 
                 showStatus(statusText);
+            }}
+            
+            // Sort files according to current sort settings
+            function sortFiles(files) {{
+                files.sort(function(a, b) {{
+                    var aVal, bVal;
+                    
+                    switch(sortColumn) {{
+                        case 'index':
+                            // Sort by modified timestamp for chronological order (newest first)
+                            aVal = a.modified || 0;
+                            bVal = b.modified || 0;
+                            // Reverse the values so newest (higher timestamp) comes first
+                            var temp = aVal;
+                            aVal = -bVal;
+                            bVal = -temp;
+                            break;
+                        case 'name':
+                            aVal = a.name.toLowerCase();
+                            bVal = b.name.toLowerCase();
+                            break;
+                        case 'admin':
+                            aVal = (a.datasite_owner || '').toLowerCase();
+                            bVal = (b.datasite_owner || '').toLowerCase();
+                            break;
+                        case 'modified':
+                            aVal = a.modified || 0;
+                            bVal = b.modified || 0;
+                            break;
+                        case 'type':
+                            aVal = (a.extension || '').toLowerCase();
+                            bVal = (b.extension || '').toLowerCase();
+                            break;
+                        case 'size':
+                            aVal = a.size || 0;
+                            bVal = b.size || 0;
+                            break;
+                        case 'permissions':
+                            aVal = (a.permissions_summary || []).length;
+                            bVal = (b.permissions_summary || []).length;
+                            break;
+                        default:
+                            return 0;
+                    }}
+                    
+                    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                }});
+            }}
+            
+            // Handle file updates from WebSocket
+            function handleFileUpdate(data) {{
+                var action = data.action;
+                var file = data.file;
+                
+                console.log('[WebSocket] File', action + ':', file.path);
+                
+                // Find existing file index
+                var existingIndex = -1;
+                for (var i = 0; i < allFiles.length; i++) {{
+                    if (allFiles[i].path === file.path) {{
+                        existingIndex = i;
+                        break;
+                    }}
+                }}
+                
+                if (action === 'created') {{
+                    // Add new file to allFiles
+                    allFiles.push(file);
+                    
+                    // Update chronological IDs
+                    updateChronologicalIds();
+                    
+                    // Check if file matches current filters
+                    if (matchesCurrentFilters(file)) {{
+                        // Add to filtered files and re-sort according to current sort settings
+                        filteredFiles.push(file);
+                        
+                        // Sort the filtered files according to current sort settings
+                        sortFiles(filteredFiles);
+                        
+                        // Re-render the table to show the file in the correct position
+                        renderTable();
+                        updateStatus();
+                    }}
+                }} else if (action === 'modified') {{
+                    if (existingIndex !== -1) {{
+                        // Update file data
+                        allFiles[existingIndex] = file;
+                        
+                        // Update in filtered files if present
+                        var filteredIndex = -1;
+                        for (var j = 0; j < filteredFiles.length; j++) {{
+                            if (filteredFiles[j].path === file.path) {{
+                                filteredIndex = j;
+                                filteredFiles[j] = file;
+                                break;
+                            }}
+                        }}
+                        
+                        // If file was in filtered list, re-sort and re-render
+                        if (filteredIndex !== -1) {{
+                            // Re-sort since modified date or size might have changed
+                            sortFiles(filteredFiles);
+                            
+                            // Re-render the table to show updated data in correct position
+                            renderTable();
+                            updateStatus();
+                        }}
+                    }}
+                }} else if (action === 'deleted') {{
+                    if (existingIndex !== -1) {{
+                        // Remove from allFiles
+                        allFiles.splice(existingIndex, 1);
+                        
+                        // Remove from filtered files
+                        var filteredIndex = -1;
+                        for (var k = 0; k < filteredFiles.length; k++) {{
+                            if (filteredFiles[k].path === file.path) {{
+                                filteredIndex = k;
+                                filteredFiles.splice(k, 1);
+                                break;
+                            }}
+                        }}
+                        
+                        // Update chronological IDs
+                        updateChronologicalIds();
+                        
+                        // If file was visible, re-render table
+                        if (filteredIndex !== -1) {{
+                            renderTable();
+                            updateStatus();
+                        }}
+                    }}
+                }}
+            }}
+            
+            // Check if file matches current filters
+            function matchesCurrentFilters(file) {{
+                var searchValue = document.getElementById('{container_id}-search').value;
+                var adminFilter = document.getElementById('{container_id}-admin-filter').value;
+                
+                // Apply admin filter
+                if (adminFilter && (file.datasite_owner || '').toLowerCase().indexOf(adminFilter.toLowerCase()) === -1) {{
+                    return false;
+                }}
+                
+                // Apply search filter
+                if (searchValue) {{
+                    var searchTerms = parseSearchTerms(searchValue);
+                    
+                    return searchTerms.every(function(term) {{
+                        var searchableContent = [
+                            file.name,
+                            file.datasite_owner || '',
+                            file.extension || '',
+                            formatSize(file.size || 0),
+                            formatDate(file.modified || 0),
+                            file.is_dir ? 'folder' : 'file',
+                            (file.permissions_summary || []).join(' ')
+                        ].join(' ').toLowerCase();
+                        
+                        return searchableContent.includes(term);
+                    }});
+                }}
+                
+                return true;
+            }}
+            
+            // Update chronological IDs after file changes
+            function updateChronologicalIds() {{
+                var sortedByDate = allFiles.slice().sort(function(a, b) {{
+                    return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
+                }});
+                
+                chronologicalIds = {{}};
+                for (var i = 0; i < sortedByDate.length; i++) {{
+                    var file = sortedByDate[i];
+                    var fileKey = file.name + '|' + file.path;
+                    chronologicalIds[fileKey] = i;
+                }}
+            }}
+            
+            // Add a new row to the table
+            function addTableRow(file, position) {{
+                var tbody = document.getElementById('{container_id}-tbody');
+                var row = tbody.insertRow(position);
+                row.className = 'file-row rainbow-flash';
+                
+                // Remove animation class after it completes
+                setTimeout(function() {{
+                    row.classList.remove('rainbow-flash');
+                }}, 800);
+                
+                updateRowContent(row, file);
+            }}
+            
+            // Update an existing row
+            function updateTableRow(file, rowIndex) {{
+                var tbody = document.getElementById('{container_id}-tbody');
+                var row = tbody.rows[rowIndex];
+                if (row) {{
+                    row.classList.add('rainbow-flash');
+                    setTimeout(function() {{
+                        row.classList.remove('rainbow-flash');
+                    }}, 800);
+                    
+                    updateRowContent(row, file);
+                }}
+            }}
+            
+            // Update row content
+            function updateRowContent(row, file) {{
+                var fileKey = file.name + '|' + file.path;
+                var chronoId = chronologicalIds[fileKey] !== undefined ? chronologicalIds[fileKey] : '';
+                
+                row.onclick = function() {{ copyPath_{container_id}(file.path, row); }};
+                
+                row.innerHTML = `
+                    <td>
+                        <input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}();">
+                    </td>
+                    <td class="chronological-number">${{chronoId}}</td>
+                    <td class="file-name">
+                        <span class="file-icon">${{file.is_dir ? '📁' : '📄'}}</span>
+                        <span>${{escapeHtml(file.name)}}</span>
+                    </td>
+                    <td>${{escapeHtml(file.datasite_owner || '')}}</td>
+                    <td>${{file.is_dir ? '-' : formatSize(file.size || 0)}}</td>
+                    <td>${{formatDate(file.modified || 0)}}</td>
+                    <td class="has-yaml">${{file.has_yaml ? '✓' : ''}}</td>
+                    <td class="permissions">${{(file.permissions_summary || []).join('<br>')}}</td>
+                    <td class="file-actions">
+                        <button class="action-btn" onclick="event.stopPropagation(); editFile_{container_id}('${{file.path}}')">✏️</button>
+                        <button class="action-btn" onclick="event.stopPropagation(); viewInfo_{container_id}('${{file.path}}')">ℹ️</button>
+                        <button class="action-btn" onclick="event.stopPropagation(); deleteFile_{container_id}('${{file.path}}')">🗑️</button>
+                    </td>
+                `;
+            }}
+            
+            // Parse search terms (helper function)
+            function parseSearchTerms(search) {{
+                var terms = [];
+                var currentTerm = '';
+                var inQuotes = false;
+                
+                for (var i = 0; i < search.length; i++) {{
+                    var char = search[i];
+                    if (char === '"') {{
+                        inQuotes = !inQuotes;
+                    }} else if (char === ' ' && !inQuotes) {{
+                        if (currentTerm) {{
+                            terms.push(currentTerm.toLowerCase());
+                            currentTerm = '';
+                        }}
+                    }} else {{
+                        currentTerm += char;
+                    }}
+                }}
+                
+                if (currentTerm) {{
+                    terms.push(currentTerm.toLowerCase());
+                }}
+                
+                return terms;
             }}
 
             // Render table

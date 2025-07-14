@@ -1,5 +1,7 @@
 """FastAPI server for syft-perm permission editor."""
 
+import asyncio
+import logging
 import os
 import threading
 import time
@@ -16,6 +18,8 @@ try:
     from fastapi import FastAPI as _FastAPI  # type: ignore[import-untyped]
     from fastapi import HTTPException as _HTTPException  # type: ignore[import-untyped]
     from fastapi import Query as _Query  # type: ignore[import-untyped]
+    from fastapi import WebSocket as _WebSocket  # type: ignore[import-untyped]
+    from fastapi import WebSocketDisconnect as _WebSocketDisconnect  # type: ignore[import-untyped]
     from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import-untyped]
     from fastapi.responses import HTMLResponse as _HTMLResponse  # type: ignore[import-untyped]
     from pydantic import BaseModel as _BaseModel  # type: ignore[import-untyped]
@@ -30,7 +34,12 @@ FastAPI = _FastAPI
 HTTPException = _HTTPException
 HTMLResponse = _HTMLResponse
 Query = _Query
+WebSocket = _WebSocket
+WebSocketDisconnect = _WebSocketDisconnect
 
+
+# Set up logging
+logger = logging.getLogger("uvicorn.error")
 
 # Only create the FastAPI app if server dependencies are available
 if _SERVER_AVAILABLE:
@@ -80,38 +89,180 @@ if _SERVER_AVAILABLE:
         "message": ""
     }
     
+    # WebSocket connection management
+    active_websockets: List[WebSocket] = []
+    websocket_lock = threading.Lock()
+    
+    # Global event loop for WebSocket operations
+    websocket_loop = None
+    
+    def get_websocket_loop():
+        global websocket_loop
+        if websocket_loop is None or not websocket_loop.is_running():
+            websocket_loop = asyncio.new_event_loop()
+            def run_loop():
+                asyncio.set_event_loop(websocket_loop)
+                websocket_loop.run_forever()
+            thread = threading.Thread(target=run_loop, daemon=True)
+            thread.start()
+            # Give the loop time to start
+            time.sleep(0.1)
+        return websocket_loop
+    
+    async def broadcast_file_change(action: str, file_path: str):
+        """Broadcast file change to all connected WebSocket clients."""
+        from pathlib import Path
+        import json
+        
+        # Skip hidden files and non-datasite files
+        path = Path(file_path)
+        if path.name.startswith('.'):
+            return
+            
+        # Get file metadata
+        try:
+            # Find relative path from datasites directory
+            datasites_parent = None
+            for parent in path.parents:
+                if parent.name == "datasites":
+                    datasites_parent = parent
+                    break
+            
+            if not datasites_parent:
+                return
+                
+            relative_path = path.relative_to(datasites_parent)
+            datasite_owner = str(relative_path).split("/")[0] if "/" in str(relative_path) else ""
+            
+            # Build file info similar to _scan_files
+            file_info = {
+                "name": str(relative_path),
+                "path": str(path),
+                "is_dir": path.is_dir() if action != "deleted" else False,
+                "size": path.stat().st_size if action != "deleted" and path.exists() else 0,
+                "modified": path.stat().st_mtime if action != "deleted" and path.exists() else time.time(),
+                "extension": path.suffix if not path.is_dir() else "folder",
+                "datasite_owner": datasite_owner,
+                "permissions": {},
+                "has_yaml": False,
+                "permissions_summary": []
+            }
+            
+            # Try to get permissions for non-deleted files
+            if action != "deleted" and path.exists() and not path.is_dir():
+                try:
+                    syft_obj = syft_open(path)
+                    permissions = syft_obj.permissions_dict.copy()
+                    file_info["permissions"] = permissions
+                    file_info["has_yaml"] = hasattr(syft_obj, "has_yaml") and syft_obj.has_yaml
+                    
+                    # Build permissions summary
+                    user_highest_perm = {}
+                    for perm_level in ["admin", "write", "create", "read"]:
+                        users = permissions.get(perm_level, [])
+                        for user in users:
+                            if user not in user_highest_perm:
+                                user_highest_perm[user] = perm_level
+                    
+                    perm_groups = {}
+                    for user, perm in user_highest_perm.items():
+                        if perm not in perm_groups:
+                            perm_groups[perm] = []
+                        perm_groups[perm].append(user)
+                    
+                    permissions_summary = []
+                    for perm_level in ["admin", "write", "create", "read"]:
+                        if perm_level in perm_groups:
+                            users = perm_groups[perm_level]
+                            if len(users) > 2:
+                                user_list = f"{users[0]}, {users[1]}, +{len(users)-2}"
+                            else:
+                                user_list = ", ".join(users)
+                            permissions_summary.append(f"{perm_level}: {user_list}")
+                    file_info["permissions_summary"] = permissions_summary
+                except:
+                    pass
+            
+            message = json.dumps({
+                "action": action,
+                "file": file_info
+            })
+            
+            # Broadcast to all connected clients
+            with websocket_lock:
+                if len(active_websockets) > 0:
+                    logger.info(f"[FILE WATCHER] Broadcasting to {len(active_websockets)} WebSocket clients")
+                    disconnected = []
+                    for ws in active_websockets:
+                        try:
+                            # Send message asynchronously
+                            await ws.send_text(message)
+                            logger.info(f"[FILE WATCHER] Successfully sent update for {action}: {file_path}")
+                        except Exception as e:
+                            logger.info(f"[FILE WATCHER] Error sending to WebSocket: {e}")
+                            disconnected.append(ws)
+                    
+                    # Remove disconnected websockets
+                    for ws in disconnected:
+                        active_websockets.remove(ws)
+                        logger.info(f"[FILE WATCHER] Removed disconnected WebSocket. Remaining: {len(active_websockets)}")
+                    
+        except Exception as e:
+            logger.info(f"[FILE WATCHER] Error broadcasting file change: {e}")
+    
     # File watcher setup
     def setup_file_watcher():
         """Set up file system watcher for SyftBox datasites directory."""
+        logger.info("[FILE WATCHER] Setting up file watcher...")
         import threading
         from pathlib import Path
         from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
+        import asyncio
         
         class SyftBoxFileHandler(FileSystemEventHandler):
             """Handler for file system events in SyftBox datasites."""
             
+            def _schedule_broadcast(self, action: str, path: str):
+                """Schedule broadcast in the event loop."""
+                try:
+                    loop = get_websocket_loop()
+                    future = asyncio.run_coroutine_threadsafe(
+                        broadcast_file_change(action, path),
+                        loop
+                    )
+                    # Wait for the broadcast to complete (with timeout)
+                    future.result(timeout=2.0)
+                except Exception as e:
+                    logger.info(f"[FILE WATCHER] Error scheduling broadcast: {e}")
+            
             def on_created(self, event):
                 if not event.is_directory:
-                    print(f"[FILE WATCHER] File created: {event.src_path}")
+                    logger.info(f"[FILE WATCHER] File created: {event.src_path}")
+                    self._schedule_broadcast("created", event.src_path)
                 else:
-                    print(f"[FILE WATCHER] Directory created: {event.src_path}")
+                    logger.info(f"[FILE WATCHER] Directory created: {event.src_path}")
             
             def on_deleted(self, event):
                 if not event.is_directory:
-                    print(f"[FILE WATCHER] File deleted: {event.src_path}")
+                    logger.info(f"[FILE WATCHER] File deleted: {event.src_path}")
+                    self._schedule_broadcast("deleted", event.src_path)
                 else:
-                    print(f"[FILE WATCHER] Directory deleted: {event.src_path}")
+                    logger.info(f"[FILE WATCHER] Directory deleted: {event.src_path}")
             
             def on_modified(self, event):
                 if not event.is_directory:
-                    print(f"[FILE WATCHER] File modified: {event.src_path}")
+                    logger.info(f"[FILE WATCHER] File modified: {event.src_path}")
+                    self._schedule_broadcast("modified", event.src_path)
             
             def on_moved(self, event):
                 if not event.is_directory:
-                    print(f"[FILE WATCHER] File moved: {event.src_path} -> {event.dest_path}")
+                    logger.info(f"[FILE WATCHER] File moved: {event.src_path} -> {event.dest_path}")
+                    # Treat as delete + create
+                    self._schedule_broadcast("deleted", event.src_path)
+                    self._schedule_broadcast("created", event.dest_path)
                 else:
-                    print(f"[FILE WATCHER] Directory moved: {event.src_path} -> {event.dest_path}")
+                    logger.info(f"[FILE WATCHER] Directory moved: {event.src_path} -> {event.dest_path}")
         
         # Find SyftBox datasites directory
         syftbox_dirs = [
@@ -122,12 +273,14 @@ if _SERVER_AVAILABLE:
         
         watch_dir = None
         for path in syftbox_dirs:
+            logger.info(f"[FILE WATCHER] Checking directory: {path}")
             if path.exists():
                 watch_dir = path
+                logger.info(f"[FILE WATCHER] Found directory: {watch_dir}")
                 break
         
         if watch_dir:
-            print(f"[FILE WATCHER] Starting file watcher for: {watch_dir}")
+            logger.info(f"[FILE WATCHER] Starting file watcher for: {watch_dir}")
             
             # Set up observer
             observer = Observer()
@@ -138,18 +291,18 @@ if _SERVER_AVAILABLE:
             def start_watcher():
                 try:
                     observer.start()
-                    print(f"[FILE WATCHER] File watcher started successfully")
+                    logger.info(f"[FILE WATCHER] File watcher started successfully")
                     # Keep the watcher running
                     observer.join()
                 except Exception as e:
-                    print(f"[FILE WATCHER] Error starting file watcher: {e}")
+                    logger.info(f"[FILE WATCHER] Error starting file watcher: {e}")
             
             watcher_thread = threading.Thread(target=start_watcher, daemon=True)
             watcher_thread.start()
             
             return observer
         else:
-            print("[FILE WATCHER] No SyftBox datasites directory found, file watcher disabled")
+            logger.info("[FILE WATCHER] No SyftBox datasites directory found, file watcher disabled")
             return None
     
     app = FastAPI(
@@ -173,15 +326,21 @@ if _SERVER_AVAILABLE:
     @app.on_event("startup")
     async def startup_event():
         """Initialize file watcher on startup."""
+        logger.info("[STARTUP] Initializing application...")
         global file_watcher_observer
+        # Initialize the WebSocket event loop
+        logger.info("[STARTUP] Setting up WebSocket event loop...")
+        get_websocket_loop()
+        logger.info("[STARTUP] Setting up file watcher...")
         file_watcher_observer = setup_file_watcher()
+        logger.info("[STARTUP] Startup complete")
     
     @app.on_event("shutdown")
     async def shutdown_event():
         """Clean up file watcher on shutdown."""
         global file_watcher_observer
         if file_watcher_observer:
-            print("[FILE WATCHER] Stopping file watcher...")
+            logger.info("[FILE WATCHER] Stopping file watcher...")
             file_watcher_observer.stop()
             file_watcher_observer.join()
 
@@ -529,6 +688,91 @@ if _SERVER_AVAILABLE:
             "total": len(filtered_files),
             "total_unfiltered": len(all_files)
         }
+    
+    @app.websocket("/ws/file-updates")  # type: ignore[misc]
+    async def websocket_endpoint(websocket: WebSocket) -> None:
+        """WebSocket endpoint for real-time file updates."""
+        logger.info(f"[WEBSOCKET] New connection attempt from {websocket.client}")
+        await websocket.accept()
+        
+        # Add to active connections
+        with websocket_lock:
+            active_websockets.append(websocket)
+            logger.info(f"[WEBSOCKET] Client connected. Total connections: {len(active_websockets)}")
+        
+        try:
+            # Keep connection alive
+            while True:
+                # Wait for any message from client (like ping/pong)
+                data = await websocket.receive_text()
+                # Echo back for heartbeat
+                if data == "ping":
+                    await websocket.send_text("pong")
+        except WebSocketDisconnect:
+            # Remove from active connections
+            with websocket_lock:
+                active_websockets.remove(websocket)
+                logger.info(f"[WEBSOCKET] Client disconnected. Total connections: {len(active_websockets)}")
+        except Exception as e:
+            logger.info(f"[WEBSOCKET] Error: {e}")
+            with websocket_lock:
+                if websocket in active_websockets:
+                    active_websockets.remove(websocket)
+    
+    # File System Editor Endpoints
+    from .filesystem_editor import FileSystemManager, generate_editor_html
+    
+    # Initialize the filesystem manager
+    fs_manager = FileSystemManager()
+    
+    @app.get("/api/filesystem/list")  # type: ignore[misc]
+    async def list_directory(path: str = Query(...)) -> Dict[str, Any]:
+        """List directory contents."""
+        return fs_manager.list_directory(path)
+    
+    @app.get("/api/filesystem/read")  # type: ignore[misc]
+    async def read_file(path: str = Query(...)) -> Dict[str, Any]:
+        """Read file contents."""
+        # TODO: Get user email from session/auth when available
+        return fs_manager.read_file(path, user_email=None)
+    
+    @app.post("/api/filesystem/write")  # type: ignore[misc]
+    async def write_file(request: Dict[str, Any]) -> Dict[str, Any]:
+        """Write content to a file."""
+        path = request.get("path")
+        content = request.get("content", "")
+        create_dirs = request.get("create_dirs", False)
+        
+        if not path:
+            raise HTTPException(status_code=400, detail="Path is required")
+        
+        # TODO: Get user email from session/auth when available
+        return fs_manager.write_file(path, content, create_dirs, user_email=None)
+    
+    @app.post("/api/filesystem/create-directory")  # type: ignore[misc]
+    async def create_directory(request: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new directory."""
+        path = request.get("path")
+        
+        if not path:
+            raise HTTPException(status_code=400, detail="Path is required")
+        
+        return fs_manager.create_directory(path)
+    
+    @app.delete("/api/filesystem/delete")  # type: ignore[misc]
+    async def delete_item(path: str = Query(...), recursive: bool = Query(False)) -> Dict[str, Any]:
+        """Delete a file or directory."""
+        return fs_manager.delete_item(path, recursive)
+    
+    @app.get("/file-editor", response_class=HTMLResponse)  # type: ignore[misc]
+    async def file_editor_interface() -> HTMLResponse:
+        """Serve the file editor interface."""
+        return HTMLResponse(content=generate_editor_html())
+    
+    @app.get("/file-editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
+    async def file_editor_with_path(path: str) -> HTMLResponse:
+        """Serve the file editor interface with a specific path."""
+        return HTMLResponse(content=generate_editor_html(initial_path=path))
 
 
 def get_editor_html(path: str) -> str:
@@ -1136,7 +1380,7 @@ def get_files_widget_html(
         'Use sp.files.filter(extension=".csv") to find specific file types',
         'Chain filters: sp.files.filter(extension=".py").search("test")',
         'Escape special characters with backslash when searching',
-        'ASCII loading bar only appears with print(sp.files), not in Jupyter',
+        'ASCII loading bar only appears with logger.info(sp.files), not in Jupyter',
         'Loading progress: first 10% is setup, 10-100% is file scanning',
         'Press Escape to close the tab-completion dropdown',
         'Use sp.open("syft://path") to access files programmatically',
@@ -1610,6 +1854,65 @@ def get_files_widget_html(
         var sortDirection = 'desc';    // Default descending (newest first)
         var chronologicalIds = {{}};
         
+        // WebSocket for real-time file updates
+        var ws = null;
+        var wsReconnectInterval = null;
+        var wsUrl = window.location.protocol.replace('http', 'ws') + '//' + window.location.host + '/ws/file-updates';
+        
+        function connectWebSocket() {{
+            if (ws && ws.readyState === WebSocket.OPEN) {{
+                return;
+            }}
+            
+            try {{
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {{
+                    console.log('[WebSocket] Connected for file updates');
+                    if (wsReconnectInterval) {{
+                        clearInterval(wsReconnectInterval);
+                        wsReconnectInterval = null;
+                    }}
+                    // Send periodic ping to keep connection alive
+                    setInterval(function() {{
+                        if (ws && ws.readyState === WebSocket.OPEN) {{
+                            ws.send('ping');
+                        }}
+                    }}, 30000); // Every 30 seconds
+                }};
+                
+                ws.onmessage = function(event) {{
+                    if (event.data === 'pong') {{
+                        return; // Ignore pong responses
+                    }}
+                    
+                    try {{
+                        var data = JSON.parse(event.data);
+                        handleFileUpdate(data);
+                    }} catch (e) {{
+                        console.error('[WebSocket] Error parsing message:', e);
+                    }}
+                }};
+                
+                ws.onclose = function() {{
+                    console.log('[WebSocket] Disconnected');
+                    // Try to reconnect every 5 seconds
+                    if (!wsReconnectInterval) {{
+                        wsReconnectInterval = setInterval(connectWebSocket, 5000);
+                    }}
+                }};
+                
+                ws.onerror = function(error) {{
+                    console.error('[WebSocket] Error:', error);
+                }};
+            }} catch (e) {{
+                console.error('[WebSocket] Failed to connect:', e);
+            }}
+        }}
+        
+        // Connect WebSocket
+        connectWebSocket();
+        
         // Update progress
         function updateProgress(percent, status) {{
             var loadingBar = document.getElementById('loading-bar-{container_id}');
@@ -1740,6 +2043,33 @@ def get_files_widget_html(
                 return size + ' B';
             }}
         }}
+        
+        // Parse search terms (helper function)
+        function parseSearchTerms(search) {{
+            var terms = [];
+            var currentTerm = '';
+            var inQuotes = false;
+            
+            for (var i = 0; i < search.length; i++) {{
+                var char = search[i];
+                if (char === '"') {{
+                    inQuotes = !inQuotes;
+                }} else if (char === ' ' && !inQuotes) {{
+                    if (currentTerm) {{
+                        terms.push(currentTerm.toLowerCase());
+                        currentTerm = '';
+                    }}
+                }} else {{
+                    currentTerm += char;
+                }}
+            }}
+            
+            if (currentTerm) {{
+                terms.push(currentTerm.toLowerCase());
+            }}
+            
+            return terms;
+        }}
 
         function showStatus(message) {{
             var statusEl = document.getElementById('{container_id}-status');
@@ -1786,6 +2116,102 @@ def get_files_widget_html(
             }}
             
             showStatus(statusText);
+        }}
+        
+        // Handle file updates from WebSocket
+        function handleFileUpdate(data) {{
+            var action = data.action;
+            var file = data.file;
+            
+            console.log('[WebSocket] File', action + ':', file.path);
+            
+            // Find existing file index
+            var existingIndex = -1;
+            for (var i = 0; i < allFiles.length; i++) {{
+                if (allFiles[i].path === file.path) {{
+                    existingIndex = i;
+                    break;
+                }}
+            }}
+            
+            if (action === 'created') {{
+                // Add new file to beginning (newest first)
+                allFiles.unshift(file);
+                
+                // Update chronological IDs
+                updateChronologicalIds();
+                
+                // Apply current filters by calling searchFiles
+                // This will automatically filter, sort, render table, and update status
+                searchFiles_{container_id}();
+            }} else if (action === 'modified') {{
+                if (existingIndex !== -1) {{
+                    // Update file data
+                    allFiles[existingIndex] = file;
+                    
+                    // Re-apply filters by calling searchFiles
+                    // This will automatically filter, sort, render table, and update status
+                    searchFiles_{container_id}();
+                }}
+            }} else if (action === 'deleted') {{
+                if (existingIndex !== -1) {{
+                    // Remove from allFiles
+                    allFiles.splice(existingIndex, 1);
+                    
+                    // Update chronological IDs
+                    updateChronologicalIds();
+                    
+                    // Re-apply filters by calling searchFiles
+                    // This will automatically filter, sort, render table, and update status
+                    searchFiles_{container_id}();
+                }}
+            }}
+        }}
+        
+        // Check if file matches current filters
+        function matchesCurrentFilters(file) {{
+            var searchValue = document.getElementById('{container_id}-search').value;
+            var adminFilter = document.getElementById('{container_id}-admin-filter').value;
+            
+            // Apply admin filter
+            if (adminFilter && (file.datasite_owner || '').toLowerCase().indexOf(adminFilter.toLowerCase()) === -1) {{
+                return false;
+            }}
+            
+            // Apply search filter
+            if (searchValue) {{
+                var searchTerms = parseSearchTerms(searchValue);
+                
+                return searchTerms.every(function(term) {{
+                    var searchableContent = [
+                        file.name,
+                        file.datasite_owner || '',
+                        file.extension || '',
+                        formatSize(file.size || 0),
+                        formatDate(file.modified || 0),
+                        file.is_dir ? 'folder' : 'file',
+                        (file.permissions_summary || []).join(' ')
+                    ].join(' ').toLowerCase();
+                    
+                    return searchableContent.includes(term);
+                }});
+            }}
+            
+            return true;
+        }}
+        
+        // Update chronological IDs after file changes
+        function updateChronologicalIds() {{
+            var sortedByDate = allFiles.slice().sort(function(a, b) {{
+                return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
+            }});
+            
+            chronologicalIds = {{}};
+            for (var i = 0; i < sortedByDate.length; i++) {{
+                var file = sortedByDate[i];
+                var fileKey = file.name + '|' + file.path;
+                chronologicalIds[fileKey] = i;
+            }}
         }}
 
         function renderTable() {{
@@ -2180,3 +2606,32 @@ def get_files_widget_url() -> str:
         server_url = start_server()
 
     return f"{server_url}/files-widget"
+
+
+def get_file_editor_url(path: str = None) -> str:
+    """Get the URL for the file editor interface."""
+    if not _SERVER_AVAILABLE:
+        return "Server not available - install with: pip install 'syft-perm[server]'"
+
+    # First check if there's a configured port
+    configured_port = _get_configured_port()
+    if configured_port:
+        # Verify the server is running on this port
+        try:
+            import urllib.request
+            with urllib.request.urlopen(f"http://localhost:{configured_port}/", timeout=0.5) as response:
+                if response.status == 200:
+                    if path:
+                        return f"http://localhost:{configured_port}/file-editor/{path}"
+                    return f"http://localhost:{configured_port}/file-editor"
+        except Exception:
+            pass
+
+    # Fall back to default behavior
+    server_url = get_server_url()
+    if not server_url:
+        server_url = start_server()
+
+    if path:
+        return f"{server_url}/file-editor/{path}"
+    return f"{server_url}/file-editor"
