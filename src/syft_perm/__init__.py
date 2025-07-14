@@ -467,6 +467,9 @@ class Files:
         # Apply filters
         filtered_files = self._apply_filters(all_files, files_query=files, admin=admin)
         
+        # Sort by modified date (newest first)
+        filtered_files.sort(key=lambda x: x.get('modified', 0), reverse=True)
+        
         # Create new Files instance with filtered data
         result = FilteredFiles(filtered_files, limit=limit, offset=offset)
         return result

@@ -512,16 +512,16 @@ if _SERVER_AVAILABLE:
             folder_list = [f.strip() for f in folders.split(",") if f.strip()]
             filtered_files = sp_files._apply_folder_filter(filtered_files, folder_list)
         
+        # Sort by modified date (newest first) - always sort to ensure consistent ordering
+        filtered_files = sorted(filtered_files, key=lambda x: x.get("modified", 0), reverse=True)
+        
         # Apply slicing if provided
         if start is not None or end is not None:
-            # Sort by modified date (newest first) for chronological slicing
-            sorted_files = sorted(filtered_files, key=lambda x: x.get("modified", 0), reverse=True)
-            
             # Convert to 0-based indexing if needed
             slice_start = (start - 1) if start is not None and start > 0 else start
             slice_end = (end - 1) if end is not None and end > 0 else end
             
-            filtered_files = sorted_files[slice(slice_start, slice_end)]
+            filtered_files = filtered_files[slice(slice_start, slice_end)]
         
         # Return the data as JSON
         return {
