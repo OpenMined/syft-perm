@@ -80,6 +80,78 @@ if _SERVER_AVAILABLE:
         "message": ""
     }
     
+    # File watcher setup
+    def setup_file_watcher():
+        """Set up file system watcher for SyftBox datasites directory."""
+        import threading
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+        
+        class SyftBoxFileHandler(FileSystemEventHandler):
+            """Handler for file system events in SyftBox datasites."""
+            
+            def on_created(self, event):
+                if not event.is_directory:
+                    print(f"[FILE WATCHER] File created: {event.src_path}")
+                else:
+                    print(f"[FILE WATCHER] Directory created: {event.src_path}")
+            
+            def on_deleted(self, event):
+                if not event.is_directory:
+                    print(f"[FILE WATCHER] File deleted: {event.src_path}")
+                else:
+                    print(f"[FILE WATCHER] Directory deleted: {event.src_path}")
+            
+            def on_modified(self, event):
+                if not event.is_directory:
+                    print(f"[FILE WATCHER] File modified: {event.src_path}")
+            
+            def on_moved(self, event):
+                if not event.is_directory:
+                    print(f"[FILE WATCHER] File moved: {event.src_path} -> {event.dest_path}")
+                else:
+                    print(f"[FILE WATCHER] Directory moved: {event.src_path} -> {event.dest_path}")
+        
+        # Find SyftBox datasites directory
+        syftbox_dirs = [
+            Path.home() / "SyftBox" / "datasites",
+            Path.home() / ".syftbox" / "datasites",
+            Path("/tmp/SyftBox/datasites"),
+        ]
+        
+        watch_dir = None
+        for path in syftbox_dirs:
+            if path.exists():
+                watch_dir = path
+                break
+        
+        if watch_dir:
+            print(f"[FILE WATCHER] Starting file watcher for: {watch_dir}")
+            
+            # Set up observer
+            observer = Observer()
+            event_handler = SyftBoxFileHandler()
+            observer.schedule(event_handler, str(watch_dir), recursive=True)
+            
+            # Start observer in a separate thread
+            def start_watcher():
+                try:
+                    observer.start()
+                    print(f"[FILE WATCHER] File watcher started successfully")
+                    # Keep the watcher running
+                    observer.join()
+                except Exception as e:
+                    print(f"[FILE WATCHER] Error starting file watcher: {e}")
+            
+            watcher_thread = threading.Thread(target=start_watcher, daemon=True)
+            watcher_thread.start()
+            
+            return observer
+        else:
+            print("[FILE WATCHER] No SyftBox datasites directory found, file watcher disabled")
+            return None
+    
     app = FastAPI(
         title="SyftPerm Permission Editor",
         description="Google Drive-style permission editor for SyftBox",
@@ -94,6 +166,24 @@ if _SERVER_AVAILABLE:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # Store file watcher observer for cleanup
+    file_watcher_observer = None
+    
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize file watcher on startup."""
+        global file_watcher_observer
+        file_watcher_observer = setup_file_watcher()
+    
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """Clean up file watcher on shutdown."""
+        global file_watcher_observer
+        if file_watcher_observer:
+            print("[FILE WATCHER] Stopping file watcher...")
+            file_watcher_observer.stop()
+            file_watcher_observer.join()
 
     @app.get("/")  # type: ignore[misc]
     async def root() -> Dict[str, str]:
