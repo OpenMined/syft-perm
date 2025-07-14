@@ -589,10 +589,41 @@ class Files:
 
     def _matches_search_terms(self, file: dict, search_terms: list) -> bool:
         """Check if file matches all search terms."""
-        file_text = f"{file.get('name', '')} {file.get('datasite_owner', '')}".lower()
+        # Format date for search
+        def format_date(timestamp):
+            if not timestamp:
+                return ""
+            from datetime import datetime
+            dt = datetime.fromtimestamp(timestamp)
+            return dt.strftime("%m/%d/%Y %H:%M")
         
+        # Format size for search
+        def format_size(size):
+            if not size:
+                return "0 B"
+            if size > 1024 * 1024:
+                return f"{size / (1024 * 1024):.1f} MB"
+            elif size > 1024:
+                return f"{size / 1024:.1f} KB"
+            else:
+                return f"{size} B"
+        
+        # Create searchable content from all file properties (matching JavaScript implementation)
+        searchable_parts = [
+            file.get('name', ''),
+            file.get('datasite_owner', ''),
+            file.get('extension', ''),
+            format_size(file.get('size', 0)),
+            format_date(file.get('modified', 0)),
+            'folder' if file.get('is_dir') else 'file',
+            ' '.join(file.get('permissions_summary', []))
+        ]
+        
+        searchable_content = ' '.join(searchable_parts).lower()
+        
+        # Check if all search terms match
         for term in search_terms:
-            if term.lower() not in file_text:
+            if term.lower() not in searchable_content:
                 return False
         
         return True
