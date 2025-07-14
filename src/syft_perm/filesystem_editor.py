@@ -1095,7 +1095,11 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
         
         class FileSystemEditor {{
             constructor() {{
-                this.currentPath = '{initial_dir}';
+                // Check for path parameter in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const pathParam = urlParams.get('path');
+                
+                this.currentPath = pathParam || '{initial_dir}';
                 this.initialFilePath = {'`' + initial_path + '`' if is_initial_file else 'null'};
                 this.isInitialFile = {str(is_initial_file).lower()};
                 this.currentFile = null;
@@ -1743,6 +1747,13 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
                 
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }}
+            
+            showContextMenu(event, path, isDirectory) {{
+                // Simple context menu - for now just prevent the default browser menu
+                // Could be extended later to show options like delete, rename, etc.
+                event.preventDefault();
+                console.log('Context menu for:', path, 'isDirectory:', isDirectory);
             }}
             
             showError(message) {{

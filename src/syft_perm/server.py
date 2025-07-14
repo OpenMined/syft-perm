@@ -1585,6 +1585,11 @@ def get_files_widget_html(
     #{container_id} .rainbow-flash {{
         animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out;
     }}
+    
+    #{container_id} .rainbow-flash-10s {{
+        animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out;
+        animation-iteration-count: 6.25; /* 0.8s * 6.25 = 5s total */
+    }}
 
     #{container_id} .pagination {{
         display: flex;
@@ -1977,15 +1982,15 @@ def get_files_widget_html(
                 allFiles = data.files;
                 filteredFiles = allFiles.slice();
                 
-                // Create chronological IDs (newest = 1, incrementing)
+                // Create chronological IDs (oldest = 0, incrementing)
                 var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                    return (b.modified || 0) - (a.modified || 0);  // Descending order (newest first)
+                    return (a.modified || 0) - (b.modified || 0);  // Ascending order (oldest first)
                 }});
                 
                 chronologicalIds = {{}};
                 sortedByDate.forEach(function(file, index) {{
                     var fileKey = file.name + '|' + file.path;
-                    chronologicalIds[fileKey] = index + 1;  // Start from 1
+                    chronologicalIds[fileKey] = index;  // Start from 0
                 }});
                 
                 // Add chronological IDs to files
@@ -2137,30 +2142,36 @@ def get_files_widget_html(
             }}
             
             if (action === 'created') {{
+                // Assign next chronological ID to the new file (count existing files first)
+                var newId = allFiles.length; // This is the next ID
+                var fileKey = file.name + '|' + file.path;
+                chronologicalIds[fileKey] = newId;
+                file.chronoId = newId; // Also set it on the file object itself
+                console.log('[WebSocket] Assigned chronological ID', newId, 'to', file.name, '(total files before adding:', allFiles.length, ')');
+                
                 // Add new file to beginning (newest first)
                 allFiles.unshift(file);
-                
-                // Assign next chronological ID to the new file
-                var maxId = -1;
-                var idCount = 0;
-                for (var key in chronologicalIds) {{
-                    idCount++;
-                    if (chronologicalIds[key] > maxId) {{
-                        maxId = chronologicalIds[key];
-                    }}
-                }}
-                console.log('[WebSocket] Current chronological IDs count:', idCount, 'Max ID:', maxId);
-                var fileKey = file.name + '|' + file.path;
-                chronologicalIds[fileKey] = maxId + 1;
-                console.log('[WebSocket] Assigned chronological ID', maxId + 1, 'to', file.name);
                 
                 // Apply current filters by calling searchFiles
                 // This will automatically filter, sort, render table, and update status
                 searchFiles_{container_id}();
             }} else if (action === 'modified') {{
                 if (existingIndex !== -1) {{
+                    // Preserve the existing chronological ID
+                    var oldFile = allFiles[existingIndex];
+                    var fileKey = file.name + '|' + file.path;
+                    var existingChronoId = oldFile.chronoId !== undefined ? oldFile.chronoId : chronologicalIds[fileKey];
+                    
                     // Update file data
                     allFiles[existingIndex] = file;
+                    
+                    // Restore the chronological ID (don't change it for modified files)
+                    file.chronoId = existingChronoId;
+                    if (existingChronoId !== undefined) {{
+                        chronologicalIds[fileKey] = existingChronoId;
+                    }}
+                    
+                    console.log('[WebSocket] Modified file', file.name, 'keeping chronological ID', existingChronoId);
                     
                     // Re-apply filters by calling searchFiles
                     // This will automatically filter, sort, render table, and update status
@@ -2217,14 +2228,14 @@ def get_files_widget_html(
         // Update chronological IDs after file changes
         function updateChronologicalIds() {{
             var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                return (b.modified || 0) - (a.modified || 0);  // Sort newest first
+                return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
             }});
             
             chronologicalIds = {{}};
             for (var i = 0; i < sortedByDate.length; i++) {{
                 var file = sortedByDate[i];
                 var fileKey = file.name + '|' + file.path;
-                chronologicalIds[fileKey] = i + 1;  // Start from 1
+                chronologicalIds[fileKey] = i;  // Start from 0
             }}
         }}
 
@@ -2260,9 +2271,20 @@ def get_files_widget_html(
                 var sizeStr = formatSize(file.size || 0);
                 var isDir = file.is_dir || false;
                 
-                var chronoId = file.chronoId !== undefined ? file.chronoId : i;
+                var fileKey = file.name + '|' + file.path;
+                var chronoId = file.chronoId !== undefined ? file.chronoId : (chronologicalIds[fileKey] !== undefined ? chronologicalIds[fileKey] : i);
                 
-                html += '<tr onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
+                // Check if this file was modified within the last 10 seconds
+                var wsActionStyle = '';
+                var now = Date.now() / 1000; // Convert to seconds
+                var fileModified = file.modified || 0;
+                var secondsSinceModified = now - fileModified;
+                
+                if (secondsSinceModified <= 10) {{
+                    wsActionStyle = ' style="animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out; animation-iteration-count: 6.25;"';
+                }}
+                
+                html += '<tr' + wsActionStyle + ' class="file-row" onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                     '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
                     '<td>' + chronoId + '</td>' +
                     '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(fullSyftPath) + '">' + escapeHtml(fullSyftPath) + '</div></td>' +

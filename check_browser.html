@@ -1,0 +1,86 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test - File Updates</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #messages { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            height: 400px; 
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .created { color: green; }
+        .modified { color: blue; }
+        .deleted { color: red; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket File Update Monitor</h1>
+    <div>Status: <span id="status">Not connected</span></div>
+    <button onclick="clearMessages()">Clear Messages</button>
+    <div id="messages"></div>
+    
+    <script>
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+        
+        function log(msg, className) {
+            console.log(msg);
+            const p = document.createElement('p');
+            p.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+            if (className) p.className = className;
+            messages.appendChild(p);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        function clearMessages() {
+            messages.innerHTML = '';
+        }
+        
+        const ws = new WebSocket('ws://localhost:8005/ws/file-updates');
+        
+        ws.onopen = function() {
+            status.textContent = 'Connected';
+            status.style.color = 'green';
+            log('WebSocket connected');
+            ws.send('ping');
+        };
+        
+        ws.onmessage = function(event) {
+            if (event.data === 'pong') {
+                log('Received pong');
+                return;
+            }
+            
+            try {
+                const data = JSON.parse(event.data);
+                const file = data.file;
+                log(`File ${data.action}: ${file.name} (${file.size} bytes, modified: ${new Date(file.modified * 1000).toLocaleString()})`, data.action);
+            } catch (e) {
+                log('Message: ' + event.data);
+            }
+        };
+        
+        ws.onerror = function(error) {
+            log('Error: ' + error, 'error');
+        };
+        
+        ws.onclose = function() {
+            status.textContent = 'Disconnected';
+            status.style.color = 'red';
+            log('WebSocket disconnected');
+        };
+        
+        // Heartbeat
+        setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send('ping');
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
+EOF < /dev/null

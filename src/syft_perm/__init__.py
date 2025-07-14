@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.94"
+__version__ = "0.3.95"
 
 __all__ = [
     "open",
@@ -1268,12 +1268,12 @@ class Files:
         # Scan files with progress tracking
         all_files = self._scan_files(progress_callback=update_progress)
 
-        # Create chronological index based on modified date (newest first)
-        sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+        # Create chronological index based on modified date (oldest first)
+        sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0))
         chronological_ids = {}
         for i, file in enumerate(sorted_by_date):
             file_key = f"{file['name']}|{file['path']}"
-            chronological_ids[file_key] = i + 1
+            chronological_ids[file_key] = i
 
         # Get initial display files
         data = {"files": all_files[:100], "total_count": len(all_files)}
@@ -1704,17 +1704,17 @@ class Files:
             // Store all files data
             var allFiles = {json.dumps(all_files)};
             
-            // Create chronological index based on modified date (newest first)
+            // Create chronological index based on modified date (oldest first)
             var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                return (b.modified || 0) - (a.modified || 0);  // Sort newest first
+                return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
             }});
             
-            // Assign chronological IDs (newest = 1, incrementing)
+            // Assign chronological IDs (oldest = 0, incrementing)
             var chronologicalIds = {{}};
             for (var i = 0; i < sortedByDate.length; i++) {{
                 var file = sortedByDate[i];
                 var fileKey = file.name + '|' + file.path; // Unique key for each file
-                chronologicalIds[fileKey] = i + 1;  // Start from 1
+                chronologicalIds[fileKey] = i;  // Start from 0
             }}
             
             var filteredFiles = allFiles.slice();
@@ -1934,22 +1934,15 @@ class Files:
                 }}
                 
                 if (action === 'created') {{
+                    // Assign next chronological ID to the new file (count existing files first)
+                    var newId = allFiles.length; // This is the next ID
+                    var fileKey = file.name + '|' + file.path;
+                    chronologicalIds[fileKey] = newId;
+                    file.chronoId = newId; // Also set it on the file object itself
+                    console.log('[WebSocket] Assigned chronological ID', newId, 'to', file.name, '(total files before adding:', allFiles.length, ')');
+                    
                     // Add new file to allFiles
                     allFiles.push(file);
-                    
-                    // Assign next chronological ID to the new file
-                    var maxId = -1;
-                    var idCount = 0;
-                    for (var key in chronologicalIds) {{
-                        idCount++;
-                        if (chronologicalIds[key] > maxId) {{
-                            maxId = chronologicalIds[key];
-                        }}
-                    }}
-                    console.log('[WebSocket] Current chronological IDs count:', idCount, 'Max ID:', maxId);
-                    var fileKey = file.name + '|' + file.path;
-                    chronologicalIds[fileKey] = maxId + 1;
-                    console.log('[WebSocket] Assigned chronological ID', maxId + 1, 'to', file.name);
                     
                     // Check if file matches current filters
                     if (matchesCurrentFilters(file)) {{
@@ -2051,14 +2044,14 @@ class Files:
             // Update chronological IDs after file changes
             function updateChronologicalIds() {{
                 var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                    return (b.modified || 0) - (a.modified || 0);  // Sort newest first
+                    return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
                 }});
                 
                 chronologicalIds = {{}};
                 for (var i = 0; i < sortedByDate.length; i++) {{
                     var file = sortedByDate[i];
                     var fileKey = file.name + '|' + file.path;
-                    chronologicalIds[fileKey] = i + 1;  // Start from 1
+                    chronologicalIds[fileKey] = i;  // Start from 0
                 }}
             }}
             

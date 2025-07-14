@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="status">Not connected</div>
+    <div id="messages"></div>
+    
+    <script>
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+        
+        function log(msg) {
+            console.log(msg);
+            const p = document.createElement('p');
+            p.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+            messages.appendChild(p);
+        }
+        
+        const ws = new WebSocket('ws://localhost:8005/ws/file-updates');
+        
+        ws.onopen = function() {
+            status.textContent = 'Connected';
+            log('WebSocket connected');
+            ws.send('ping');
+        };
+        
+        ws.onmessage = function(event) {
+            log('Message: ' + event.data);
+        };
+        
+        ws.onerror = function(error) {
+            log('Error: ' + error);
+        };
+        
+        ws.onclose = function() {
+            status.textContent = 'Disconnected';
+            log('WebSocket disconnected');
+        };
+    </script>
+</body>
+</html>
