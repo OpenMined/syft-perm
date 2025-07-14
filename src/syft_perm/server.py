@@ -2140,8 +2140,19 @@ def get_files_widget_html(
                 // Add new file to beginning (newest first)
                 allFiles.unshift(file);
                 
-                // Update chronological IDs
-                updateChronologicalIds();
+                // Assign next chronological ID to the new file
+                var maxId = -1;
+                var idCount = 0;
+                for (var key in chronologicalIds) {{
+                    idCount++;
+                    if (chronologicalIds[key] > maxId) {{
+                        maxId = chronologicalIds[key];
+                    }}
+                }}
+                console.log('[WebSocket] Current chronological IDs count:', idCount, 'Max ID:', maxId);
+                var fileKey = file.name + '|' + file.path;
+                chronologicalIds[fileKey] = maxId + 1;
+                console.log('[WebSocket] Assigned chronological ID', maxId + 1, 'to', file.name);
                 
                 // Apply current filters by calling searchFiles
                 // This will automatically filter, sort, render table, and update status
@@ -2160,8 +2171,9 @@ def get_files_widget_html(
                     // Remove from allFiles
                     allFiles.splice(existingIndex, 1);
                     
-                    // Update chronological IDs
-                    updateChronologicalIds();
+                    // Remove chronological ID for deleted file
+                    var fileKey = file.name + '|' + file.path;
+                    delete chronologicalIds[fileKey];
                     
                     // Re-apply filters by calling searchFiles
                     // This will automatically filter, sort, render table, and update status

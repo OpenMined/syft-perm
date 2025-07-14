@@ -979,6 +979,15 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
             document.body.classList.add('embedded-mode');
         }}
         
+        // Theme colors for JavaScript
+        const themeColors = {{
+            editor_bg: '{editor_bg}',
+            editor_readonly_bg: '{('#2d2d30' if is_dark_mode else '#f9fafb')}',
+            editor_uncertain_bg: '{('#3d3d30' if is_dark_mode else '#fffbeb')}',
+            text_color: '{text_color}',
+            muted_color: '{muted_color}'
+        }};
+        
         class FileSystemEditor {{
             constructor() {{
                 this.currentPath = '{initial_dir}';
@@ -1059,13 +1068,13 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                             
                             this.fileList.innerHTML = `
                                 <div class="empty-state" style="text-align: center; padding: 40px;">
-                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin: 0 auto 16px;">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="${{themeColors.muted_color}}" stroke-width="1.5" style="margin: 0 auto 16px;">
                                         <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
-                                    <h3 style="color: #374151; font-size: 18px; margin: 0 0 8px 0; font-weight: 600;">
+                                    <h3 style="color: ${{themeColors.text_color}}; font-size: 18px; margin: 0 0 8px 0; font-weight: 600;">
                                         ${{title}}
                                     </h3>
-                                    <p style="color: #6b7280; font-size: 14px; margin: 0; max-width: 400px;">
+                                    <p style="color: ${{themeColors.muted_color}}; font-size: 14px; margin: 0; max-width: 400px;">
                                         ${{message}}
                                     </p>
                                 </div>
@@ -1204,13 +1213,13 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                             
                             this.emptyState.innerHTML = `
                                 <div style="text-align: center; padding: 40px;">
-                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin: 0 auto 16px;">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="${{themeColors.muted_color}}" stroke-width="1.5" style="margin: 0 auto 16px;">
                                         <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
-                                    <h3 style="color: #374151; font-size: 18px; margin: 0 0 8px 0; font-weight: 600;">
+                                    <h3 style="color: ${{themeColors.text_color}}; font-size: 18px; margin: 0 0 8px 0; font-weight: 600;">
                                         ${{title}}
                                     </h3>
-                                    <p style="color: #6b7280; font-size: 14px; margin: 0; max-width: 400px;">
+                                    <p style="color: ${{themeColors.muted_color}}; font-size: 14px; margin: 0; max-width: 400px;">
                                         ${{message}}
                                     </p>
                                 </div>
@@ -1246,11 +1255,11 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                     // Set editor state based on permissions
                     this.editor.readOnly = this.isReadOnly;
                     if (this.isReadOnly) {{
-                        this.editor.style.backgroundColor = '#f9fafb';
+                        this.editor.style.backgroundColor = themeColors.editor_readonly_bg;
                     }} else if (this.isUncertainPermissions) {{
-                        this.editor.style.backgroundColor = '#fffbeb'; // Light yellow warning color
+                        this.editor.style.backgroundColor = themeColors.editor_uncertain_bg;
                     }} else {{
-                        this.editor.style.backgroundColor = '#ffffff';
+                        this.editor.style.backgroundColor = themeColors.editor_bg;
                     }}
                     
                     this.updateUI();

@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.92"
+__version__ = "0.3.93"
 
 __all__ = [
     "open",
@@ -1939,13 +1939,17 @@ class Files:
                     
                     // Assign next chronological ID to the new file
                     var maxId = -1;
+                    var idCount = 0;
                     for (var key in chronologicalIds) {{
+                        idCount++;
                         if (chronologicalIds[key] > maxId) {{
                             maxId = chronologicalIds[key];
                         }}
                     }}
+                    console.log('[WebSocket] Current chronological IDs count:', idCount, 'Max ID:', maxId);
                     var fileKey = file.name + '|' + file.path;
                     chronologicalIds[fileKey] = maxId + 1;
+                    console.log('[WebSocket] Assigned chronological ID', maxId + 1, 'to', file.name);
                     
                     // Check if file matches current filters
                     if (matchesCurrentFilters(file)) {{
@@ -1999,8 +2003,9 @@ class Files:
                             }}
                         }}
                         
-                        // Update chronological IDs
-                        updateChronologicalIds();
+                        // Remove chronological ID for deleted file
+                        var fileKey = file.name + '|' + file.path;
+                        delete chronologicalIds[fileKey];
                         
                         // If file was visible, re-render table
                         if (filteredIndex !== -1) {{
