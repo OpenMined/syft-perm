@@ -658,6 +658,51 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
         .editor-textarea:focus {{
             box-shadow: none;
         }}
+        
+        #editor-container {{
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: none;
+        }}
+        
+        #syntax-highlight {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 16px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: auto;
+            pointer-events: none;
+            background: transparent;
+        }}
+        
+        #editor-input {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 16px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            background: transparent;
+            color: transparent;
+            caret-color: {text_color};
+            resize: none;
+            border: none;
+            outline: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: auto;
+        }}
 
         .status-bar {{
             display: flex;
@@ -858,6 +903,62 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
         .toggle-explorer-btn {{
             margin-right: 8px;
         }}
+        
+        /* Syntax highlighting editor styles */
+        #editor-container {{
+            position: relative;
+            width: 100%;
+            height: 100%;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }}
+        
+        #syntax-highlight {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow: auto;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 1;
+        }}
+        
+        #editor-input {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: {text_color};
+            font-family: inherit;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow: auto;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+            z-index: 2;
+            caret-color: {text_color};
+        }}
+        
+        #editor-input::selection {{
+            background: rgba(59, 130, 246, 0.3);
+        }}
     </style>
 </head>
 <body>
@@ -950,6 +1051,10 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                             <h3>Welcome to SyftBox Editor</h3>
                             <p>Select a file from the explorer to start editing</p>
                         </div>
+                        <div id="editor-container" style="display: none;">
+                            <pre id="syntax-highlight"><code class="language-text"></code></pre>
+                            <textarea id="editor-input" spellcheck="false"></textarea>
+                        </div>
                         <textarea class="editor-textarea" id="editor" style="display: none;" placeholder="Start typing..."></textarea>
                     </div>
                     <div class="status-bar">
@@ -996,6 +1101,7 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                 this.currentFile = null;
                 this.isModified = false;
                 this.fileOnlyMode = this.isInitialFile;
+                this.isDarkMode = {str(is_dark_mode).lower()};
                 this.initializeElements();
                 this.setupEventListeners();
                 
@@ -1014,6 +1120,9 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
             initializeElements() {{
                 this.fileList = document.getElementById('fileList');
                 this.editor = document.getElementById('editor');
+                this.editorContainer = document.getElementById('editor-container');
+                this.editorInput = document.getElementById('editor-input');
+                this.syntaxHighlight = document.getElementById('syntax-highlight').querySelector('code');
                 this.saveBtn = document.getElementById('saveBtn');
                 this.newFileBtn = document.getElementById('newFileBtn');
                 this.newFolderBtn = document.getElementById('newFolderBtn');
@@ -1027,12 +1136,95 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                 this.readOnlyIndicator = document.getElementById('readOnlyIndicator');
             }}
             
+            getLanguageFromExtension(extension) {{
+                const ext = extension.toLowerCase();
+                const langMap = {{
+                    '.js': 'javascript',
+                    '.jsx': 'jsx',
+                    '.ts': 'typescript',
+                    '.tsx': 'tsx',
+                    '.py': 'python',
+                    '.html': 'html',
+                    '.htm': 'html',
+                    '.css': 'css',
+                    '.scss': 'scss',
+                    '.sass': 'sass',
+                    '.json': 'json',
+                    '.md': 'markdown',
+                    '.xml': 'xml',
+                    '.svg': 'svg',
+                    '.sql': 'sql',
+                    '.c': 'c',
+                    '.cpp': 'cpp',
+                    '.cc': 'cpp',
+                    '.cxx': 'cpp',
+                    '.h': 'c',
+                    '.hpp': 'cpp',
+                    '.java': 'java',
+                    '.rs': 'rust',
+                    '.php': 'php',
+                    '.yaml': 'yaml',
+                    '.yml': 'yaml',
+                    '.toml': 'toml',
+                    '.ini': 'ini',
+                    '.cfg': 'ini',
+                    '.conf': 'ini',
+                    '.sh': 'bash',
+                    '.bash': 'bash',
+                    '.zsh': 'bash',
+                    '.fish': 'bash',
+                    '.ps1': 'powershell',
+                    '.bat': 'batch',
+                    '.cmd': 'batch',
+                    '.rb': 'ruby',
+                    '.go': 'go',
+                    '.swift': 'swift',
+                    '.kt': 'kotlin',
+                    '.r': 'r',
+                    '.R': 'r'
+                }};
+                
+                return langMap[ext] || 'plaintext';
+            }}
+            
+            updateSyntaxHighlighting() {{
+                const content = this.editorInput.value;
+                const language = this.currentFile ? this.getLanguageFromExtension(this.currentFile.extension || '') : 'plaintext';
+                
+                // Update language class
+                this.syntaxHighlight.className = `language-${{language}}`;
+                this.syntaxHighlight.textContent = content;
+                
+                // Re-highlight
+                if (window.Prism) {{
+                    Prism.highlightElement(this.syntaxHighlight);
+                }}
+            }}
+            
+            syncScroll() {{
+                const syntaxPre = document.getElementById('syntax-highlight');
+                syntaxPre.scrollTop = this.editorInput.scrollTop;
+                syntaxPre.scrollLeft = this.editorInput.scrollLeft;
+            }}
+            
             setupEventListeners() {{
                 this.saveBtn.addEventListener('click', () => this.saveFile());
                 this.newFileBtn.addEventListener('click', () => this.createNewFile());
                 this.newFolderBtn.addEventListener('click', () => this.createNewFolder());
                 this.toggleExplorerBtn.addEventListener('click', () => this.toggleFileOnlyMode());
                 
+                // Editor input listeners
+                this.editorInput.addEventListener('input', () => {{
+                    this.isModified = true;
+                    this.updateUI();
+                    this.updateSyntaxHighlighting();
+                }});
+                
+                this.editorInput.addEventListener('scroll', () => this.syncScroll());
+                this.editorInput.addEventListener('keyup', () => this.updateCursorPosition());
+                this.editorInput.addEventListener('click', () => this.updateCursorPosition());
+                
+                // Fallback textarea listeners
                 this.editor.addEventListener('input', () => {{
                     this.isModified = true;
                     this.updateUI();
@@ -1230,7 +1422,6 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                     }}
                     
                     this.currentFile = data;
-                    this.editor.value = data.content;
                     this.isModified = false;
                     this.isReadOnly = !data.can_write;
                     this.isUncertainPermissions = false;
@@ -1252,21 +1443,49 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                         }}
                     }}
                     
-                    // Set editor state based on permissions
-                    this.editor.readOnly = this.isReadOnly;
-                    if (this.isReadOnly) {{
-                        this.editor.style.backgroundColor = themeColors.editor_readonly_bg;
-                    }} else if (this.isUncertainPermissions) {{
-                        this.editor.style.backgroundColor = themeColors.editor_uncertain_bg;
+                    // Decide which editor to use
+                    const useSimpleEditor = true; // For now, always use simple editor
+                    
+                    if (useSimpleEditor) {{
+                        // Use syntax highlighting editor
+                        this.editorInput.value = data.content;
+                        this.editorInput.readOnly = this.isReadOnly;
+                        
+                        // Set background color based on permissions
+                        if (this.isReadOnly) {{
+                            this.editorInput.style.backgroundColor = themeColors.editor_readonly_bg;
+                        }} else if (this.isUncertainPermissions) {{
+                            this.editorInput.style.backgroundColor = themeColors.editor_uncertain_bg;
+                        }} else {{
+                            this.editorInput.style.backgroundColor = themeColors.editor_bg;
+                        }}
+                        
+                        // Update syntax highlighting
+                        this.updateSyntaxHighlighting();
+                        
+                        // Show editor container
+                        this.emptyState.style.display = 'none';
+                        this.editorContainer.style.display = 'block';
+                        this.editor.style.display = 'none';
                     }} else {{
-                        this.editor.style.backgroundColor = themeColors.editor_bg;
+                        // Fallback to simple textarea
+                        this.editor.value = data.content;
+                        this.editor.readOnly = this.isReadOnly;
+                        
+                        if (this.isReadOnly) {{
+                            this.editor.style.backgroundColor = themeColors.editor_readonly_bg;
+                        }} else if (this.isUncertainPermissions) {{
+                            this.editor.style.backgroundColor = themeColors.editor_uncertain_bg;
+                        }} else {{
+                            this.editor.style.backgroundColor = themeColors.editor_bg;
+                        }}
+                        
+                        this.emptyState.style.display = 'none';
+                        this.editorContainer.style.display = 'none';
+                        this.editor.style.display = 'block';
                     }}
                     
                     this.updateUI();
-                    
-                    // Show editor, hide empty state
-                    this.emptyState.style.display = 'none';
-                    this.editor.style.display = 'block';
                     
                     // Update file info with appropriate indicator
                     let badge = '';
@@ -1279,7 +1498,7 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                     this.fileSize.textContent = this.formatFileSize(data.size);
                     
                     // Remove any existing permission warnings
-                    const existingWarnings = this.editor.parentElement.querySelectorAll('.permission-warning');
+                    const existingWarnings = this.editorContainer.parentElement.querySelectorAll('.permission-warning');
                     existingWarnings.forEach(w => w.remove());
                     
                     // Show permission info
@@ -1299,7 +1518,7 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                             <strong>⚠️ Read-Only:</strong> You don't have write permission for this file. 
                             Only <strong>${{data.write_users.join(', ')}}</strong> can edit this file.
                         `;
-                        this.editor.parentElement.insertBefore(permissionInfo, this.editor);
+                        this.editorContainer.parentElement.insertBefore(permissionInfo, this.editorContainer);
                     }} else if (this.isUncertainPermissions) {{
                         const permissionInfo = document.createElement('div');
                         permissionInfo.className = 'permission-warning';
@@ -1318,7 +1537,7 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                             We can't verify your write permissions until the server processes your changes.
                             If you don't have permission, a conflict file will be created.
                         `;
-                        this.editor.parentElement.insertBefore(permissionInfo, this.editor);
+                        this.editorContainer.parentElement.insertBefore(permissionInfo, this.editorContainer);
                     }}
                     
                     // Update read-only indicator in footer
@@ -1336,8 +1555,12 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                         }}
                     }}
                     
-                    // Focus editor
-                    this.editor.focus();
+                    // Focus the active editor
+                    if (this.editorContainer.style.display !== 'none') {{
+                        this.editorInput.focus();
+                    }} else {{
+                        this.editor.focus();
+                    }}
                     
                 }} catch (error) {{
                     this.showError('Failed to load file: ' + error.message);
@@ -1427,6 +1650,14 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                 }}, 1000);
                 
                 try {{
+                    // Get content from the active editor
+                    let content = '';
+                    if (this.editorContainer.style.display !== 'none') {{
+                        content = this.editorInput.value;
+                    }} else {{
+                        content = this.editor.value;
+                    }}
+                    
                     const response = await fetch('/api/filesystem/write', {{
                         method: 'POST',
                         headers: {{
@@ -1434,7 +1665,7 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                         }},
                         body: JSON.stringify({{
                             path: this.currentFile.path,
-                            content: this.editor.value
+                            content: content
                         }})
                     }});
                     
@@ -1486,7 +1717,13 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
             }}
             
             updateCursorPosition() {{
-                const textarea = this.editor;
+                let textarea;
+                if (this.editorContainer.style.display !== 'none') {{
+                    textarea = this.editorInput;
+                }} else {{
+                    textarea = this.editor;
+                }}
+                
                 const text = textarea.value;
                 const cursorPos = textarea.selectionStart;
                 

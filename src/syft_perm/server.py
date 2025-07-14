@@ -1977,15 +1977,15 @@ def get_files_widget_html(
                 allFiles = data.files;
                 filteredFiles = allFiles.slice();
                 
-                // Create chronological IDs (oldest = 1, newest = highest)
+                // Create chronological IDs (newest = 1, incrementing)
                 var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                    return (a.modified || 0) - (b.modified || 0);  // Ascending order (oldest first)
+                    return (b.modified || 0) - (a.modified || 0);  // Descending order (newest first)
                 }});
                 
                 chronologicalIds = {{}};
                 sortedByDate.forEach(function(file, index) {{
                     var fileKey = file.name + '|' + file.path;
-                    chronologicalIds[fileKey] = index;  // Start from 0
+                    chronologicalIds[fileKey] = index + 1;  // Start from 1
                 }});
                 
                 // Add chronological IDs to files
@@ -2217,14 +2217,14 @@ def get_files_widget_html(
         // Update chronological IDs after file changes
         function updateChronologicalIds() {{
             var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
+                return (b.modified || 0) - (a.modified || 0);  // Sort newest first
             }});
             
             chronologicalIds = {{}};
             for (var i = 0; i < sortedByDate.length; i++) {{
                 var file = sortedByDate[i];
                 var fileKey = file.name + '|' + file.path;
-                chronologicalIds[fileKey] = i;
+                chronologicalIds[fileKey] = i + 1;  // Start from 1
             }}
         }}
 

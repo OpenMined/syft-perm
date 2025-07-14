@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.93"
+__version__ = "0.3.94"
 
 __all__ = [
     "open",
@@ -1706,15 +1706,15 @@ class Files:
             
             // Create chronological index based on modified date (newest first)
             var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
+                return (b.modified || 0) - (a.modified || 0);  // Sort newest first
             }});
             
-            // Assign chronological IDs (oldest = 0)
+            // Assign chronological IDs (newest = 1, incrementing)
             var chronologicalIds = {{}};
             for (var i = 0; i < sortedByDate.length; i++) {{
                 var file = sortedByDate[i];
                 var fileKey = file.name + '|' + file.path; // Unique key for each file
-                chronologicalIds[fileKey] = i;  // Start from 0
+                chronologicalIds[fileKey] = i + 1;  // Start from 1
             }}
             
             var filteredFiles = allFiles.slice();
@@ -2051,14 +2051,14 @@ class Files:
             // Update chronological IDs after file changes
             function updateChronologicalIds() {{
                 var sortedByDate = allFiles.slice().sort(function(a, b) {{
-                    return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
+                    return (b.modified || 0) - (a.modified || 0);  // Sort newest first
                 }});
                 
                 chronologicalIds = {{}};
                 for (var i = 0; i < sortedByDate.length; i++) {{
                     var file = sortedByDate[i];
                     var fileKey = file.name + '|' + file.path;
-                    chronologicalIds[fileKey] = i;
+                    chronologicalIds[fileKey] = i + 1;  // Start from 1
                 }}
             }}
             
