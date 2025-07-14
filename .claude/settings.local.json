@@ -33,7 +33,10 @@
       "Bash(mv:*)",
       "Bash(curl:*)",
       "WebFetch(domain:localhost)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(pkill:*)",
+      "Bash(open check_browser.html)",
+      "Bash(open http://localhost:8005/files-widget)"
     ],
     "deny": []
   }

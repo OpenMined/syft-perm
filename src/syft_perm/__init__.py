@@ -6,7 +6,7 @@ from typing import Union as _Union
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 
-__version__ = "0.3.91"
+__version__ = "0.3.92"
 
 __all__ = [
     "open",
@@ -1937,8 +1937,15 @@ class Files:
                     // Add new file to allFiles
                     allFiles.push(file);
                     
-                    // Update chronological IDs
-                    updateChronologicalIds();
+                    // Assign next chronological ID to the new file
+                    var maxId = -1;
+                    for (var key in chronologicalIds) {{
+                        if (chronologicalIds[key] > maxId) {{
+                            maxId = chronologicalIds[key];
+                        }}
+                    }}
+                    var fileKey = file.name + '|' + file.path;
+                    chronologicalIds[fileKey] = maxId + 1;
                     
                     // Check if file matches current filters
                     if (matchesCurrentFilters(file)) {{

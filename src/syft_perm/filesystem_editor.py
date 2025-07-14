@@ -277,7 +277,7 @@ class FileSystemManager:
             raise HTTPException(status_code=500, detail=f"Error deleting item: {str(e)}")
 
 
-def generate_editor_html(initial_path: str = None) -> str:
+def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -> str:
     """Generate the HTML for the filesystem code editor."""
     initial_path = initial_path or str(Path.home())
     
@@ -295,6 +295,60 @@ def generate_editor_html(initial_path: str = None) -> str:
     except:
         initial_dir = initial_path
     
+    # Define theme colors based on dark/light mode
+    if is_dark_mode:
+        # Dark mode colors
+        bg_color = "#1e1e1e"
+        text_color = "#d4d4d4"
+        border_color = "#3e3e42"
+        panel_bg = "#252526"
+        panel_header_bg = "#2d2d30"
+        input_bg = "#1e1e1e"
+        input_border = "#3e3e42"
+        hover_bg = "rgba(255, 255, 255, 0.05)"
+        accent_bg = "#2d2d30"
+        muted_color = "#9ca3af"
+        btn_primary_bg = "rgba(59, 130, 246, 0.2)"
+        btn_primary_border = "rgba(59, 130, 246, 0.4)"
+        btn_secondary_bg = "#2d2d30"
+        btn_secondary_hover = "#3e3e42"
+        editor_bg = "#1e1e1e"
+        status_bar_bg = "#252526"
+        status_bar_border = "#3e3e42"
+        breadcrumb_bg = "#252526"
+        file_item_hover = "#2d2d30"
+        empty_state_color = "#9ca3af"
+        error_bg = "rgba(239, 68, 68, 0.1)"
+        error_color = "#ef4444"
+        success_bg = "#065f46"
+        success_border = "#10b981"
+    else:
+        # Light mode colors
+        bg_color = "#ffffff"
+        text_color = "#374151"
+        border_color = "#e5e7eb"
+        panel_bg = "#ffffff"
+        panel_header_bg = "#f8f9fa"
+        input_bg = "#ffffff"
+        input_border = "#e5e7eb"
+        hover_bg = "rgba(0, 0, 0, 0.03)"
+        accent_bg = "#f3f4f6"
+        muted_color = "#6b7280"
+        btn_primary_bg = "rgba(147, 197, 253, 0.25)"
+        btn_primary_border = "rgba(147, 197, 253, 0.4)"
+        btn_secondary_bg = "#f3f4f6"
+        btn_secondary_hover = "#e5e7eb"
+        editor_bg = "#ffffff"
+        status_bar_bg = "#ffffff"
+        status_bar_border = "#e5e7eb"
+        breadcrumb_bg = "#ffffff"
+        file_item_hover = "#f3f4f6"
+        empty_state_color = "#6b7280"
+        error_bg = "rgba(254, 226, 226, 0.5)"
+        error_color = "#dc2626"
+        success_bg = "#dcfce7"
+        success_border = "#bbf7d0"
+    
     html_content = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -302,39 +356,16 @@ def generate_editor_html(initial_path: str = None) -> str:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyftBox File Editor</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/{('prism-tomorrow' if is_dark_mode else 'prism')}.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <style>
-        :root {{
-            --background: 0 0% 100%;
-            --foreground: 222.2 84% 4.9%;
-            --card: 0 0% 100%;
-            --card-foreground: 222.2 84% 4.9%;
-            --popover: 0 0% 100%;
-            --popover-foreground: 222.2 84% 4.9%;
-            --primary: 222.2 47.4% 11.2%;
-            --primary-foreground: 210 40% 98%;
-            --secondary: 210 40% 96.1%;
-            --secondary-foreground: 222.2 47.4% 11.2%;
-            --muted: 210 40% 96.1%;
-            --muted-foreground: 215.4 16.3% 46.9%;
-            --accent: 210 40% 96.1%;
-            --accent-foreground: 222.2 47.4% 11.2%;
-            --destructive: 0 84.2% 60.2%;
-            --destructive-foreground: 210 40% 98%;
-            --border: 214.3 31.8% 91.4%;
-            --input: 214.3 31.8% 91.4%;
-            --ring: 222.2 84% 4.9%;
-            --radius: 0.5rem;
-        }}
-
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            background: white;
-            color: #374151;
+            background: {bg_color};
+            color: {text_color};
             font-size: 13px;
             line-height: 1.5;
             height: 100vh;
@@ -359,7 +390,7 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .panel {{
-            background: white;
+            background: {panel_bg};
             border: none;
             border-radius: 0;
             overflow: hidden;
@@ -370,18 +401,18 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .panel-header {{
-            background: #f8f9fa;
+            background: {panel_header_bg};
             padding: 8px 12px;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid {border_color};
             font-weight: 600;
-            color: #374151;
+            color: {text_color};
             font-size: 12px;
         }}
 
         .panel-content {{
             flex: 1;
             overflow: auto;
-            background: white;
+            background: {panel_bg};
         }}
 
         .breadcrumb {{
@@ -390,8 +421,8 @@ def generate_editor_html(initial_path: str = None) -> str:
             align-items: center;
             gap: 6px;
             padding: 8px 12px;
-            background: white;
-            border-bottom: 1px solid #e5e7eb;
+            background: {breadcrumb_bg};
+            border-bottom: 1px solid {border_color};
             font-size: 11px;
             max-height: 150px;
             overflow-y: auto;
@@ -405,10 +436,10 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .breadcrumb-link {{
-            color: hsl(var(--muted-foreground));
+            color: {muted_color};
             text-decoration: none;
             padding: 4px 8px;
-            border-radius: calc(var(--radius) - 2px);
+            border-radius: 4px;
             transition: all 0.2s;
             white-space: nowrap;
             overflow: hidden;
@@ -418,17 +449,17 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .breadcrumb-link:hover {{
-            background: hsl(var(--accent));
-            color: hsl(var(--accent-foreground));
+            background: {accent_bg};
+            color: {text_color};
             max-width: none;
         }}
 
         .breadcrumb-current {{
-            color: hsl(var(--foreground));
+            color: {text_color};
             font-weight: 500;
-            background: hsl(var(--muted));
+            background: {accent_bg};
             padding: 4px 8px;
-            border-radius: calc(var(--radius) - 2px);
+            border-radius: 4px;
             max-width: 150px;
             white-space: nowrap;
             overflow: hidden;
@@ -436,7 +467,7 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .breadcrumb-separator {{
-            color: hsl(var(--muted-foreground));
+            color: {muted_color};
             font-size: 0.8rem;
         }}
 
@@ -449,7 +480,7 @@ def generate_editor_html(initial_path: str = None) -> str:
             align-items: center;
             gap: 12px;
             padding: 10px 16px;
-            border-radius: calc(var(--radius) - 2px);
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
             border: 1px solid transparent;
@@ -457,12 +488,12 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .file-item:hover {{
-            background: hsl(var(--accent));
+            background: {file_item_hover};
         }}
 
         .file-item.selected {{
-            background: hsl(var(--accent));
-            border-color: hsl(var(--border));
+            background: {accent_bg};
+            border-color: {border_color};
         }}
 
         .file-icon {{
@@ -472,7 +503,7 @@ def generate_editor_html(initial_path: str = None) -> str:
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #6b7280;
+            color: {muted_color};
         }}
 
         .file-details {{
@@ -482,7 +513,7 @@ def generate_editor_html(initial_path: str = None) -> str:
 
         .file-name {{
             font-weight: 500;
-            color: #111827;
+            color: {text_color};
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -491,7 +522,7 @@ def generate_editor_html(initial_path: str = None) -> str:
 
         .file-meta {{
             font-size: 10px;
-            color: #6b7280;
+            color: {muted_color};
             margin-top: 1px;
         }}
 
@@ -508,14 +539,14 @@ def generate_editor_html(initial_path: str = None) -> str:
             justify-content: space-between;
             gap: 12px;
             padding: 12px 16px;
-            background: white;
+            background: {panel_bg};
             border-bottom: none;
             flex-shrink: 0;
         }}
 
         .editor-title {{
             font-weight: 500;
-            color: hsl(var(--foreground));
+            color: {text_color};
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -546,17 +577,18 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .btn-primary {{
-            background: rgba(147, 197, 253, 0.25);  /* Very light pastel blue */
+            background: {btn_primary_bg};
             color: #3b82f6;
-            border: 1px solid rgba(147, 197, 253, 0.4);
+            border: 1px solid {btn_primary_border};
             backdrop-filter: blur(4px);
         }}
 
         .btn-primary:hover {{
-            background: rgba(147, 197, 253, 0.35);  /* Slightly more opaque on hover */
-            border-color: rgba(147, 197, 253, 0.5);
+            background: {btn_primary_bg};
+            border-color: {btn_primary_border};
             transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(147, 197, 253, 0.2);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+            opacity: 0.8;
         }}
         
         .btn-primary.saving {{
@@ -575,31 +607,31 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .btn-secondary {{
-            background: #f3f4f6;
-            color: #374151;
+            background: {btn_secondary_bg};
+            color: {text_color};
         }}
 
         .btn-secondary:hover {{
-            background: #e5e7eb;
+            background: {btn_secondary_hover};
         }}
         
         /* Additional button colors with better harmony */
         .btn-mint {{
-            background: #f3f4f6;
-            color: #374151;
+            background: {btn_secondary_bg};
+            color: {text_color};
         }}
         
         .btn-mint:hover {{
-            background: #e5e7eb;
+            background: {btn_secondary_hover};
         }}
         
         .btn-lavender {{
-            background: #f3f4f6;
-            color: #374151;
+            background: {btn_secondary_bg};
+            color: {text_color};
         }}
         
         .btn-lavender:hover {{
-            background: #e5e7eb;
+            background: {btn_secondary_hover};
         }}
 
         .btn:disabled {{
@@ -616,8 +648,8 @@ def generate_editor_html(initial_path: str = None) -> str:
             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
             font-size: 14px;
             line-height: 1.6;
-            background: hsl(var(--card));
-            color: hsl(var(--foreground));
+            background: {editor_bg};
+            color: {text_color};
             tab-size: 4;
             width: 100%;
             height: 100%;
@@ -632,10 +664,10 @@ def generate_editor_html(initial_path: str = None) -> str:
             align-items: center;
             justify-content: space-between;
             padding: 8px 16px;
-            background: white;
-            border-top: 1px solid #e5e7eb;
+            background: {status_bar_bg};
+            border-top: 1px solid {status_bar_border};
             font-size: 0.85rem;
-            color: hsl(var(--muted-foreground));
+            color: {muted_color};
             flex-shrink: 0;
         }}
 
@@ -654,12 +686,12 @@ def generate_editor_html(initial_path: str = None) -> str:
         .loading {{
             text-align: center;
             padding: 40px;
-            color: hsl(var(--muted-foreground));
+            color: {muted_color};
         }}
 
         .error {{
-            background: hsl(var(--destructive) / 0.1);
-            color: hsl(var(--destructive));
+            background: {error_bg};
+            color: {error_color};
             padding: 12px;
             border-radius: 0;
             margin: 12px;
@@ -667,11 +699,12 @@ def generate_editor_html(initial_path: str = None) -> str:
         }}
 
         .success {{
-            color: #065f46;
+            background: {success_bg};
+            color: {('white' if is_dark_mode else '#065f46')};
             padding: 12px 20px;
             border-radius: 8px;
             margin: 12px;
-            border: 1px solid #bbf7d0;
+            border: 1px solid {success_border};
             position: fixed;
             top: 20px;
             right: 20px;
@@ -713,18 +746,18 @@ def generate_editor_html(initial_path: str = None) -> str:
         .empty-state {{
             text-align: center;
             padding: 60px 20px;
-            color: hsl(var(--muted-foreground));
+            color: {empty_state_color};
         }}
 
         .empty-state h3 {{
             font-size: 1.1rem;
             margin-bottom: 8px;
-            color: hsl(var(--foreground));
+            color: {text_color};
             font-weight: 500;
         }}
 
         .empty-state p {{
-            color: hsl(var(--muted-foreground));
+            color: {empty_state_color};
             font-size: 0.9rem;
         }}
 

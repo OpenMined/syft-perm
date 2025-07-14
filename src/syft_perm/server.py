@@ -767,12 +767,14 @@ if _SERVER_AVAILABLE:
     @app.get("/file-editor", response_class=HTMLResponse)  # type: ignore[misc]
     async def file_editor_interface() -> HTMLResponse:
         """Serve the file editor interface."""
-        return HTMLResponse(content=generate_editor_html())
+        from . import is_dark
+        return HTMLResponse(content=generate_editor_html(is_dark_mode=is_dark()))
     
     @app.get("/file-editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
     async def file_editor_with_path(path: str) -> HTMLResponse:
         """Serve the file editor interface with a specific path."""
-        return HTMLResponse(content=generate_editor_html(initial_path=path))
+        from . import is_dark
+        return HTMLResponse(content=generate_editor_html(initial_path=path, is_dark_mode=is_dark()))
 
 
 def get_editor_html(path: str) -> str:
@@ -2361,6 +2363,48 @@ def get_files_widget_html(
                     
                     return searchableContent.includes(term);
                 }});
+            }});
+            
+            // Sort the filtered files according to current sort settings
+            // Use a copy of the sort logic without toggling direction
+            filteredFiles.sort(function(a, b) {{
+                var aVal, bVal;
+                
+                switch(sortColumn) {{
+                    case 'index':
+                        aVal = a.modified || 0;
+                        bVal = b.modified || 0;
+                        var temp = aVal;
+                        aVal = -bVal;
+                        bVal = -temp;
+                        break;
+                    case 'name':
+                        aVal = a.name.toLowerCase();
+                        bVal = b.name.toLowerCase();
+                        break;
+                    case 'modified':
+                        aVal = a.modified || 0;
+                        bVal = b.modified || 0;
+                        break;
+                    case 'type':
+                        aVal = (a.extension || '').toLowerCase();
+                        bVal = (b.extension || '').toLowerCase();
+                        break;
+                    case 'size':
+                        aVal = a.size || 0;
+                        bVal = b.size || 0;
+                        break;
+                    case 'permissions':
+                        aVal = (a.permissions_summary || []).length;
+                        bVal = (b.permissions_summary || []).length;
+                        break;
+                    default:
+                        return 0;
+                }}
+                
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
             }});
             
             currentPage = 1;
