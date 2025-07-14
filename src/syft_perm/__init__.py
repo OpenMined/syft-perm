@@ -1059,7 +1059,7 @@ class Files:
                     </defs>
                 </svg>
             </div>
-            <div style="font-size: 20px; font-weight: 600; color: {'#cccccc' if is_dark_mode else '#666666'}; margin-bottom: 12px;">loading your view of <br />the internet of private data...</div>
+            <div style="font-size: 20px; font-weight: 600; color: {'#cccccc' if is_dark_mode else '#666666'}; margin-bottom: 12px;">the internet of private data</div>
             <div style="width: 340px; height: 6px; background-color: {'#3e3e42' if is_dark_mode else '#e5e7eb'}; border-radius: 3px; margin: 0 auto; overflow: hidden;">
                 <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
             </div>

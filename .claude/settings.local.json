@@ -39,7 +39,9 @@
       "Bash(open http://localhost:8005/files-widget)",
       "Bash(chmod:*)",
       "Bash(./check_chrono_ids.sh:*)",
-      "Bash(./test_final.sh:*)"
+      "Bash(./test_final.sh:*)",
+      "Bash(grep -n \"^def open\" /Users/atrask/Desktop/Laboratory/syft-perm/src/syft_perm/__init__.py)",
+      "Bash(PYTHONPATH=src python3 test_syft_url_context.py)"
     ],
     "deny": []
   }

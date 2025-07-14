@@ -15,6 +15,24 @@ from fastapi.responses import HTMLResponse
 import json
 
 
+def get_current_user_email() -> Optional[str]:
+    """Get current user email from environment or local datasite."""
+    # Try environment variable first
+    user_email = os.environ.get("SYFTBOX_USER_EMAIL")
+    
+    # If not found, try to detect from local datasite
+    if not user_email:
+        datasites_path = Path(os.path.expanduser("~/SyftBox/datasites"))
+        if datasites_path.exists():
+            for datasite_dir in datasites_path.iterdir():
+                if datasite_dir.is_dir() and "@" in datasite_dir.name:
+                    yaml_files = list(datasite_dir.glob("**/syft.pub.yaml"))
+                    if yaml_files:
+                        user_email = datasite_dir.name
+                        break
+    return user_email
+
+
 class FileSystemManager:
     """Manages filesystem operations for the code editor."""
     
@@ -73,7 +91,7 @@ class FileSystemManager:
         except (UnicodeDecodeError, PermissionError):
             return False
     
-    def list_directory(self, path: str) -> Dict[str, Any]:
+    def list_directory(self, path: str, user_email: Optional[str] = None) -> Dict[str, Any]:
         """List directory contents."""
         dir_path = self._validate_path(path)
         
@@ -111,11 +129,28 @@ class FileSystemManager:
             if dir_path.parent != dir_path:
                 parent_path = str(dir_path.parent)
             
+            # Check admin permissions for the directory itself
+            current_user = user_email or get_current_user_email()
+            can_admin = True  # Default to true for non-SyftBox directories
+            
+            # Check if directory is within SyftBox
+            syftbox_path = os.path.expanduser("~/SyftBox")
+            if str(dir_path).startswith(syftbox_path) and current_user:
+                try:
+                    # Use syft-perm to check admin permissions
+                    from . import open as syft_open
+                    syft_folder = syft_open(dir_path)
+                    can_admin = syft_folder.has_admin_access(current_user)
+                except Exception:
+                    # If syft-perm check fails, assume no admin access
+                    can_admin = False
+            
             return {
                 'path': str(dir_path),
                 'parent': parent_path,
                 'items': items,
-                'total_items': len(items)
+                'total_items': len(items),
+                'can_admin': can_admin
             }
             
         except PermissionError:
@@ -137,43 +172,36 @@ class FileSystemManager:
         if not self._is_text_file(file_path):
             raise HTTPException(status_code=415, detail="File type not supported for editing")
         
-        # Check write permissions
-        # IMPORTANT: Non-admins don't have access to syft.pub.yaml files, so we can't
-        # reliably check write permissions for files in other people's datasites.
-        # The best we can do is:
-        # 1. If it's in the user's own datasite, they can write
-        # 2. If it's in someone else's datasite, assume read-only
-        # 3. For non-SyftBox files, allow writes
-        
+        # Check write permissions using syft-perm
+        current_user = user_email or get_current_user_email()
         can_write = True  # Default to true for non-SyftBox files
+        can_admin = True  # Default to true for non-SyftBox files
         write_users = []
         
-        # Check if file is within SyftBox
+        # Check if file is within SyftBox - use syft-perm for proper permission checking
         syftbox_path = os.path.expanduser("~/SyftBox")
         if str(file_path).startswith(syftbox_path):
-            # For SyftBox files, check if user owns the datasite
-            try:
-                # Extract the datasite from the path
-                # Format: ~/SyftBox/datasites/<email>/...
-                path_parts = str(file_path).split('/')
-                if 'datasites' in path_parts:
-                    ds_idx = path_parts.index('datasites')
-                    if len(path_parts) > ds_idx + 1:
-                        datasite_owner = path_parts[ds_idx + 1]
-                        
-                        # Simple check: user can write if they own the datasite
-                        if user_email and user_email == datasite_owner:
-                            can_write = True
-                            write_users = [datasite_owner]
-                        else:
-                            # File is in someone else's datasite
-                            # We can't know the real permissions without syft.pub.yaml
-                            # So assume read-only to be safe
-                            can_write = False
-                            write_users = [datasite_owner]  # Show the owner at least
-            except Exception:
-                # On error, be conservative - assume no write access for SyftBox files
+            if current_user:
+                try:
+                    # Use syft-perm to check actual permissions
+                    from . import open as syft_open
+                    syft_file = syft_open(file_path)
+                    can_write = syft_file.has_write_access(current_user)
+                    can_admin = syft_file.has_admin_access(current_user)
+                    
+                    # Get write users from the permission system
+                    permissions = syft_file.get_permissions()
+                    write_users = permissions.get('write', [])
+                    
+                except Exception:
+                    # If syft-perm check fails, fall back to conservative approach
+                    can_write = False
+                    can_admin = False
+                    write_users = []
+            else:
+                # No current user identified, assume no write access for SyftBox files
                 can_write = False
+                can_admin = False
                 write_users = []
         
         try:
@@ -189,6 +217,7 @@ class FileSystemManager:
                 'extension': file_path.suffix.lower(),
                 'encoding': 'utf-8',
                 'can_write': can_write,
+                'can_admin': can_admin,
                 'write_users': write_users
             }
         except UnicodeDecodeError:
@@ -200,9 +229,21 @@ class FileSystemManager:
         """Write content to a file."""
         file_path = self._validate_path(path)
         
-        # For SyftBox files in other people's datasites, we allow the write attempt
-        # but warn that it might fail. The server will handle the actual permission check
-        # and create a .syftconflict file if the user doesn't have permission.
+        # Check write permissions using syft-perm before attempting to write
+        current_user = user_email or get_current_user_email()
+        syftbox_path = os.path.expanduser("~/SyftBox")
+        permission_warning = None
+        
+        if str(file_path).startswith(syftbox_path) and current_user:
+            try:
+                # Use syft-perm to check actual permissions
+                from . import open as syft_open
+                syft_file = syft_open(file_path.parent if not file_path.exists() else file_path)
+                if not syft_file.has_write_access(current_user):
+                    permission_warning = "You can edit this file but the permission system indicates it's likely to be rejected"
+            except Exception:
+                # If permission check fails, proceed but note the uncertainty
+                pass
         
         # Create parent directories if requested
         if create_dirs:
@@ -221,12 +262,15 @@ class FileSystemManager:
                 f.write(content)
             
             stat = file_path.stat()
-            return {
+            response = {
                 'path': str(file_path),
                 'size': stat.st_size,
                 'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
                 'message': 'File saved successfully'
             }
+            if permission_warning:
+                response['permission_warning'] = permission_warning
+            return response
         except PermissionError:
             raise HTTPException(status_code=403, detail="Permission denied")
         except OSError as e:
@@ -277,7 +321,7 @@ class FileSystemManager:
             raise HTTPException(status_code=500, detail=f"Error deleting item: {str(e)}")
 
 
-def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -> str:
+def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, syft_user: Optional[str] = None) -> str:
     """Generate the HTML for the filesystem code editor."""
     initial_path = initial_path or str(Path.home())
     
@@ -613,6 +657,18 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
 
         .btn-secondary:hover {{
             background: {btn_secondary_hover};
+        }}
+        
+        .btn-purple {{
+            background: {'#3b2e4d' if is_dark_mode else '#e9d5ff'};
+            color: {'#c084fc' if is_dark_mode else '#a855f7'};
+            border: 1px solid {'rgba(192, 132, 252, 0.3)' if is_dark_mode else 'rgba(168, 85, 247, 0.3)'};
+        }}
+        
+        .btn-purple:hover {{
+            background: {'#4a3861' if is_dark_mode else '#ddd5ff'};
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2);
         }}
         
         /* Additional button colors with better harmony */
@@ -1005,6 +1061,27 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                                 </svg>
                                 New Folder
                             </button>
+                            <button class="btn btn-secondary" id="shareBtn" title="Share file/folder">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M16 3h5v5M21 3l-7 7m1 4v4h-5M14 21l7-7"/>
+                                </svg>
+                                Share
+                            </button>
+                            <button class="btn btn-secondary" id="closeFileBtn" title="Close file" style="display: none;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                                Close
+                            </button>
+                            <button class="btn btn-purple" id="openInWindowBtn" title="Open in new window">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                    <polyline points="15 3 21 3 21 9"/>
+                                    <line x1="10" y1="14" x2="21" y2="3"/>
+                                </svg>
+                                Open in Window
+                            </button>
                             <button class="btn btn-primary" id="saveBtn" disabled>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z"/>
@@ -1065,6 +1142,9 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                             <span id="readOnlyIndicator" style="color: #dc2626; font-weight: 600; margin-right: 10px; display: none;">READ-ONLY</span>
                             <span id="cursorPosition">Ln 1, Col 1</span>
                             <span id="fileSize">0 bytes</span>
+                            <a href="https://github.com/OpenMined/syft-perm/issues" target="_blank" style="margin-left: 20px; color: {muted_color}; text-decoration: none; font-size: 11px;">
+                                Report a Bug
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1099,11 +1179,16 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                 const urlParams = new URLSearchParams(window.location.search);
                 const pathParam = urlParams.get('path');
                 
+                // Get syft_user from URL parameter if present
+                this.syftUser = urlParams.get('syft_user') || null;
+                
                 this.currentPath = pathParam || '{initial_dir}';
                 this.initialFilePath = {'`' + initial_path + '`' if is_initial_file else 'null'};
                 this.isInitialFile = {str(is_initial_file).lower()};
                 this.currentFile = null;
+                this.selectedFolder = null;
                 this.isModified = false;
+                this.isAdmin = false;  // Default to false until we load a file/directory
                 this.fileOnlyMode = this.isInitialFile;
                 this.isDarkMode = {str(is_dark_mode).lower()};
                 this.initializeElements();
@@ -1128,6 +1213,8 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                 this.editorInput = document.getElementById('editor-input');
                 this.syntaxHighlight = document.getElementById('syntax-highlight').querySelector('code');
                 this.saveBtn = document.getElementById('saveBtn');
+                this.shareBtn = document.getElementById('shareBtn');
+                this.closeFileBtn = document.getElementById('closeFileBtn');
                 this.newFileBtn = document.getElementById('newFileBtn');
                 this.newFolderBtn = document.getElementById('newFolderBtn');
                 this.editorTitle = document.getElementById('editorTitle');
@@ -1213,8 +1300,19 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
             
             setupEventListeners() {{
                 this.saveBtn.addEventListener('click', () => this.saveFile());
+                this.shareBtn.addEventListener('click', () => this.showShareModal());
+                this.closeFileBtn.addEventListener('click', () => this.closeFile());
                 this.newFileBtn.addEventListener('click', () => this.createNewFile());
                 this.newFolderBtn.addEventListener('click', () => this.createNewFolder());
+                
+                // Open in Window button
+                const openInWindowBtn = document.getElementById('openInWindowBtn');
+                if (openInWindowBtn) {{
+                    openInWindowBtn.addEventListener('click', () => {{
+                        const currentUrl = window.location.href;
+                        window.open(currentUrl, '_blank');
+                    }});
+                }}
                 this.toggleExplorerBtn.addEventListener('click', () => this.toggleFileOnlyMode());
                 
                 // Editor input listeners
@@ -1250,7 +1348,11 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
             
             async loadDirectory(path) {{
                 try {{
-                    const response = await fetch(`/api/filesystem/list?path=${{encodeURIComponent(path)}}`);
+                    let url = `/api/filesystem/list?path=${{encodeURIComponent(path)}}`;
+                    if (this.syftUser) {{
+                        url += `&syft_user=${{encodeURIComponent(this.syftUser)}}`;
+                    }}
+                    const response = await fetch(url);
                     const data = await response.json();
                     
                     if (!response.ok) {{
@@ -1284,8 +1386,10 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                     }}
                     
                     this.currentPath = data.path;
+                    this.isAdmin = data.can_admin || false;  // Update admin status for the directory
                     this.renderFileList(data.items);
                     this.renderBreadcrumb(data.path, data.parent);
+                    this.updateUI();  // Update UI to reflect admin status
                     
                 }} catch (error) {{
                     this.showError('Failed to load directory: ' + error.message);
@@ -1323,10 +1427,60 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                         const isDirectory = item.dataset.isDirectory === 'true';
                         const isEditable = item.dataset.isEditable === 'true';
                         
+                        // Clear previous selections
+                        this.fileList.querySelectorAll('.file-item').forEach(el => el.classList.remove('selected'));
+                        
+                        // Add selection to current item
+                        item.classList.add('selected');
+                        
                         if (isDirectory) {{
-                            this.loadDirectory(path);
+                            // For directories, just select them (don't navigate)
+                            // This allows users to configure permissions for folders
+                            this.selectedFolder = path;
+                            this.currentFile = null;
+                            
+                            // Check admin permissions for the selected folder
+                            this.checkFolderPermissions(path);
+                            
+                            // Update the editor title to show selected folder
+                            this.editorTitle.textContent = `Selected: ${{path.split('/').pop()}} (folder)`;
+                            
+                            // Show empty state with folder selected message
+                            this.emptyState.style.display = 'flex';
+                            this.emptyState.innerHTML = `
+                                <div style="text-align: center;">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="${{themeColors.muted_color}}" stroke-width="1.5" style="margin: 0 auto 16px;">
+                                        <path d="M3 3h6l2 3h10a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                                    </svg>
+                                    <h3 style="color: ${{themeColors.text_color}}; font-size: 18px; margin: 0 0 8px 0; font-weight: 600;">
+                                        Folder Selected
+                                    </h3>
+                                    <p style="color: ${{themeColors.muted_color}}; font-size: 14px; margin: 0;">
+                                        ${{path.split('/').pop()}} - Use the Share button to configure permissions
+                                    </p>
+                                    <p style="color: ${{themeColors.muted_color}}; font-size: 13px; margin: 8px 0 0 0;">
+                                        Double-click to open the folder
+                                    </p>
+                                </div>
+                            `;
+                            
+                            // Hide editors
+                            this.editor.style.display = 'none';
+                            this.editorContainer.style.display = 'none';
+                            
+                            // Enable share button if user has permissions
+                            this.updateUI();
                         }} else if (isEditable) {{
                             this.loadFile(path);
+                            this.selectedFolder = null;
+                        }}
+                    }});
+                    
+                    // Add double-click handler for folders to navigate
+                    item.addEventListener('dblclick', () => {{
+                        const isDirectory = item.dataset.isDirectory === 'true';
+                        if (isDirectory) {{
+                            this.loadDirectory(item.dataset.path);
                         }}
                     }});
                     
@@ -1387,7 +1541,11 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
             
             async loadFile(path) {{
                 try {{
-                    const response = await fetch(`/api/filesystem/read?path=${{encodeURIComponent(path)}}`);
+                    let url = `/api/filesystem/read?path=${{encodeURIComponent(path)}}`;
+                    if (this.syftUser) {{
+                        url += `&syft_user=${{encodeURIComponent(this.syftUser)}}`;
+                    }}
+                    const response = await fetch(url);
                     const data = await response.json();
                     
                     if (!response.ok) {{
@@ -1428,24 +1586,12 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                     this.currentFile = data;
                     this.isModified = false;
                     this.isReadOnly = !data.can_write;
+                    this.isAdmin = data.can_admin || false;
                     this.isUncertainPermissions = false;
                     
-                    // Check if this is a file in someone else datasite (uncertain permissions)
-                    const pathStr = data.path || path;
-                    if (pathStr.includes('/SyftBox/datasites/') && data.write_users && data.write_users.length > 0) {{
-                        // If we marked it as read-only but it is not our datasite, we are uncertain
-                        const pathParts = pathStr.split('/');
-                        const dsIdx = pathParts.indexOf('datasites');
-                        if (dsIdx >= 0 && pathParts.length > dsIdx + 1) {{
-                            const datasite = pathParts[dsIdx + 1];
-                            // Get current user email from somewhere (might need to add this to API)
-                            // For now, if it is marked read-only and has write_users, it is uncertain
-                            if (this.isReadOnly && !data.write_users.includes('*')) {{
-                                this.isUncertainPermissions = true;
-                                this.isReadOnly = false; // Allow editing, but with warning
-                            }}
-                        }}
-                    }}
+                    // Backend now uses syft-perm for proper permission checking
+                    // can_write reflects the actual syft-perm decision
+                    // No more "uncertain permissions" guesswork needed
                     
                     // Decide which editor to use
                     const useSimpleEditor = true; // For now, always use simple editor
@@ -1519,7 +1665,7 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                             color: #dc2626;
                         `;
                         permissionInfo.innerHTML = `
-                            <strong>⚠️ Read-Only:</strong> You don't have write permission for this file. 
+                            <strong>⚠️ Read-Only:</strong> The permission system indicates you don't have write access to this file. 
                             Only <strong>${{data.write_users.join(', ')}}</strong> can edit this file.
                         `;
                         this.editorContainer.parentElement.insertBefore(permissionInfo, this.editorContainer);
@@ -1662,15 +1808,22 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                         content = this.editor.value;
                     }}
                     
+                    const requestBody = {{
+                        path: this.currentFile.path,
+                        content: content
+                    }};
+                    
+                    // Add syft_user if present
+                    if (this.syftUser) {{
+                        requestBody.syft_user = this.syftUser;
+                    }}
+                    
                     const response = await fetch('/api/filesystem/write', {{
                         method: 'POST',
                         headers: {{
                             'Content-Type': 'application/json',
                         }},
-                        body: JSON.stringify({{
-                            path: this.currentFile.path,
-                            content: content
-                        }})
+                        body: JSON.stringify(requestBody)
                     }});
                     
                     const data = await response.json();
@@ -1718,6 +1871,109 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                     this.saveBtn.style.cursor = '';
                     this.saveBtn.title = 'Save file (Ctrl+S)';
                 }}
+                
+                // Show/hide close button based on whether a file is open
+                this.closeFileBtn.style.display = this.currentFile ? 'inline-flex' : 'none';
+                
+                // Update share button - only enabled if user has admin permissions
+                if (this.shareBtn) {{
+                    const hasFile = this.currentFile || this.selectedFolder || this.currentPath;
+                    const canShare = hasFile && this.isAdmin;
+                    
+                    this.shareBtn.disabled = !canShare;
+                    
+                    if (!hasFile) {{
+                        this.shareBtn.style.opacity = '0.5';
+                        this.shareBtn.style.cursor = 'not-allowed';
+                        this.shareBtn.title = 'Select a file or folder first';
+                    }} else if (!this.isAdmin) {{
+                        this.shareBtn.style.opacity = '0.5';
+                        this.shareBtn.style.cursor = 'not-allowed';
+                        this.shareBtn.title = 'You need admin permissions to share this item';
+                    }} else {{
+                        this.shareBtn.style.opacity = '';
+                        this.shareBtn.style.cursor = '';
+                        this.shareBtn.title = 'Share file/folder';
+                    }}
+                }}
+            }}
+            
+            closeFile() {{
+                // Close the current file and return to directory view
+                this.currentFile = null;
+                this.selectedFolder = null;
+                this.isModified = false;
+                this.isReadOnly = false;
+                this.isUncertainPermissions = false;
+                
+                // Clear editors
+                this.editor.value = '';
+                this.editorInput.value = '';
+                
+                // Hide editors and show empty state
+                this.editor.style.display = 'none';
+                this.editorContainer.style.display = 'none';
+                this.emptyState.style.display = 'flex';
+                
+                // Restore default empty state content
+                this.emptyState.innerHTML = `
+                    <svg class="logo" xmlns="http://www.w3.org/2000/svg" width="311" height="360" viewBox="0 0 311 360" fill="none">
+                        <g clip-path="url(#clip0_7523_4240)">
+                            <path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_7523_4240)"></path>
+                            <path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_7523_4240)"></path>
+                            <path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear_7523_4240)"></path>
+                        </g>
+                        <defs>
+                            <linearGradient id="paint0_linear_7523_4240" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#DC7A6E"></stop>
+                                <stop offset="0.251496" stop-color="#F6A464"></stop>
+                                <stop offset="0.501247" stop-color="#FDC577"></stop>
+                                <stop offset="0.753655" stop-color="#EFC381"></stop>
+                                <stop offset="1" stop-color="#B9D599"></stop>
+                            </linearGradient>
+                            <linearGradient id="paint1_linear_7523_4240" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#BFCD94"></stop>
+                                <stop offset="0.245025" stop-color="#B2D69E"></stop>
+                                <stop offset="0.504453" stop-color="#8DCCA6"></stop>
+                                <stop offset="0.745734" stop-color="#5CB8B7"></stop>
+                                <stop offset="1" stop-color="#4CA5B8"></stop>
+                            </linearGradient>
+                            <linearGradient id="paint2_linear_7523_4240" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#D7686D"></stop>
+                                <stop offset="0.225" stop-color="#C64B77"></stop>
+                                <stop offset="0.485" stop-color="#A2638E"></stop>
+                                <stop offset="0.703194" stop-color="#758AA8"></stop>
+                                <stop offset="1" stop-color="#639EAF"></stop>
+                            </linearGradient>
+                            <clipPath id="clip0_7523_4240">
+                                <rect width="311" height="360" fill="white"></rect>
+                            </clipPath>
+                        </defs>
+                    </svg>
+                    <h3>Welcome to SyftBox Editor</h3>
+                    <p>Select a file from the explorer to start editing</p>
+                `;
+                
+                // Remove any permission warnings
+                const existingWarnings = this.editorContainer.parentElement.querySelectorAll('.permission-warning');
+                existingWarnings.forEach(w => w.remove());
+                
+                // Update UI
+                this.updateUI();
+                
+                // Clear file info
+                this.fileInfo.innerHTML = 'Ready';
+                this.fileSize.textContent = '0 bytes';
+                
+                // Reset read-only indicator
+                if (this.readOnlyIndicator) {{
+                    this.readOnlyIndicator.style.display = 'none';
+                }}
+                
+                // Clear any selected file styling in the file list
+                this.fileList.querySelectorAll('.file-item').forEach(item => {{
+                    item.classList.remove('selected');
+                }});
             }}
             
             updateCursorPosition() {{
@@ -1991,6 +2247,589 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False) -
                     }};
                     document.addEventListener('keydown', escHandler);
                 }});
+            }}
+            
+            async showShareModal() {{
+                // Determine the path to share - could be current file, selected folder, or current directory
+                let pathToShare;
+                let isDirectory;
+                
+                if (this.currentFile) {{
+                    pathToShare = this.currentFile.path;
+                    isDirectory = false;
+                }} else if (this.selectedFolder) {{
+                    pathToShare = this.selectedFolder;
+                    isDirectory = true;
+                }} else {{
+                    pathToShare = this.currentPath;
+                    isDirectory = true;
+                }}
+                
+                if (!pathToShare) {{
+                    this.showError('No file or folder selected');
+                    return;
+                }}
+                
+                // For directories, we need to check admin permissions first
+                if (isDirectory) {{
+                    try {{
+                        const response = await fetch(`/permissions/${{encodeURIComponent(pathToShare)}}`);
+                        const permData = await response.json();
+                        
+                        if (!response.ok) {{
+                            throw new Error(permData.detail || 'Failed to load permissions');
+                        }}
+                        
+                        // Check if current user has admin permissions
+                        const currentUser = await this.getCurrentUser();
+                        if (currentUser && permData.permissions && permData.permissions.admin) {{
+                            const hasAdmin = permData.permissions.admin.includes(currentUser) || 
+                                           permData.permissions.admin.includes('*');
+                            if (!hasAdmin) {{
+                                this.showError('You need admin permissions to share this folder');
+                                return;
+                            }}
+                        }}
+                        
+                        this.createShareModal(pathToShare, isDirectory, permData);
+                    }} catch (error) {{
+                        this.showError('Failed to load permissions: ' + error.message);
+                    }}
+                }} else {{
+                    // For files, we already checked admin permissions during load
+                    if (!this.isAdmin) {{
+                        this.showError('You need admin permissions to share this file');
+                        return;
+                    }}
+                    
+                    try {{
+                        const response = await fetch(`/permissions/${{encodeURIComponent(pathToShare)}}`);
+                        const permData = await response.json();
+                        
+                        if (!response.ok) {{
+                            throw new Error(permData.detail || 'Failed to load permissions');
+                        }}
+                        
+                        this.createShareModal(pathToShare, isDirectory, permData);
+                    }} catch (error) {{
+                        this.showError('Failed to load permissions: ' + error.message);
+                    }}
+                }}
+            }}
+            
+            async getCurrentUser() {{
+                // If we have a syft user from the URL, use that
+                if (this.syftUser) {{
+                    return this.syftUser;
+                }}
+                
+                // Try to get current user from the backend or environment
+                try {{
+                    const response = await fetch('/api/current-user');
+                    if (response.ok) {{
+                        const data = await response.json();
+                        return data.email;
+                    }}
+                }} catch (e) {{
+                    // Fallback: try to extract from local path or use a default
+                    const pathParts = window.location.pathname.split('/');
+                    const datasitesIndex = pathParts.indexOf('datasites');
+                    if (datasitesIndex >= 0 && pathParts.length > datasitesIndex + 1) {{
+                        return pathParts[datasitesIndex + 1];
+                    }}
+                }}
+                return null;
+            }}
+            
+            async checkFolderPermissions(folderPath) {{
+                // Check admin permissions for a selected folder
+                try {{
+                    let url = `/api/filesystem/read?path=${{encodeURIComponent(folderPath + '/.syft_folder_check')}}`;
+                    if (this.syftUser) {{
+                        url += `&syft_user=${{encodeURIComponent(this.syftUser)}}`;
+                    }}
+                    
+                    // We'll use a trick: try to read a non-existent file in the folder
+                    // This will trigger permission checks for the folder itself
+                    const response = await fetch(url);
+                    
+                    if (response.status === 404) {{
+                        // File not found is expected, but we got permission info
+                        const data = await response.json();
+                        // The backend should still check permissions even for non-existent files
+                    }}
+                    
+                    // For now, let's use a simpler approach: when a folder is selected,
+                    // we already have its parent's admin status from loadDirectory
+                    // So we'll inherit that status
+                    // This is a reasonable assumption since folder permissions are inherited
+                    
+                    // The isAdmin status was already set by loadDirectory for the current directory
+                    // We'll keep that status for selected folders within that directory
+                    this.updateUI();
+                    
+                }} catch (error) {{
+                    console.error('Error checking folder permissions:', error);
+                    // On error, assume no admin access
+                    this.isAdmin = false;
+                    this.updateUI();
+                }}
+            }}
+            
+            createShareModal(path, isDirectory, permData) {{
+                // Create modal overlay
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    animation: fadeIn 0.3s ease-out;
+                `;
+                
+                // Create modal content
+                const modal = document.createElement('div');
+                const isDark = this.isDarkMode;
+                modal.style.cssText = `
+                    background: ${{isDark ? '#2d2d30' : 'white'}};
+                    color: ${{isDark ? '#d4d4d4' : '#374151'}};
+                    border-radius: 12px;
+                    padding: 0;
+                    max-width: 640px;
+                    width: 90%;
+                    max-height: 80vh;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+                    animation: slideIn 0.3s ease-out;
+                    overflow: hidden;
+                `;
+                
+                const fileName = path.split('/').pop();
+                const itemType = isDirectory ? 'folder' : 'file';
+                
+                // Generate user list HTML
+                const permissions = permData.permissions || {{}};
+                const allUsers = new Set();
+                Object.values(permissions).forEach(userList => {{
+                    userList.forEach(user => allUsers.add(user));
+                }});
+                
+                const userListHtml = Array.from(allUsers).map(user => {{
+                    const userPerms = {{}};
+                    ['read', 'create', 'write', 'admin'].forEach(perm => {{
+                        userPerms[perm] = permissions[perm]?.includes(user) || false;
+                    }});
+                    
+                    return `
+                        <div class="user-row" data-user="${{user}}" style="
+                            display: flex;
+                            align-items: center;
+                            padding: 12px 16px;
+                            border-bottom: 1px solid ${{isDark ? '#3e3e42' : '#e5e7eb'}};
+                            gap: 12px;
+                        ">
+                            <div class="user-info" style="flex: 1; min-width: 0;">
+                                <div class="user-email" style="
+                                    font-weight: 500;
+                                    font-size: 14px;
+                                    color: ${{isDark ? '#d4d4d4' : '#111827'}};
+                                    overflow: hidden;
+                                    text-overflow: ellipsis;
+                                    white-space: nowrap;
+                                ">${{user}}</div>
+                                <div class="user-role" style="
+                                    font-size: 12px;
+                                    color: ${{isDark ? '#9ca3af' : '#6b7280'}};
+                                    margin-top: 2px;
+                                ">${{this.getUserRoleText(userPerms)}}</div>
+                            </div>
+                            <select class="permission-select" data-user="${{user}}" style="
+                                padding: 6px 8px;
+                                border: 1px solid ${{isDark ? '#3e3e42' : '#d1d5db'}};
+                                border-radius: 6px;
+                                background: ${{isDark ? '#1e1e1e' : 'white'}};
+                                color: ${{isDark ? '#d4d4d4' : '#374151'}};
+                                font-size: 13px;
+                                cursor: pointer;
+                            ">
+                                <option value="none" ${{!userPerms.read ? 'selected' : ''}}>No access</option>
+                                <option value="read" ${{userPerms.read && !userPerms.write && !userPerms.admin ? 'selected' : ''}}>Read</option>
+                                <option value="write" ${{userPerms.write && !userPerms.admin ? 'selected' : ''}}>Write</option>
+                                <option value="admin" ${{userPerms.admin ? 'selected' : ''}}>Admin</option>
+                            </select>
+                            <button class="remove-user-btn" data-user="${{user}}" style="
+                                padding: 6px;
+                                border: none;
+                                background: none;
+                                color: ${{isDark ? '#9ca3af' : '#6b7280'}};
+                                cursor: pointer;
+                                border-radius: 4px;
+                                transition: all 0.2s;
+                            " title="Remove user">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c-1 0 2 1 2 2v2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                }}).join('');
+                
+                modal.innerHTML = `
+                    <div class="modal-header" style="
+                        padding: 20px 24px;
+                        border-bottom: 1px solid ${{isDark ? '#3e3e42' : '#e5e7eb'}};
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                    ">
+                        <div>
+                            <h2 style="
+                                margin: 0;
+                                font-size: 18px;
+                                font-weight: 600;
+                                color: ${{isDark ? '#d4d4d4' : '#111827'}};
+                            ">Share "${{fileName}}"</h2>
+                            <p style="
+                                margin: 4px 0 0 0;
+                                font-size: 14px;
+                                color: ${{isDark ? '#9ca3af' : '#6b7280'}};
+                            ">Manage who can access this ${{itemType}}</p>
+                        </div>
+                        <button id="closeModal" style="
+                            background: none;
+                            border: none;
+                            color: ${{isDark ? '#9ca3af' : '#6b7280'}};
+                            cursor: pointer;
+                            padding: 8px;
+                            border-radius: 6px;
+                            transition: all 0.2s;
+                        " title="Close">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="modal-body" style="
+                        padding: 20px 0;
+                        max-height: 400px;
+                        overflow-y: auto;
+                    ">
+                        <div class="add-user-section" style="
+                            padding: 0 24px 16px;
+                            border-bottom: 1px solid ${{isDark ? '#3e3e42' : '#e5e7eb'}};
+                            margin-bottom: 16px;
+                        ">
+                            <div style="display: flex; gap: 8px; align-items: flex-end;">
+                                <div style="flex: 1;">
+                                    <label style="
+                                        display: block;
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: ${{isDark ? '#d4d4d4' : '#374151'}};
+                                        margin-bottom: 6px;
+                                    ">Add person</label>
+                                    <input 
+                                        type="email" 
+                                        id="userEmailInput" 
+                                        placeholder="Enter email address"
+                                        style="
+                                            width: 100%;
+                                            padding: 8px 12px;
+                                            border: 1px solid ${{isDark ? '#3e3e42' : '#d1d5db'}};
+                                            border-radius: 6px;
+                                            background: ${{isDark ? '#1e1e1e' : 'white'}};
+                                            color: ${{isDark ? '#d4d4d4' : '#374151'}};
+                                            font-size: 14px;
+                                            box-sizing: border-box;
+                                        "
+                                    />
+                                </div>
+                                <select id="newUserPermission" style="
+                                    padding: 8px 12px;
+                                    border: 1px solid ${{isDark ? '#3e3e42' : '#d1d5db'}};
+                                    border-radius: 6px;
+                                    background: ${{isDark ? '#1e1e1e' : 'white'}};
+                                    color: ${{isDark ? '#d4d4d4' : '#374151'}};
+                                    font-size: 14px;
+                                    cursor: pointer;
+                                ">
+                                    <option value="read">Read</option>
+                                    <option value="write">Write</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                                <button id="addUserBtn" style="
+                                    padding: 8px 16px;
+                                    background: #3b82f6;
+                                    color: white;
+                                    border: none;
+                                    border-radius: 6px;
+                                    font-size: 14px;
+                                    font-weight: 500;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                    white-space: nowrap;
+                                ">Add</button>
+                            </div>
+                        </div>
+                        
+                        <div class="users-list">
+                            ${{userListHtml || '<div style="padding: 20px; text-align: center; color: ' + (isDark ? '#9ca3af' : '#6b7280') + ';">No users have access yet</div>'}}
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer" style="
+                        padding: 16px 24px;
+                        border-top: 1px solid ${{isDark ? '#3e3e42' : '#e5e7eb'}};
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 12px;
+                        background: ${{isDark ? '#252526' : '#f9fafb'}};
+                    ">
+                        <button id="cancelShare" style="
+                            padding: 8px 16px;
+                            border: 1px solid ${{isDark ? '#3e3e42' : '#d1d5db'}};
+                            background: ${{isDark ? '#2d2d30' : 'white'}};
+                            color: ${{isDark ? '#d4d4d4' : '#374151'}};
+                            border-radius: 6px;
+                            font-size: 14px;
+                            font-weight: 500;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        ">Cancel</button>
+                        <button id="saveShare" style="
+                            padding: 8px 16px;
+                            background: #10b981;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            font-weight: 500;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        ">Save Changes</button>
+                    </div>
+                `;
+                
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+                
+                // Add modal event listeners
+                this.setupShareModalEventListeners(overlay, modal, path, isDirectory, permData);
+            }}
+            
+            getUserRoleText(userPerms) {{
+                if (userPerms.admin) return 'Admin';
+                if (userPerms.write) return 'Can edit';
+                if (userPerms.read) return 'Can view';
+                return 'No access';
+            }}
+            
+            setupShareModalEventListeners(overlay, modal, path, isDirectory, permData) {{
+                const closeModal = () => {{
+                    overlay.style.animation = 'fadeIn 0.2s ease-out reverse';
+                    modal.style.animation = 'slideIn 0.2s ease-out reverse';
+                    setTimeout(() => overlay.remove(), 200);
+                }};
+                
+                // Close modal handlers
+                modal.querySelector('#closeModal').addEventListener('click', closeModal);
+                modal.querySelector('#cancelShare').addEventListener('click', closeModal);
+                
+                // Close on escape
+                const escHandler = (e) => {{
+                    if (e.key === 'Escape') {{
+                        closeModal();
+                        document.removeEventListener('keydown', escHandler);
+                    }}
+                }};
+                document.addEventListener('keydown', escHandler);
+                
+                // Add user handler
+                const addUserBtn = modal.querySelector('#addUserBtn');
+                const userEmailInput = modal.querySelector('#userEmailInput');
+                const newUserPermission = modal.querySelector('#newUserPermission');
+                
+                const addUser = () => {{
+                    const email = userEmailInput.value.trim();
+                    const permission = newUserPermission.value;
+                    
+                    if (!email) {{
+                        this.showError('Please enter an email address');
+                        return;
+                    }}
+                    
+                    if (!email.includes('@')) {{
+                        this.showError('Please enter a valid email address');
+                        return;
+                    }}
+                    
+                    this.addUserToModal(modal, email, permission, path);
+                    userEmailInput.value = '';
+                }};
+                
+                addUserBtn.addEventListener('click', addUser);
+                userEmailInput.addEventListener('keypress', (e) => {{
+                    if (e.key === 'Enter') addUser();
+                }});
+                
+                // Permission change handlers
+                modal.addEventListener('change', (e) => {{
+                    if (e.target.classList.contains('permission-select')) {{
+                        const user = e.target.dataset.user;
+                        const permission = e.target.value;
+                        this.updateUserPermission(e.target.closest('.user-row'), user, permission);
+                    }}
+                }});
+                
+                // Remove user handlers
+                modal.addEventListener('click', (e) => {{
+                    if (e.target.closest('.remove-user-btn')) {{
+                        const userRow = e.target.closest('.user-row');
+                        const user = userRow.dataset.user;
+                        if (confirm(`Remove access for ${{user}}?`)) {{
+                            userRow.remove();
+                        }}
+                    }}
+                }});
+                
+                // Save changes handler
+                modal.querySelector('#saveShare').addEventListener('click', () => {{
+                    this.savePermissionChanges(modal, path, closeModal);
+                }});
+            }}
+            
+            addUserToModal(modal, email, permission, path) {{
+                const usersList = modal.querySelector('.users-list');
+                const isDark = this.isDarkMode;
+                
+                // Check if user already exists
+                if (modal.querySelector(`[data-user="${{email}}"]`)) {{
+                    this.showError('User already has access');
+                    return;
+                }}
+                
+                // Remove "no users" message if present
+                const noUsersMsg = usersList.querySelector('div[style*="text-align: center"]');
+                if (noUsersMsg) noUsersMsg.remove();
+                
+                const userRow = document.createElement('div');
+                userRow.className = 'user-row';
+                userRow.dataset.user = email;
+                userRow.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    padding: 12px 16px;
+                    border-bottom: 1px solid ${{isDark ? '#3e3e42' : '#e5e7eb'}};
+                    gap: 12px;
+                `;
+                
+                userRow.innerHTML = `
+                    <div class="user-info" style="flex: 1; min-width: 0;">
+                        <div class="user-email" style="
+                            font-weight: 500;
+                            font-size: 14px;
+                            color: ${{isDark ? '#d4d4d4' : '#111827'}};
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        ">${{email}}</div>
+                        <div class="user-role" style="
+                            font-size: 12px;
+                            color: ${{isDark ? '#9ca3af' : '#6b7280'}};
+                            margin-top: 2px;
+                        ">${{this.getPermissionText(permission)}}</div>
+                    </div>
+                    <select class="permission-select" data-user="${{email}}" style="
+                        padding: 6px 8px;
+                        border: 1px solid ${{isDark ? '#3e3e42' : '#d1d5db'}};
+                        border-radius: 6px;
+                        background: ${{isDark ? '#1e1e1e' : 'white'}};
+                        color: ${{isDark ? '#d4d4d4' : '#374151'}};
+                        font-size: 13px;
+                        cursor: pointer;
+                    ">
+                        <option value="none">No access</option>
+                        <option value="read" ${{permission === 'read' ? 'selected' : ''}}>Read</option>
+                        <option value="write" ${{permission === 'write' ? 'selected' : ''}}>Write</option>
+                        <option value="admin" ${{permission === 'admin' ? 'selected' : ''}}>Admin</option>
+                    </select>
+                    <button class="remove-user-btn" data-user="${{email}}" style="
+                        padding: 6px;
+                        border: none;
+                        background: none;
+                        color: ${{isDark ? '#9ca3af' : '#6b7280'}};
+                        cursor: pointer;
+                        border-radius: 4px;
+                        transition: all 0.2s;
+                    " title="Remove user">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c-1 0 2 1 2 2v2"/>
+                        </svg>
+                    </button>
+                `;
+                
+                usersList.appendChild(userRow);
+            }}
+            
+            getPermissionText(permission) {{
+                switch (permission) {{
+                    case 'admin': return 'Admin';
+                    case 'write': return 'Can edit';
+                    case 'read': return 'Can view';
+                    default: return 'No access';
+                }}
+            }}
+            
+            updateUserPermission(userRow, user, permission) {{
+                const userRole = userRow.querySelector('.user-role');
+                userRole.textContent = this.getPermissionText(permission);
+            }}
+            
+            async savePermissionChanges(modal, path, closeModal) {{
+                const userRows = modal.querySelectorAll('.user-row');
+                const changes = [];
+                
+                // Collect all current permissions from the modal
+                userRows.forEach(row => {{
+                    const user = row.dataset.user;
+                    const permission = row.querySelector('.permission-select').value;
+                    if (permission !== 'none') {{
+                        changes.push({{ user, permission, action: 'grant' }});
+                    }}
+                }});
+                
+                try {{
+                    // Apply changes via API
+                    for (const change of changes) {{
+                        const response = await fetch('/permissions/update', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{
+                                path: path,
+                                user: change.user,
+                                permission: change.permission,
+                                action: change.action
+                            }})
+                        }});
+                        
+                        if (!response.ok) {{
+                            const error = await response.json();
+                            throw new Error(error.detail || 'Failed to update permissions');
+                        }}
+                    }}
+                    
+                    this.showSuccess('Permissions updated successfully');
+                    closeModal();
+                }} catch (error) {{
+                    this.showError('Failed to save permissions: ' + error.message);
+                }}
             }}
         }}
         

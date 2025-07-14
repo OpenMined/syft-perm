@@ -412,13 +412,13 @@ if _SERVER_AVAILABLE:
             # Apply the permission change
             if update.action == "grant":
                 if update.permission == "read":
-                    syft_obj.grant_read_access(update.user)
+                    syft_obj.grant_read_access(update.user, force=True)
                 elif update.permission == "create":
-                    syft_obj.grant_create_access(update.user)
+                    syft_obj.grant_create_access(update.user, force=True)
                 elif update.permission == "write":
-                    syft_obj.grant_write_access(update.user)
+                    syft_obj.grant_write_access(update.user, force=True)
                 elif update.permission == "admin":
-                    syft_obj.grant_admin_access(update.user)
+                    syft_obj.grant_admin_access(update.user, force=True)
                 else:
                     raise HTTPException(
                         status_code=400, detail=f"Invalid permission: {update.permission}"
@@ -689,6 +689,31 @@ if _SERVER_AVAILABLE:
             "total_unfiltered": len(all_files)
         }
     
+    @app.post("/api/restart")  # type: ignore[misc]
+    async def restart_server() -> Dict[str, str]:
+        """Restart the server."""
+        import os
+        import sys
+        import signal
+        
+        # Send response before restarting
+        response = {"status": "restarting", "message": "Server is restarting..."}
+        
+        # Schedule restart after response is sent
+        def do_restart():
+            # Give time for response to be sent
+            import time
+            time.sleep(0.5)
+            
+            # Restart the process
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        
+        # Start restart in background thread
+        import threading
+        threading.Thread(target=do_restart, daemon=True).start()
+        
+        return response
+    
     @app.websocket("/ws/file-updates")  # type: ignore[misc]
     async def websocket_endpoint(websocket: WebSocket) -> None:
         """WebSocket endpoint for real-time file updates."""
@@ -726,15 +751,20 @@ if _SERVER_AVAILABLE:
     fs_manager = FileSystemManager()
     
     @app.get("/api/filesystem/list")  # type: ignore[misc]
-    async def list_directory(path: str = Query(...)) -> Dict[str, Any]:
+    async def list_directory(path: str = Query(...), syft_user: Optional[str] = Query(None)) -> Dict[str, Any]:
         """List directory contents."""
-        return fs_manager.list_directory(path)
+        from .filesystem_editor import get_current_user_email
+        # Use syft_user if provided (from syft:// URL), otherwise detect current user
+        current_user = syft_user or get_current_user_email()
+        return fs_manager.list_directory(path, user_email=current_user)
     
     @app.get("/api/filesystem/read")  # type: ignore[misc]
-    async def read_file(path: str = Query(...)) -> Dict[str, Any]:
+    async def read_file(path: str = Query(...), syft_user: Optional[str] = Query(None)) -> Dict[str, Any]:
         """Read file contents."""
-        # TODO: Get user email from session/auth when available
-        return fs_manager.read_file(path, user_email=None)
+        from .filesystem_editor import get_current_user_email
+        # Use syft_user if provided (from syft:// URL), otherwise detect current user
+        current_user = syft_user or get_current_user_email()
+        return fs_manager.read_file(path, user_email=current_user)
     
     @app.post("/api/filesystem/write")  # type: ignore[misc]
     async def write_file(request: Dict[str, Any]) -> Dict[str, Any]:
@@ -742,12 +772,15 @@ if _SERVER_AVAILABLE:
         path = request.get("path")
         content = request.get("content", "")
         create_dirs = request.get("create_dirs", False)
+        syft_user = request.get("syft_user")
         
         if not path:
             raise HTTPException(status_code=400, detail="Path is required")
         
-        # TODO: Get user email from session/auth when available
-        return fs_manager.write_file(path, content, create_dirs, user_email=None)
+        from .filesystem_editor import get_current_user_email
+        # Use syft_user if provided (from syft:// URL), otherwise detect current user
+        current_user = syft_user or get_current_user_email()
+        return fs_manager.write_file(path, content, create_dirs, user_email=current_user)
     
     @app.post("/api/filesystem/create-directory")  # type: ignore[misc]
     async def create_directory(request: Dict[str, Any]) -> Dict[str, Any]:
@@ -765,16 +798,16 @@ if _SERVER_AVAILABLE:
         return fs_manager.delete_item(path, recursive)
     
     @app.get("/file-editor", response_class=HTMLResponse)  # type: ignore[misc]
-    async def file_editor_interface() -> HTMLResponse:
+    async def file_editor_interface(syft_user: Optional[str] = Query(None)) -> HTMLResponse:
         """Serve the file editor interface."""
         from . import is_dark
-        return HTMLResponse(content=generate_editor_html(is_dark_mode=is_dark()))
+        return HTMLResponse(content=generate_editor_html(is_dark_mode=is_dark(), syft_user=syft_user))
     
     @app.get("/file-editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
-    async def file_editor_with_path(path: str) -> HTMLResponse:
+    async def file_editor_with_path(path: str, syft_user: Optional[str] = Query(None)) -> HTMLResponse:
         """Serve the file editor interface with a specific path."""
         from . import is_dark
-        return HTMLResponse(content=generate_editor_html(initial_path=path, is_dark_mode=is_dark()))
+        return HTMLResponse(content=generate_editor_html(initial_path=path, is_dark_mode=is_dark(), syft_user=syft_user))
 
 
 def get_editor_html(path: str) -> str:
@@ -1688,6 +1721,17 @@ def get_files_widget_html(
         background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
         color: {'#9ca3af' if is_dark_mode else '#6b7280'};
     }}
+    
+    #{container_id} .btn-clickable {{
+        cursor: pointer !important;
+        opacity: 1 !important;
+    }}
+    
+    #{container_id} .btn-clickable:hover {{
+        opacity: 0.85 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }}
 
     #{container_id} .icon {{
         width: 0.5rem;
@@ -1743,6 +1787,101 @@ def get_files_widget_html(
         color: {'#d1d5db' if is_dark_mode else '#374151'};
     }}
 
+    #{container_id} .modal {{
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }}
+    
+    #{container_id} .modal-content {{
+        position: relative;
+        background-color: {bg_color};
+        margin: 10% auto;
+        padding: 20px;
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        width: 500px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }}
+    
+    #{container_id} .modal-editor {{
+        width: 90%;
+        height: 80vh;
+        max-width: 1200px;
+    }}
+    
+    #{container_id} .modal-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid {border_color};
+    }}
+    
+    #{container_id} .modal-title {{
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: {text_color};
+    }}
+    
+    #{container_id} .modal-close {{
+        cursor: pointer;
+        font-size: 1.5rem;
+        color: {text_color};
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }}
+    
+    #{container_id} .modal-close:hover {{
+        opacity: 1;
+    }}
+    
+    #{container_id} .modal-body {{
+        margin-bottom: 20px;
+    }}
+    
+    #{container_id} .modal-footer {{
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding-top: 10px;
+        border-top: 1px solid {border_color};
+    }}
+    
+    #{container_id} .form-group {{
+        margin-bottom: 15px;
+    }}
+    
+    #{container_id} .form-label {{
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: {text_color};
+    }}
+    
+    #{container_id} .form-input {{
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid {input_border};
+        border-radius: 4px;
+        background: {input_bg};
+        color: {text_color};
+        font-size: 0.875rem;
+    }}
+    
+    #{container_id} .form-hint {{
+        margin-top: 5px;
+        font-size: 0.75rem;
+        color: {page_info_color};
+    }}
+    
     #{container_id} .date-text {{
         display: flex;
         align-items: center;
@@ -1791,7 +1930,7 @@ def get_files_widget_html(
         </svg>
         
         <div style="font-size: 20px; font-weight: 600; color: {text_color}; margin-top: 2rem; text-align: center;">
-            loading your view of <br />the internet of private data...
+            the internet of private data...
         </div>
         
         <div style="width: 340px; height: 6px; background-color: {'#2d2d30' if is_dark_mode else '#e5e5e5'}; border-radius: 3px; margin: 1.5rem auto; overflow: hidden;">
@@ -1814,9 +1953,9 @@ def get_files_widget_html(
         <div class="search-controls">
             <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
             <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." style="flex: 1;">
-            <button class="btn btn-green">New</button>
-            <button class="btn btn-blue">Select All</button>
-            <button class="btn btn-gray">Refresh</button>
+            <button class="btn btn-green btn-clickable" onclick="openNewFileModal()">New</button>
+            <button class="btn btn-gray btn-clickable" onclick="restartServer()">Refresh</button>
+            <button class="btn btn-purple btn-clickable" onclick="window.open(window.location.href, '_blank')">Open in Window</button>
         </div>
 
         <div class="table-container">
@@ -1840,12 +1979,46 @@ def get_files_widget_html(
         </div>
 
         <div class="pagination">
-            <div></div>
+            <div>
+                <a href="https://github.com/OpenMined/syft-perm/issues" target="_blank" style="color: {page_info_color}; text-decoration: none; font-size: 0.75rem;">
+                    Report a Bug
+                </a>
+            </div>
             <span class="status" id="{container_id}-status">Loading...</span>
             <div class="pagination-controls">
                 <button onclick="changePage_{container_id}(-1)" id="{container_id}-prev-btn" disabled>Previous</button>
                 <span class="page-info" id="{container_id}-page-info">Page 1 of 1</span>
                 <button onclick="changePage_{container_id}(1)" id="{container_id}-next-btn">Next</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- New File Modal -->
+    <div id="newFileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New File</h3>
+                <span class="modal-close" onclick="closeNewFileModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">File Path</label>
+                    <input type="text" id="newFilePath" class="form-input" placeholder="syft://user@example.com/path/to/file.txt">
+                    <div class="form-hint">Enter a syft:// path for the new file</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeNewFileModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="createNewFile()">Create & Edit</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- File Editor Modal -->
+    <div id="fileEditorModal" class="modal">
+        <div class="modal-content modal-editor">
+            <div style="height: 100%; border: 1px solid {border_color}; border-radius: 8px; overflow: hidden;">
+                <iframe id="fileEditorFrame" width="100%" height="100%" frameborder="0" style="border: none;"></iframe>
             </div>
         </div>
     </div>
@@ -2081,6 +2254,81 @@ def get_files_widget_html(
         function showStatus(message) {{
             var statusEl = document.getElementById('{container_id}-status');
             if (statusEl) statusEl.textContent = message;
+        }}
+        
+        // Restart server function
+        async function restartServer() {{
+            try {{
+                showStatus('Restarting server...');
+                
+                const response = await fetch('/api/restart', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/json'
+                    }}
+                }});
+                
+                if (response.ok) {{
+                    showStatus('Server is restarting. Page will reload...');
+                    
+                    // Wait a bit then reload the page
+                    setTimeout(() => {{
+                        window.location.reload();
+                    }}, 2000);
+                }} else {{
+                    showStatus('Failed to restart server');
+                }}
+            }} catch (error) {{
+                console.error('Error restarting server:', error);
+                showStatus('Error restarting server');
+            }}
+        }}
+        
+        // Modal functions
+        function openNewFileModal() {{
+            document.getElementById('newFileModal').style.display = 'block';
+            document.getElementById('newFilePath').focus();
+        }}
+        
+        function closeNewFileModal() {{
+            document.getElementById('newFileModal').style.display = 'none';
+            document.getElementById('newFilePath').value = '';
+        }}
+        
+        function createNewFile() {{
+            var filePath = document.getElementById('newFilePath').value.trim();
+            
+            if (!filePath) {{
+                alert('Please enter a file path');
+                return;
+            }}
+            
+            // Validate syft:// format
+            if (!filePath.startsWith('syft://')) {{
+                alert('File path must start with syft://');
+                return;
+            }}
+            
+            // Close the first modal
+            closeNewFileModal();
+            
+            // Open the editor modal with the new file
+            var editorUrl = '/file-editor?path=' + encodeURIComponent(filePath) + '&new=true&embedded=true';
+            document.getElementById('fileEditorFrame').src = editorUrl;
+            document.getElementById('fileEditorModal').style.display = 'block';
+        }}
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {{
+            var newFileModal = document.getElementById('newFileModal');
+            var editorModal = document.getElementById('fileEditorModal');
+            
+            if (event.target === newFileModal) {{
+                closeNewFileModal();
+            }} else if (event.target === editorModal) {{
+                document.getElementById('fileEditorModal').style.display = 'none';
+                document.getElementById('fileEditorFrame').src = '';
+            }}
         }}
         
         function calculateTotalSize() {{

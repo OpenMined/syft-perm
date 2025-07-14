@@ -494,6 +494,20 @@ class SyftFile:
     """A file wrapper that manages SyftBox permissions."""
 
     def __init__(self, path: Union[str, Path]):
+        # Store original path (might be syft:// URL)
+        self._original_path = str(path)
+        
+        # Extract user from syft:// URL if present
+        self._syft_user = None
+        if isinstance(path, str) and path.startswith("syft://"):
+            # Extract user from syft://user@domain/path format
+            try:
+                url_parts = path[7:].split("/", 1)  # Remove "syft://" prefix
+                if "@" in url_parts[0]:
+                    self._syft_user = url_parts[0]
+            except:
+                pass
+        
         resolved_path = resolve_path(str(path))
         if resolved_path is None:
             raise ValueError("Could not resolve path")
@@ -1024,11 +1038,17 @@ class SyftFile:
             # Get the file-editor URL for this specific folder
             editor_url = get_file_editor_url(str(self._path))
             
+            # If we have a syft user context, pass it as a query parameter
+            if self._syft_user:
+                import urllib.parse
+                separator = "&" if "?" in editor_url else "?"
+                editor_url = f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
+            
             # Create iframe to display the file-editor
             return f"""
-            <div style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42; border-radius: 8px; overflow: hidden; background: #1e1e1e;">
                 <iframe src="{editor_url}" 
-                        style="width: 100%; height: 100%; border: none;" 
+                        style="width: 100%; height: 100%; border: none; background: transparent;" 
                         frameborder="0"
                         allow="clipboard-read; clipboard-write">
                 </iframe>
@@ -1608,7 +1628,25 @@ class SyftFolder:
     """A folder wrapper that manages SyftBox permissions."""
 
     def __init__(self, path: Union[str, Path]):
-        self._path = Path(path)
+        # Store original path (might be syft:// URL)
+        self._original_path = str(path)
+        
+        # Extract user from syft:// URL if present
+        self._syft_user = None
+        if isinstance(path, str) and path.startswith("syft://"):
+            # Extract user from syft://user@domain/path format
+            try:
+                url_parts = path[7:].split("/", 1)  # Remove "syft://" prefix
+                if "@" in url_parts[0]:
+                    self._syft_user = url_parts[0]
+            except:
+                pass
+        
+        resolved_path = resolve_path(str(path))
+        if resolved_path is None:
+            raise ValueError("Could not resolve path")
+        self._path: Path = resolved_path
+        
         # Ensure folder exists
         self._path.mkdir(parents=True, exist_ok=True)
 
@@ -2157,11 +2195,17 @@ class SyftFolder:
             # Get the file-editor URL for this specific folder
             editor_url = get_file_editor_url(str(self._path))
             
+            # If we have a syft user context, pass it as a query parameter
+            if self._syft_user:
+                import urllib.parse
+                separator = "&" if "?" in editor_url else "?"
+                editor_url = f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
+            
             # Create iframe to display the file-editor
             return f"""
-            <div style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42; border-radius: 8px; overflow: hidden; background: #1e1e1e;">
                 <iframe src="{editor_url}" 
-                        style="width: 100%; height: 100%; border: none;" 
+                        style="width: 100%; height: 100%; border: none; background: transparent;" 
                         frameborder="0"
                         allow="clipboard-read; clipboard-write">
                 </iframe>
@@ -2171,7 +2215,7 @@ class SyftFolder:
             # Fallback to basic file info if editor is not available
             return f"""
             <div style='padding: 20px; color: #666; border: 1px solid #ddd; border-radius: 8px;'>
-                <h3>📄 SyftFile: {self._path.name}</h3>
+                <h3>📁 SyftFolder: {self._path.name}</h3>
                 <p><strong>Path:</strong> {self._path}</p>
                 <p><em>File editor not available: {str(e)}</em></p>
             </div>
