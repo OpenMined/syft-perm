@@ -5693,39 +5693,40 @@ def generate_share_modal_html(
         }}
 
         .permission-reasons {{
-
             margin-top: 4px;
-
+            padding: 6px 0;
             font-size: 11px;
-
             color: {muted_color};
-
+            font-style: italic;
         }}
 
         .reason-item {{
-
-            margin: 2px 0;
-
+            margin: 0;
             display: flex;
-
-            gap: 4px;
-
+            align-items: center;
+            gap: 6px;
+            line-height: 1.3;
         }}
 
         .reason-perm {{
-
             font-weight: 500;
-
-            min-width: 45px;
-
+            color: {f'#1d4ed8' if not is_dark_mode else '#60a5fa'};
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.3px;
         }}
 
         .reason-text {{
-
             flex: 1;
+            opacity: 0.85;
+            font-weight: 400;
+            word-break: break-word;
+        }}
 
+        .reason-icon {{
+            margin-right: 2px;
             opacity: 0.8;
-
+            font-size: 10px;
         }}
 
         .permission-select {{
@@ -6169,28 +6170,37 @@ def generate_share_modal_html(
             }}
 
             let reasonsHtml = '<div class="permission-reasons">';
-
-            // Show reasons for the highest granted permission
-
+            
+            // Find the highest granted permission level
+            let highestPerm = null;
             ['admin', 'write', 'create', 'read'].forEach(perm => {{
-
                 const permData = reasons[perm];
-
-                if (permData && permData.granted && permData.reasons && permData.reasons.length > 0) {{
-
-                    reasonsHtml += `<div class="reason-item">
-
-                        <span class="reason-perm">${{perm.toUpperCase()}}:</span>
-
-                        <span class="reason-text">${{permData.reasons[0]}}</span>
-
-                    </div>`;
-
-                    return false; // Stop at first granted permission
-
+                if (permData && permData.granted && permData.reasons && permData.reasons.length > 0 && !highestPerm) {{
+                    highestPerm = {{ level: perm, data: permData }};
                 }}
-
             }});
+            
+            if (highestPerm) {{
+                const icons = {{
+                    'admin': '👑',
+                    'write': '✏️', 
+                    'create': '📝',
+                    'read': '👁️'
+                }};
+                
+                // Clean up the reason text - remove path prefix if it's too long
+                let reasonText = highestPerm.data.reasons[0];
+                if (reasonText.includes('/Users/') && reasonText.length > 50) {{
+                    reasonText = reasonText.replace(/\/Users\/[^\/]+\/SyftBox\/datasites\/[^\/]+\//, '.../');
+                }}
+                
+                reasonsHtml += `<div class="reason-item">
+                    <span class="reason-perm">
+                        <span class="reason-icon">${{icons[highestPerm.level] || '📋'}}</span>${{highestPerm.level.toUpperCase()}}:
+                    </span>
+                    <span class="reason-text">${{reasonText}}</span>
+                </div>`;
+            }}
 
             reasonsHtml += '</div>';
 

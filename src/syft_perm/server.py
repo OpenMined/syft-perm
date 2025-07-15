@@ -56,7 +56,7 @@ if _SERVER_AVAILABLE:
         """Model for permission response."""
 
         path: str
-        permissions: Dict[str, List[str]]
+        permissions: Dict[str, Any]  # Can be Dict[str, List[str]] or Dict[str, Dict] depending on include_reasons
         compliance: Dict[str, Any]
         datasites: List[str]
 
@@ -373,18 +373,36 @@ if _SERVER_AVAILABLE:
             # Add permission reasons if requested
             if include_reasons:
                 permissions_with_reasons = {}
-                for user, user_perms in permissions.items():
+                # Collect all unique users from all permission levels
+                all_users = set()
+                for perm_level, user_list in permissions.items():
+                    all_users.update(user_list)
+                
+                # For each user, get their permissions and reasons
+                for user in all_users:
+                    user_permissions = {}
+                    # Get which permission levels this user has
+                    for perm_level, user_list in permissions.items():
+                        user_permissions[perm_level] = user_list if user in user_list else []
+                    
                     permissions_with_reasons[user] = {
-                        "permissions": user_perms,
+                        "permissions": user_permissions,
                         "reasons": {}
                     }
                     # Get detailed reasons for each permission level
                     for perm in ["read", "create", "write", "admin"]:
-                        has_perm, reasons = syft_obj._check_permission_with_reasons(user, perm)
-                        permissions_with_reasons[user]["reasons"][perm] = {
-                            "granted": has_perm,
-                            "reasons": reasons
-                        }
+                        try:
+                            has_perm, reasons = syft_obj._check_permission_with_reasons(user, perm)
+                            permissions_with_reasons[user]["reasons"][perm] = {
+                                "granted": has_perm,
+                                "reasons": reasons
+                            }
+                        except Exception as e:
+                            # Fallback if permission checking fails
+                            permissions_with_reasons[user]["reasons"][perm] = {
+                                "granted": False,
+                                "reasons": [f"Error checking permissions: {str(e)}"]
+                            }
                 permissions = permissions_with_reasons
 
             # Get compliance information
@@ -418,7 +436,10 @@ if _SERVER_AVAILABLE:
             )
 
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            import traceback
+            error_details = f"Error processing permissions for {path}: {str(e)}\n{traceback.format_exc()}"
+            logger.error(error_details)
+            raise HTTPException(status_code=500, detail=f"Permission processing failed: {str(e)}")
 
     @app.post("/permissions/update")  # type: ignore[misc]
     async def update_permission(update: PermissionUpdate) -> Dict[str, Any]:
@@ -3703,16 +3724,27 @@ def get_files_widget_html(
                 for (var i = 0; i < filteredFiles.length; i++) {{
                     if (filteredFiles[i].path === filePath) {{
                         var file = filteredFiles[i];
-                        var permissions = file.permissions || {{}};
-                        var currentUser = getCurrentUserFromURL();
                         
-                        // Check if user has write or admin permissions
-                        var hasWrite = permissions.write && permissions.write.includes(currentUser);
-                        var hasAdmin = permissions.admin && permissions.admin.includes(currentUser);
-                        var hasPublicWrite = permissions.write && permissions.write.includes('*');
-                        var hasPublicAdmin = permissions.admin && permissions.admin.includes('*');
+                        // Use the same permission checking logic as individual row delete
+                        var isAdmin = false;
+                        var canCreate = false;
+
+                        // Check permissions object first
+                        if (file.permissions && CONFIG.currentUserEmail) {{
+                            if (file.permissions.admin && file.permissions.admin.includes(CONFIG.currentUserEmail)) {{
+                                isAdmin = true;
+                                canCreate = true; // Admin implies all permissions
+                            }} else if (file.permissions.write && file.permissions.write.includes(CONFIG.currentUserEmail)) {{
+                                canCreate = true; // Write implies create
+                            }} else if (file.permissions.create && file.permissions.create.includes(CONFIG.currentUserEmail)) {{
+                                canCreate = true;
+                            }}
+                        }}
                         
-                        if (hasWrite || hasAdmin || hasPublicWrite || hasPublicAdmin) {{
+                        // Users with write or admin permissions can delete
+                        var canDelete = isAdmin || canCreate;
+                        
+                        if (canDelete) {{
                             writableFiles.push({{path: filePath, syftPath: fullPath, isDir: file.is_dir}});
                         }}
                         break;
