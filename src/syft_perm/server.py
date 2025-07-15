@@ -82,43 +82,40 @@ if _SERVER_AVAILABLE:
         syftbox_path: Optional[str]
 
     # Global progress tracking
-    scan_progress = {
-        "current": 0,
-        "total": 0,
-        "status": "idle",
-        "message": ""
-    }
-    
+    scan_progress = {"current": 0, "total": 0, "status": "idle", "message": ""}
+
     # WebSocket connection management
     active_websockets: List[WebSocket] = []
     websocket_lock = threading.Lock()
-    
+
     # Global event loop for WebSocket operations
     websocket_loop = None
-    
+
     def get_websocket_loop():
         global websocket_loop
         if websocket_loop is None or not websocket_loop.is_running():
             websocket_loop = asyncio.new_event_loop()
+
             def run_loop():
                 asyncio.set_event_loop(websocket_loop)
                 websocket_loop.run_forever()
+
             thread = threading.Thread(target=run_loop, daemon=True)
             thread.start()
             # Give the loop time to start
             time.sleep(0.1)
         return websocket_loop
-    
+
     async def broadcast_file_change(action: str, file_path: str):
         """Broadcast file change to all connected WebSocket clients."""
         from pathlib import Path
         import json
-        
+
         # Skip hidden files and non-datasite files
         path = Path(file_path)
-        if path.name.startswith('.'):
+        if path.name.startswith("."):
             return
-            
+
         # Get file metadata
         try:
             # Find relative path from datasites directory
@@ -127,27 +124,29 @@ if _SERVER_AVAILABLE:
                 if parent.name == "datasites":
                     datasites_parent = parent
                     break
-            
+
             if not datasites_parent:
                 return
-                
+
             relative_path = path.relative_to(datasites_parent)
             datasite_owner = str(relative_path).split("/")[0] if "/" in str(relative_path) else ""
-            
+
             # Build file info similar to _scan_files
             file_info = {
                 "name": str(relative_path),
                 "path": str(path),
                 "is_dir": path.is_dir() if action != "deleted" else False,
                 "size": path.stat().st_size if action != "deleted" and path.exists() else 0,
-                "modified": path.stat().st_mtime if action != "deleted" and path.exists() else time.time(),
+                "modified": (
+                    path.stat().st_mtime if action != "deleted" and path.exists() else time.time()
+                ),
                 "extension": path.suffix if not path.is_dir() else "folder",
                 "datasite_owner": datasite_owner,
                 "permissions": {},
                 "has_yaml": False,
-                "permissions_summary": []
+                "permissions_summary": [],
             }
-            
+
             # Try to get permissions for non-deleted files
             if action != "deleted" and path.exists() and not path.is_dir():
                 try:
@@ -155,7 +154,7 @@ if _SERVER_AVAILABLE:
                     permissions = syft_obj.permissions_dict.copy()
                     file_info["permissions"] = permissions
                     file_info["has_yaml"] = hasattr(syft_obj, "has_yaml") and syft_obj.has_yaml
-                    
+
                     # Build permissions summary
                     user_highest_perm = {}
                     for perm_level in ["admin", "write", "create", "read"]:
@@ -163,13 +162,13 @@ if _SERVER_AVAILABLE:
                         for user in users:
                             if user not in user_highest_perm:
                                 user_highest_perm[user] = perm_level
-                    
+
                     perm_groups = {}
                     for user, perm in user_highest_perm.items():
                         if perm not in perm_groups:
                             perm_groups[perm] = []
                         perm_groups[perm].append(user)
-                    
+
                     permissions_summary = []
                     for perm_level in ["admin", "write", "create", "read"]:
                         if perm_level in perm_groups:
@@ -182,34 +181,37 @@ if _SERVER_AVAILABLE:
                     file_info["permissions_summary"] = permissions_summary
                 except:
                     pass
-            
-            message = json.dumps({
-                "action": action,
-                "file": file_info
-            })
-            
+
+            message = json.dumps({"action": action, "file": file_info})
+
             # Broadcast to all connected clients
             with websocket_lock:
                 if len(active_websockets) > 0:
-                    logger.info(f"[FILE WATCHER] Broadcasting to {len(active_websockets)} WebSocket clients")
+                    logger.info(
+                        f"[FILE WATCHER] Broadcasting to {len(active_websockets)} WebSocket clients"
+                    )
                     disconnected = []
                     for ws in active_websockets:
                         try:
                             # Send message asynchronously
                             await ws.send_text(message)
-                            logger.info(f"[FILE WATCHER] Successfully sent update for {action}: {file_path}")
+                            logger.info(
+                                f"[FILE WATCHER] Successfully sent update for {action}: {file_path}"
+                            )
                         except Exception as e:
                             logger.info(f"[FILE WATCHER] Error sending to WebSocket: {e}")
                             disconnected.append(ws)
-                    
+
                     # Remove disconnected websockets
                     for ws in disconnected:
                         active_websockets.remove(ws)
-                        logger.info(f"[FILE WATCHER] Removed disconnected WebSocket. Remaining: {len(active_websockets)}")
-                    
+                        logger.info(
+                            f"[FILE WATCHER] Removed disconnected WebSocket. Remaining: {len(active_websockets)}"
+                        )
+
         except Exception as e:
             logger.info(f"[FILE WATCHER] Error broadcasting file change: {e}")
-    
+
     # File watcher setup
     def setup_file_watcher():
         """Set up file system watcher for SyftBox datasites directory."""
@@ -219,42 +221,41 @@ if _SERVER_AVAILABLE:
         from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
         import asyncio
-        
+
         class SyftBoxFileHandler(FileSystemEventHandler):
             """Handler for file system events in SyftBox datasites."""
-            
+
             def _schedule_broadcast(self, action: str, path: str):
                 """Schedule broadcast in the event loop."""
                 try:
                     loop = get_websocket_loop()
                     future = asyncio.run_coroutine_threadsafe(
-                        broadcast_file_change(action, path),
-                        loop
+                        broadcast_file_change(action, path), loop
                     )
                     # Wait for the broadcast to complete (with timeout)
                     future.result(timeout=2.0)
                 except Exception as e:
                     logger.info(f"[FILE WATCHER] Error scheduling broadcast: {e}")
-            
+
             def on_created(self, event):
                 if not event.is_directory:
                     logger.info(f"[FILE WATCHER] File created: {event.src_path}")
                     self._schedule_broadcast("created", event.src_path)
                 else:
                     logger.info(f"[FILE WATCHER] Directory created: {event.src_path}")
-            
+
             def on_deleted(self, event):
                 if not event.is_directory:
                     logger.info(f"[FILE WATCHER] File deleted: {event.src_path}")
                     self._schedule_broadcast("deleted", event.src_path)
                 else:
                     logger.info(f"[FILE WATCHER] Directory deleted: {event.src_path}")
-            
+
             def on_modified(self, event):
                 if not event.is_directory:
                     logger.info(f"[FILE WATCHER] File modified: {event.src_path}")
                     self._schedule_broadcast("modified", event.src_path)
-            
+
             def on_moved(self, event):
                 if not event.is_directory:
                     logger.info(f"[FILE WATCHER] File moved: {event.src_path} -> {event.dest_path}")
@@ -262,15 +263,17 @@ if _SERVER_AVAILABLE:
                     self._schedule_broadcast("deleted", event.src_path)
                     self._schedule_broadcast("created", event.dest_path)
                 else:
-                    logger.info(f"[FILE WATCHER] Directory moved: {event.src_path} -> {event.dest_path}")
-        
+                    logger.info(
+                        f"[FILE WATCHER] Directory moved: {event.src_path} -> {event.dest_path}"
+                    )
+
         # Find SyftBox datasites directory
         syftbox_dirs = [
             Path.home() / "SyftBox" / "datasites",
             Path.home() / ".syftbox" / "datasites",
             Path("/tmp/SyftBox/datasites"),
         ]
-        
+
         watch_dir = None
         for path in syftbox_dirs:
             logger.info(f"[FILE WATCHER] Checking directory: {path}")
@@ -278,15 +281,15 @@ if _SERVER_AVAILABLE:
                 watch_dir = path
                 logger.info(f"[FILE WATCHER] Found directory: {watch_dir}")
                 break
-        
+
         if watch_dir:
             logger.info(f"[FILE WATCHER] Starting file watcher for: {watch_dir}")
-            
+
             # Set up observer
             observer = Observer()
             event_handler = SyftBoxFileHandler()
             observer.schedule(event_handler, str(watch_dir), recursive=True)
-            
+
             # Start observer in a separate thread
             def start_watcher():
                 try:
@@ -296,15 +299,17 @@ if _SERVER_AVAILABLE:
                     observer.join()
                 except Exception as e:
                     logger.info(f"[FILE WATCHER] Error starting file watcher: {e}")
-            
+
             watcher_thread = threading.Thread(target=start_watcher, daemon=True)
             watcher_thread.start()
-            
+
             return observer
         else:
-            logger.info("[FILE WATCHER] No SyftBox datasites directory found, file watcher disabled")
+            logger.info(
+                "[FILE WATCHER] No SyftBox datasites directory found, file watcher disabled"
+            )
             return None
-    
+
     app = FastAPI(
         title="SyftPerm Permission Editor",
         description="Google Drive-style permission editor for SyftBox",
@@ -319,10 +324,10 @@ if _SERVER_AVAILABLE:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Store file watcher observer for cleanup
     file_watcher_observer = None
-    
+
     @app.on_event("startup")
     async def startup_event():
         """Initialize file watcher on startup."""
@@ -334,7 +339,7 @@ if _SERVER_AVAILABLE:
         logger.info("[STARTUP] Setting up file watcher...")
         file_watcher_observer = setup_file_watcher()
         logger.info("[STARTUP] Startup complete")
-    
+
     @app.on_event("shutdown")
     async def shutdown_event():
         """Clean up file watcher on shutdown."""
@@ -572,7 +577,7 @@ if _SERVER_AVAILABLE:
     async def permission_editor(path: str) -> str:
         """Serve the Google Drive-style permission editor."""
         return get_editor_html(path)
-    
+
     @app.get("/files-widget", response_class=HTMLResponse)  # type: ignore[misc]
     async def files_widget(
         search: Optional[str] = Query(None, description="Search term for file names"),
@@ -586,13 +591,14 @@ if _SERVER_AVAILABLE:
         """Serve the files widget interface with filtering support."""
         # Get current user email
         from .filesystem_editor import get_current_user_email
+
         current_user_email = get_current_user_email() or ""
-        
+
         # Parse folders if provided
         folder_list = None
         if folders:
             folder_list = [f.strip() for f in folders.split(",") if f.strip()]
-        
+
         # Generate the widget HTML with parameters
         return get_files_widget_html(
             search=search,
@@ -602,14 +608,14 @@ if _SERVER_AVAILABLE:
             items_per_page=items_per_page,
             start=start,
             end=end,
-            current_user_email=current_user_email
+            current_user_email=current_user_email,
         )
-    
+
     @app.get("/api/scan-progress")  # type: ignore[misc]
     async def get_scan_progress() -> Dict[str, Any]:
         """Get current scan progress."""
         return scan_progress.copy()
-    
+
     @app.get("/api/files-data")  # type: ignore[misc]
     async def get_files_data(
         search: Optional[str] = Query(None),
@@ -621,18 +627,18 @@ if _SERVER_AVAILABLE:
         """Get files data for the widget with filtering support."""
         import asyncio
         from . import files as sp_files
-        
+
         # Reset progress
         scan_progress["status"] = "scanning"
         scan_progress["current"] = 0
         scan_progress["total"] = 0
         scan_progress["message"] = "Starting scan..."
-        
+
         # Define progress callback without rate limiting
         def progress_callback(current: int, total: int, message: str):
             scan_progress["current"] = current
             scan_progress["total"] = total
-            
+
             # Update message less frequently to avoid showing individual datasite names
             if current == 0:
                 scan_progress["message"] = "Starting scan..."
@@ -641,95 +647,96 @@ if _SERVER_AVAILABLE:
             elif current % 10 == 0:  # Update every 10 datasites
                 scan_progress["message"] = f"Scanning datasites... ({current}/{total})"
             # Keep existing message for other updates
-        
+
         # Run scan in a thread to not block async endpoint
         loop = asyncio.get_event_loop()
         all_files = await loop.run_in_executor(
-            None, 
-            lambda: sp_files._scan_files(progress_callback=progress_callback)
+            None, lambda: sp_files._scan_files(progress_callback=progress_callback)
         )
-        
+
         # Mark as complete
         scan_progress["status"] = "complete"
         scan_progress["message"] = "Scan complete"
-        
+
         # Apply filters if provided
         filtered_files = all_files
-        
+
         # Apply search filter
         if search:
             search_terms = sp_files._parse_search_terms(search)
             filtered_files = [
-                f for f in filtered_files
-                if sp_files._matches_search_terms(f, search_terms)
+                f for f in filtered_files if sp_files._matches_search_terms(f, search_terms)
             ]
-        
+
         # Apply admin filter
         if admin:
             filtered_files = [
-                f for f in filtered_files
-                if f.get("datasite_owner", "").lower() == admin.lower()
+                f for f in filtered_files if f.get("datasite_owner", "").lower() == admin.lower()
             ]
-        
+
         # Apply folder filter
         if folders:
             folder_list = [f.strip() for f in folders.split(",") if f.strip()]
             filtered_files = sp_files._apply_folder_filter(filtered_files, folder_list)
-        
+
         # Sort by modified date (newest first) - always sort to ensure consistent ordering
         filtered_files = sorted(filtered_files, key=lambda x: x.get("modified", 0), reverse=True)
-        
+
         # Apply slicing if provided
         if start is not None or end is not None:
             # Convert to 0-based indexing if needed
             slice_start = (start - 1) if start is not None and start > 0 else start
             slice_end = (end - 1) if end is not None and end > 0 else end
-            
+
             filtered_files = filtered_files[slice(slice_start, slice_end)]
-        
+
         # Return the data as JSON
         return {
             "files": filtered_files,
             "total": len(filtered_files),
-            "total_unfiltered": len(all_files)
+            "total_unfiltered": len(all_files),
         }
-    
+
     @app.post("/api/restart")  # type: ignore[misc]
     async def restart_server() -> Dict[str, str]:
         """Restart the server."""
         import os
         import sys
         import signal
-        
+
         # Send response before restarting
         response = {"status": "restarting", "message": "Server is restarting..."}
-        
+
         # Schedule restart after response is sent
         def do_restart():
             # Give time for response to be sent
             import time
+
             time.sleep(0.5)
-            
+
             # Restart the process
             os.execv(sys.executable, [sys.executable] + sys.argv)
-        
+
         # Start restart in background thread
         import threading
+
         threading.Thread(target=do_restart, daemon=True).start()
-        
+
         return response
-    
+
     @app.websocket("/ws/file-updates")  # type: ignore[misc]
     async def websocket_endpoint(websocket: WebSocket) -> None:
         """WebSocket endpoint for real-time file updates."""
         logger.info(f"[WEBSOCKET] New connection attempt from {websocket.client}")
         await websocket.accept()
-        
+
         # Add to active connections
         with websocket_lock:
             active_websockets.append(websocket)
-            logger.info(f"[WEBSOCKET] Client connected. Total connections: {len(active_websockets)}")
-        
+            logger.info(
+                f"[WEBSOCKET] Client connected. Total connections: {len(active_websockets)}"
+            )
+
         try:
             # Keep connection alive
             while True:
@@ -742,35 +749,43 @@ if _SERVER_AVAILABLE:
             # Remove from active connections
             with websocket_lock:
                 active_websockets.remove(websocket)
-                logger.info(f"[WEBSOCKET] Client disconnected. Total connections: {len(active_websockets)}")
+                logger.info(
+                    f"[WEBSOCKET] Client disconnected. Total connections: {len(active_websockets)}"
+                )
         except Exception as e:
             logger.info(f"[WEBSOCKET] Error: {e}")
             with websocket_lock:
                 if websocket in active_websockets:
                     active_websockets.remove(websocket)
-    
+
     # File System Editor Endpoints
     from .filesystem_editor import FileSystemManager, generate_editor_html
-    
+
     # Initialize the filesystem manager
     fs_manager = FileSystemManager()
-    
+
     @app.get("/api/filesystem/list")  # type: ignore[misc]
-    async def list_directory(path: str = Query(...), syft_user: Optional[str] = Query(None)) -> Dict[str, Any]:
+    async def list_directory(
+        path: str = Query(...), syft_user: Optional[str] = Query(None)
+    ) -> Dict[str, Any]:
         """List directory contents."""
         from .filesystem_editor import get_current_user_email
+
         # Use syft_user if provided (from syft:// URL), otherwise detect current user
         current_user = syft_user or get_current_user_email()
         return fs_manager.list_directory(path, user_email=current_user)
-    
+
     @app.get("/api/filesystem/read")  # type: ignore[misc]
-    async def read_file(path: str = Query(...), syft_user: Optional[str] = Query(None)) -> Dict[str, Any]:
+    async def read_file(
+        path: str = Query(...), syft_user: Optional[str] = Query(None)
+    ) -> Dict[str, Any]:
         """Read file contents."""
         from .filesystem_editor import get_current_user_email
+
         # Use syft_user if provided (from syft:// URL), otherwise detect current user
         current_user = syft_user or get_current_user_email()
         return fs_manager.read_file(path, user_email=current_user)
-    
+
     @app.post("/api/filesystem/write")  # type: ignore[misc]
     async def write_file(request: Dict[str, Any]) -> Dict[str, Any]:
         """Write content to a file."""
@@ -778,53 +793,75 @@ if _SERVER_AVAILABLE:
         content = request.get("content", "")
         create_dirs = request.get("create_dirs", False)
         syft_user = request.get("syft_user")
-        
+
         if not path:
             raise HTTPException(status_code=400, detail="Path is required")
-        
+
         from .filesystem_editor import get_current_user_email
+
         # Use syft_user if provided (from syft:// URL), otherwise detect current user
         current_user = syft_user or get_current_user_email()
         return fs_manager.write_file(path, content, create_dirs, user_email=current_user)
-    
+
     @app.post("/api/filesystem/create-directory")  # type: ignore[misc]
     async def create_directory(request: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new directory."""
         path = request.get("path")
         syft_user = request.get("syft_user")
-        
+
         if not path:
             raise HTTPException(status_code=400, detail="Path is required")
-        
+
         from .filesystem_editor import get_current_user_email
+
         # Use syft_user if provided (from syft:// URL), otherwise detect current user
         current_user = syft_user or get_current_user_email()
         return fs_manager.create_directory(path, user_email=current_user)
-    
+
     @app.delete("/api/filesystem/delete")  # type: ignore[misc]
     async def delete_item(path: str = Query(...), recursive: bool = Query(False)) -> Dict[str, Any]:
         """Delete a file or directory."""
         return fs_manager.delete_item(path, recursive)
-    
+
     @app.get("/file-editor", response_class=HTMLResponse)  # type: ignore[misc]
     async def file_editor_interface(syft_user: Optional[str] = Query(None)) -> HTMLResponse:
         """Serve the file editor interface."""
         from . import is_dark
-        return HTMLResponse(content=generate_editor_html(is_dark_mode=is_dark(), syft_user=syft_user))
-    
+
+        return HTMLResponse(
+            content=generate_editor_html(is_dark_mode=is_dark(), syft_user=syft_user)
+        )
+
     @app.get("/file-editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
-    async def file_editor_with_path(path: str, syft_user: Optional[str] = Query(None), new: Optional[str] = Query(None)) -> HTMLResponse:
+    async def file_editor_with_path(
+        path: str, syft_user: Optional[str] = Query(None), new: Optional[str] = Query(None)
+    ) -> HTMLResponse:
         """Serve the file editor interface with a specific path."""
         from . import is_dark
+
         is_new_file = new == "true"
-        return HTMLResponse(content=generate_editor_html(initial_path=path, is_dark_mode=is_dark(), syft_user=syft_user, is_new_file=is_new_file))
-    
+        return HTMLResponse(
+            content=generate_editor_html(
+                initial_path=path,
+                is_dark_mode=is_dark(),
+                syft_user=syft_user,
+                is_new_file=is_new_file,
+            )
+        )
+
     @app.get("/share-modal", response_class=HTMLResponse)  # type: ignore[misc]
-    async def share_modal(path: str = Query(...), syft_user: Optional[str] = Query(None)) -> HTMLResponse:
+    async def share_modal(
+        path: str = Query(...), syft_user: Optional[str] = Query(None)
+    ) -> HTMLResponse:
         """Serve the share modal as a standalone page."""
         from . import is_dark
         from .filesystem_editor import generate_share_modal_html
-        return HTMLResponse(content=generate_share_modal_html(path=path, is_dark_mode=is_dark(), syft_user=syft_user))
+
+        return HTMLResponse(
+            content=generate_share_modal_html(
+                path=path, is_dark_mode=is_dark(), syft_user=syft_user
+            )
+        )
 
 
 def get_editor_html(path: str) -> str:
@@ -1402,7 +1439,7 @@ def get_files_widget_html(
     items_per_page: int = 50,
     start: Optional[int] = None,
     end: Optional[int] = None,
-    current_user_email: str = ""
+    current_user_email: str = "",
 ) -> str:
     """Generate the files widget HTML for web serving."""
     import html as html_module
@@ -1411,46 +1448,46 @@ def get_files_widget_html(
     import uuid
     from datetime import datetime
     from pathlib import Path
-    
+
     # Import needed functions
     from . import files as sp_files
     from . import is_dark
-    
+
     container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-    
+
     # Check if Jupyter is in dark mode
     is_dark_mode = is_dark()
-    
+
     # Non-obvious tips for users
     tips = [
         'Use quotation marks to search for exact phrases like "machine learning"',
-        'Multiple words without quotes searches for files containing ALL words',
-        'Press Tab in search boxes for auto-completion suggestions',
-        'Tab completion in Admin filter shows all available datasite emails',
-        'Use sp.files.page(5) to jump directly to page 5',
-        'Click any row to copy its syft:// path to clipboard',
+        "Multiple words without quotes searches for files containing ALL words",
+        "Press Tab in search boxes for auto-completion suggestions",
+        "Tab completion in Admin filter shows all available datasite emails",
+        "Use sp.files.page(5) to jump directly to page 5",
+        "Click any row to copy its syft:// path to clipboard",
         'Try sp.files.search("keyword") for programmatic filtering',
         'Use sp.files.filter(extension=".csv") to find specific file types',
         'Chain filters: sp.files.filter(extension=".py").search("test")',
-        'Escape special characters with backslash when searching',
-        'ASCII loading bar only appears with logger.info(sp.files), not in Jupyter',
-        'Loading progress: first 10% is setup, 10-100% is file scanning',
-        'Press Escape to close the tab-completion dropdown',
+        "Escape special characters with backslash when searching",
+        "ASCII loading bar only appears with logger.info(sp.files), not in Jupyter",
+        "Loading progress: first 10% is setup, 10-100% is file scanning",
+        "Press Escape to close the tab-completion dropdown",
         'Use sp.open("syft://path") to access files programmatically',
-        'Search for dates in various formats: 2024-01-15, Jan-15, etc',
+        "Search for dates in various formats: 2024-01-15, Jan-15, etc",
         'Admin filter supports partial matching - type "gmail" for all Gmail users',
-        'File sizes show as B, KB, MB, or GB automatically',
-        'The # column shows files in chronological order by modified date',
-        'Empty search returns all files - useful for resetting filters',
-        'Search works across file names, paths, and extensions at once'
+        "File sizes show as B, KB, MB, or GB automatically",
+        "The # column shows files in chronological order by modified date",
+        "Empty search returns all files - useful for resetting filters",
+        "Search works across file names, paths, and extensions at once",
     ]
-    
+
     # Pick a random tip for footer
     footer_tip = random.choice(tips)
     show_footer_tip = random.random() < 0.5  # 50% chance
-    
+
     # Don't scan files initially - let JavaScript handle it
-    
+
     # Generate CSS based on theme - matching Jupyter widget exactly
     if is_dark_mode:
         # Dark mode colors from Jupyter widget
@@ -1480,7 +1517,7 @@ def get_files_widget_html(
         pagination_bg = "rgba(0, 0, 0, 0.02)"
         page_info_color = "#6b7280"
         status_color = "#9ca3af"
-    
+
     # Generate complete HTML with the widget
     return f"""
 <!DOCTYPE html>
@@ -2535,23 +2572,51 @@ def get_files_widget_html(
                         }}
                     }});
                 }} else {{
-                    // Suggest paths within the datasite
+                    // Suggest paths within the datasite (only folders with create permissions)
                     var uniquePaths = new Set();
                     allFiles.forEach(function(file) {{
-                        if (file.datasite_owner === userPart && file.name.startsWith(userPart + '/')) {{
-                            var filePath = file.name.substring(userPart.length + 1);
-                            var segments = filePath.split('/');
+                        if (file.datasite_owner === userPart && file.name.startsWith(userPart + '/') && file.is_dir) {{
+                            // Check if user has create permissions for this folder
+                            var canCreate = false;
+                            if (file.permissions && currentUserEmail) {{
+                                if (file.permissions.admin && file.permissions.admin.includes(currentUserEmail)) {{
+                                    canCreate = true;
+                                }} else if (file.permissions.write && file.permissions.write.includes(currentUserEmail)) {{
+                                    canCreate = true;
+                                }} else if (file.permissions.create && file.permissions.create.includes(currentUserEmail)) {{
+                                    canCreate = true;
+                                }}
+                            }}
                             
-                            // Build partial paths for autocomplete
-                            var partialPath = '';
-                            for (var i = 0; i < segments.length; i++) {{
-                                if (i > 0) partialPath += '/';
-                                partialPath += segments[i];
+                            // Also check permissions_summary
+                            if (!canCreate && file.permissions_summary && currentUserEmail) {{
+                                for (var k = 0; k < file.permissions_summary.length; k++) {{
+                                    var summary = file.permissions_summary[k];
+                                    if (summary.includes(currentUserEmail)) {{
+                                        if (summary.startsWith('admin: ') || summary.startsWith('write: ') || summary.startsWith('create: ')) {{
+                                            canCreate = true;
+                                            break;
+                                        }}
+                                    }}
+                                }}
+                            }}
+                            
+                            // Only suggest if user has create permissions
+                            if (canCreate) {{
+                                var filePath = file.name.substring(userPart.length + 1);
+                                var segments = filePath.split('/');
                                 
-                                // Only suggest if it matches current input
-                                if (partialPath.toLowerCase().startsWith(currentPath.toLowerCase()) && 
-                                    partialPath.length > currentPath.length) {{
-                                    uniquePaths.add('syft://' + userPart + '/' + partialPath);
+                                // Build partial paths for autocomplete
+                                var partialPath = '';
+                                for (var i = 0; i < segments.length; i++) {{
+                                    if (i > 0) partialPath += '/';
+                                    partialPath += segments[i];
+                                    
+                                    // Only suggest if it matches current input
+                                    if (partialPath.toLowerCase().startsWith(currentPath.toLowerCase()) && 
+                                        partialPath.length > currentPath.length) {{
+                                        uniquePaths.add('syft://' + userPart + '/' + partialPath);
+                                    }}
                                 }}
                             }}
                         }}
@@ -3585,7 +3650,10 @@ def get_editor_url(path: str) -> str:
         # Verify the server is running on this port
         try:
             import urllib.request
-            with urllib.request.urlopen(f"http://localhost:{configured_port}/", timeout=0.5) as response:
+
+            with urllib.request.urlopen(
+                f"http://localhost:{configured_port}/", timeout=0.5
+            ) as response:
                 if response.status == 200:
                     return f"http://localhost:{configured_port}/editor/{path}"
         except Exception:
@@ -3604,12 +3672,12 @@ def _get_configured_port() -> Optional[int]:
     try:
         import json
         from pathlib import Path
-        
+
         config_path = Path.home() / ".syftperm" / "config.json"
         if config_path.exists():
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config = json.load(f)
-                return config.get('port')
+                return config.get("port")
     except Exception:
         pass
     return None
@@ -3626,7 +3694,10 @@ def get_files_widget_url() -> str:
         # Verify the server is running on this port
         try:
             import urllib.request
-            with urllib.request.urlopen(f"http://localhost:{configured_port}/", timeout=0.5) as response:
+
+            with urllib.request.urlopen(
+                f"http://localhost:{configured_port}/", timeout=0.5
+            ) as response:
                 if response.status == 200:
                     return f"http://localhost:{configured_port}/files-widget"
         except Exception:
@@ -3651,7 +3722,10 @@ def get_file_editor_url(path: str = None) -> str:
         # Verify the server is running on this port
         try:
             import urllib.request
-            with urllib.request.urlopen(f"http://localhost:{configured_port}/", timeout=0.5) as response:
+
+            with urllib.request.urlopen(
+                f"http://localhost:{configured_port}/", timeout=0.5
+            ) as response:
                 if response.status == 200:
                     if path:
                         return f"http://localhost:{configured_port}/file-editor/{path}"

@@ -496,7 +496,7 @@ class SyftFile:
     def __init__(self, path: Union[str, Path]):
         # Store original path (might be syft:// URL)
         self._original_path = str(path)
-        
+
         # Extract user from syft:// URL if present
         self._syft_user = None
         if isinstance(path, str) and path.startswith("syft://"):
@@ -507,7 +507,7 @@ class SyftFile:
                     self._syft_user = url_parts[0]
             except:
                 pass
-        
+
         resolved_path = resolve_path(str(path))
         if resolved_path is None:
             raise ValueError("Could not resolve path")
@@ -1033,17 +1033,20 @@ class SyftFile:
     def _repr_html_(self) -> str:
         """Generate iframe that opens this folder in the file-editor."""
         from . import get_file_editor_url
-        
+
         try:
             # Get the file-editor URL for this specific folder
             editor_url = get_file_editor_url(str(self._path))
-            
+
             # If we have a syft user context, pass it as a query parameter
             if self._syft_user:
                 import urllib.parse
+
                 separator = "&" if "?" in editor_url else "?"
-                editor_url = f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
-            
+                editor_url = (
+                    f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
+                )
+
             # Create iframe to display the file-editor
             return f"""
             <div style="width: 100%; height: 600px; border: 1px solid #3e3e42; border-radius: 8px; overflow: hidden; background: #1e1e1e;">
@@ -1064,6 +1067,7 @@ class SyftFile:
                 <p><em>File editor not available: {str(e)}</em></p>
             </div>
             """
+
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""
         self._grant_access(user, "read", force=force)
@@ -1630,7 +1634,7 @@ class SyftFolder:
     def __init__(self, path: Union[str, Path]):
         # Store original path (might be syft:// URL)
         self._original_path = str(path)
-        
+
         # Extract user from syft:// URL if present
         self._syft_user = None
         if isinstance(path, str) and path.startswith("syft://"):
@@ -1641,12 +1645,12 @@ class SyftFolder:
                     self._syft_user = url_parts[0]
             except:
                 pass
-        
+
         resolved_path = resolve_path(str(path))
         if resolved_path is None:
             raise ValueError("Could not resolve path")
         self._path: Path = resolved_path
-        
+
         # Ensure folder exists
         self._path.mkdir(parents=True, exist_ok=True)
 
@@ -2190,17 +2194,20 @@ class SyftFolder:
     def _repr_html_(self) -> str:
         """Generate iframe that opens this folder in the file-editor."""
         from . import get_file_editor_url
-        
+
         try:
             # Get the file-editor URL for this specific folder
             editor_url = get_file_editor_url(str(self._path))
-            
+
             # If we have a syft user context, pass it as a query parameter
             if self._syft_user:
                 import urllib.parse
+
                 separator = "&" if "?" in editor_url else "?"
-                editor_url = f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
-            
+                editor_url = (
+                    f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
+                )
+
             # Create iframe to display the file-editor
             return f"""
             <div style="width: 100%; height: 600px; border: 1px solid #3e3e42; border-radius: 8px; overflow: hidden; background: #1e1e1e;">
@@ -2220,6 +2227,7 @@ class SyftFolder:
                 <p><em>File editor not available: {str(e)}</em></p>
             </div>
             """
+
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""
         self._grant_access(user, "read", force=force)

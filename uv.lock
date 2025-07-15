@@ -1764,6 +1764,7 @@ syftbox = [
 [package.dev-dependencies]
 dev = [
     { name = "autopep8" },
+    { name = "black" },
     { name = "mypy" },
     { name = "nbformat" },
     { name = "pytest" },
@@ -1801,6 +1802,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "autopep8", specifier = ">=2.3.2" },
+    { name = "black", specifier = ">=25.1.0" },
     { name = "mypy", specifier = ">=1.16.1" },
     { name = "nbformat", specifier = ">=5.10.4" },
     { name = "pytest", specifier = ">=8.4.1" },

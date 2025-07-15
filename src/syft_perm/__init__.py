@@ -65,27 +65,27 @@ def get_editor_url(path: _Union[str, _Path]) -> str:
 def get_files_widget_url() -> str:
     """
     Get the URL for the files widget interface (identical to sp.files in Jupyter).
-    
+
     Returns:
         URL to the files widget
     """
     from .server import get_files_widget_url as _get_files_widget_url
-    
+
     return _get_files_widget_url()
 
 
 def get_file_editor_url(path: _Union[str, _Path] = None) -> str:
     """
     Get the URL for the file editor interface.
-    
+
     Args:
         path: Optional path to open in the editor
-        
+
     Returns:
         URL to the file editor
     """
     from .server import get_file_editor_url as _get_file_editor_url
-    
+
     if path:
         return _get_file_editor_url(str(path))
     return _get_file_editor_url()
@@ -113,50 +113,52 @@ class Files:
         self._initial_page = 1  # Default to first page
         self._items_per_page = 50  # Default items per page
         self._show_ascii_progress = True  # Whether to show ASCII progress in __repr__
-    
+
     def _check_server(self) -> _Union[str, None]:
         """Check if syft-perm server is available. Returns server URL or None."""
         try:
             import urllib.request
             import json
             from pathlib import Path
-            
+
             # First check config file for port
             config_path = Path.home() / ".syftperm" / "config.json"
             ports_to_check = []
-            
+
             if config_path.exists():
                 try:
-                    with open(config_path, 'r') as f:
+                    with open(config_path, "r") as f:
                         config = json.load(f)
-                        port = config.get('port')
+                        port = config.get("port")
                         if port:
                             ports_to_check.append(port)
                 except:
                     pass
-            
+
             # Also check default port
             if 8005 not in ports_to_check:
                 ports_to_check.append(8005)
-            
+
             # Try each port with 20 second timeout
             for port in ports_to_check:
                 try:
                     url = f"http://localhost:{port}"
                     with urllib.request.urlopen(url, timeout=20) as response:
                         if response.status == 200:
-                            content = response.read().decode('utf-8')
+                            content = response.read().decode("utf-8")
                             if "SyftPerm" in content:
                                 return url
                 except:
                     continue
-                    
+
         except:
             pass
-        
+
         return None
 
-    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False) -> list:
+    def _scan_files(
+        self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False
+    ) -> list:
         """Scan SyftBox directory for files with permissions."""
         import os
         import sys
@@ -216,14 +218,14 @@ class Files:
         # Setup ASCII progress bar if requested
         if show_ascii_progress and total_datasites > 0:
             print("Scanning datasites...")
-            
+
         def update_ascii_progress(current, total, status):
             if show_ascii_progress:
                 percent = (current / max(total, 1)) * 100
                 bar_length = 40
                 filled_length = int(bar_length * current / max(total, 1))
-                bar = '█' * filled_length + '░' * (bar_length - filled_length)
-                sys.stdout.write(f'\r[{bar}] {percent:.0f}% - {status}')
+                bar = "█" * filled_length + "░" * (bar_length - filled_length)
+                sys.stdout.write(f"\r[{bar}] {percent:.0f}% - {status}")
                 sys.stdout.flush()
 
         # First pass: collect all unique paths (files and folders) per datasite
@@ -405,12 +407,12 @@ class Files:
 
         # Sort by name
         files.sort(key=lambda x: x["name"])
-        
+
         # Clear ASCII progress bar if it was shown
         if show_ascii_progress and total_datasites > 0:
-            sys.stdout.write('\r' + ' ' * 80 + '\r')  # Clear the line
+            sys.stdout.write("\r" + " " * 80 + "\r")  # Clear the line
             sys.stdout.flush()
-        
+
         return files
 
     def get(self, limit: int = 50, offset: int = 0, search: _Union[str, None] = None) -> dict:
@@ -453,7 +455,13 @@ class Files:
         """
         return self._scan_files(search)
 
-    def search(self, files: _Union[str, None] = None, admin: _Union[str, None] = None, limit: int = 50, offset: int = 0) -> "Files":
+    def search(
+        self,
+        files: _Union[str, None] = None,
+        admin: _Union[str, None] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> "Files":
         """
         Search and filter files by query and admin.
 
@@ -478,16 +486,16 @@ class Files:
             except:
                 # If server fails, fall back to local
                 pass
-        
+
         # Fall back to local scanning
         all_files = self._scan_files()
-        
+
         # Apply filters
         filtered_files = self._apply_filters(all_files, files_query=files, admin=admin)
-        
+
         # Sort by modified date (newest first)
-        filtered_files.sort(key=lambda x: x.get('modified', 0), reverse=True)
-        
+        filtered_files.sort(key=lambda x: x.get("modified", 0), reverse=True)
+
         # Create new Files instance with filtered data
         result = FilteredFiles(filtered_files, limit=limit, offset=offset)
         return result
@@ -513,49 +521,47 @@ class Files:
             except:
                 # If server fails, fall back to local
                 pass
-        
+
         # Fall back to local scanning
         all_files = self._scan_files()
-        
+
         # Convert string to list if needed for local processing
         if isinstance(folders, str):
             folders = [folders]
-        
+
         # Apply folder filter
         filtered_files = self._apply_folder_filter(all_files, folders=folders)
-        
+
         # Create new Files instance with filtered data
         result = FilteredFiles(filtered_files)
         return result
 
-    def _apply_filters(self, files: list, files_query: _Union[str, None] = None, admin: _Union[str, None] = None) -> list:
+    def _apply_filters(
+        self, files: list, files_query: _Union[str, None] = None, admin: _Union[str, None] = None
+    ) -> list:
         """Apply search and admin filters to file list."""
         filtered = files.copy()
-        
+
         # Apply files search filter (same as textbar search)
         if files_query:
             # Parse search terms to handle quoted phrases (same logic as in JS)
             search_terms = self._parse_search_terms(files_query)
-            
-            filtered = [
-                file for file in filtered
-                if self._matches_search_terms(file, search_terms)
-            ]
-        
+
+            filtered = [file for file in filtered if self._matches_search_terms(file, search_terms)]
+
         # Apply admin filter
         if admin:
             filtered = [
-                file for file in filtered
-                if file.get("datasite_owner", "").lower() == admin.lower()
+                file for file in filtered if file.get("datasite_owner", "").lower() == admin.lower()
             ]
-        
+
         return filtered
 
     def _apply_folder_filter(self, files: list, folders: _Union[list, None] = None) -> list:
         """Apply folder path filter to file list."""
         if not folders:
             return files
-        
+
         # Normalize folder paths
         normalized_folders = []
         for folder in folders:
@@ -563,7 +569,7 @@ class Files:
             if isinstance(folder, str) and folder.startswith("syft://"):
                 folder = folder[7:]  # Remove "syft://"
             normalized_folders.append(str(folder).strip())
-        
+
         # Filter files that match any of the folder paths
         filtered = []
         for file in files:
@@ -572,16 +578,16 @@ class Files:
                 if file_path.startswith(folder_path):
                     filtered.append(file)
                     break
-        
+
         return filtered
 
     def _parse_search_terms(self, search: str) -> list:
         """Parse search string into terms, handling quoted phrases."""
         terms = []
-        current_term = ''
+        current_term = ""
         in_quotes = False
-        quote_char = ''
-        
+        quote_char = ""
+
         for char in search:
             if (char == '"' or char == "'") and not in_quotes:
                 # Start of quoted string
@@ -592,32 +598,34 @@ class Files:
                 in_quotes = False
                 if current_term.strip():
                     terms.append(current_term.strip())
-                    current_term = ''
-                quote_char = ''
+                    current_term = ""
+                quote_char = ""
             elif char.isspace() and not in_quotes:
                 # End of unquoted term
                 if current_term.strip():
                     terms.append(current_term.strip())
-                    current_term = ''
+                    current_term = ""
             else:
                 current_term += char
-        
+
         # Add final term
         if current_term.strip():
             terms.append(current_term.strip())
-        
+
         return terms
 
     def _matches_search_terms(self, file: dict, search_terms: list) -> bool:
         """Check if file matches all search terms."""
+
         # Format date for search
         def format_date(timestamp):
             if not timestamp:
                 return ""
             from datetime import datetime
+
             dt = datetime.fromtimestamp(timestamp)
             return dt.strftime("%m/%d/%Y %H:%M")
-        
+
         # Format size for search
         def format_size(size):
             if not size:
@@ -628,25 +636,25 @@ class Files:
                 return f"{size / 1024:.1f} KB"
             else:
                 return f"{size} B"
-        
+
         # Create searchable content from all file properties (matching JavaScript implementation)
         searchable_parts = [
-            file.get('name', ''),
-            file.get('datasite_owner', ''),
-            file.get('extension', ''),
-            format_size(file.get('size', 0)),
-            format_date(file.get('modified', 0)),
-            'folder' if file.get('is_dir') else 'file',
-            ' '.join(file.get('permissions_summary', []))
+            file.get("name", ""),
+            file.get("datasite_owner", ""),
+            file.get("extension", ""),
+            format_size(file.get("size", 0)),
+            format_date(file.get("modified", 0)),
+            "folder" if file.get("is_dir") else "file",
+            " ".join(file.get("permissions_summary", [])),
         ]
-        
-        searchable_content = ' '.join(searchable_parts).lower()
-        
+
+        searchable_content = " ".join(searchable_parts).lower()
+
         # Check if all search terms match
         for term in search_terms:
             if term.lower() not in searchable_content:
                 return False
-        
+
         return True
 
     def __getitem__(self, key) -> "Files":
@@ -660,22 +668,23 @@ class Files:
                     # Convert slice to start/end parameters for server
                     start = key.start
                     end = key.stop
-                    
+
                     # Create FastAPIFiles and use server for slicing
                     api_files = FastAPIFiles(server_url)
-                    
+
                     # Build URL with start/end parameters
                     import urllib.parse
+
                     params = {}
                     if start is not None:
-                        params['start'] = start
+                        params["start"] = start
                     if end is not None:
-                        params['end'] = end
-                    
+                        params["end"] = end
+
                     url = f"{server_url}/files-widget"
                     if params:
                         url += "?" + urllib.parse.urlencode(params)
-                    
+
                     # Return FastAPIFiles instance for iframe display
                     result = FastAPIFiles(server_url)
                     result._url = url
@@ -683,19 +692,19 @@ class Files:
                 except:
                     # If server fails, fall back to local
                     pass
-            
+
             # Fall back to local processing
             all_files = self._scan_files()
-            
+
             # Sort by modified date to get chronological order (newest first)
-            sorted_files = sorted(all_files, key=lambda x: x.get('modified', 0), reverse=True)
-            
+            sorted_files = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
+
             # Apply slice (convert to 0-based indexing since user expects 1-based)
             start = (key.start - 1) if key.start is not None and key.start > 0 else key.start
             stop = (key.stop - 1) if key.stop is not None and key.stop > 0 else key.stop
-            
+
             sliced_files = sorted_files[slice(start, stop, key.step)]
-            
+
             # Create new Files instance with sliced data
             result = FilteredFiles(sliced_files)
             return result
@@ -705,17 +714,17 @@ class Files:
     def page(self, page_number: int = 2, items_per_page: int = 50) -> "Files":
         """
         Return a Files instance that will display starting at a specific page.
-        
+
         Args:
             page_number: The page number to jump to (1-based indexing, defaults to 2)
             items_per_page: Number of items per page (default: 50)
-        
+
         Returns:
             Files instance with full table or FastAPIFiles with iframe
         """
         if page_number < 1:
             raise ValueError("Page number must be >= 1")
-        
+
         # Check if server is available
         server_url = self._check_server()
         if server_url:
@@ -727,7 +736,7 @@ class Files:
             except:
                 # If server fails, fall back to local
                 pass
-        
+
         # Fall back to local - create a new Files instance with the initial page set
         new_files = Files()
         new_files._initial_page = page_number
@@ -737,7 +746,7 @@ class Files:
     def _repr_pretty_(self, p, cycle):
         """Called by IPython for pretty printing. We disable ASCII progress here."""
         if cycle:
-            p.text('...')
+            p.text("...")
             return
         # Temporarily disable ASCII progress for IPython pretty printing
         old_progress = self._show_ascii_progress
@@ -746,49 +755,42 @@ class Files:
             p.text(str(self))
         finally:
             self._show_ascii_progress = old_progress
-    
+
     def __repr__(self) -> str:
         """Generate ASCII table representation of files."""
         from datetime import datetime
-        
+
         # Get files with ASCII progress bar when appropriate
         all_files = self._scan_files(show_ascii_progress=self._show_ascii_progress)
-        
+
         if not all_files:
             return "No files found in SyftBox/datasites directory"
-        
+
         # Sort by modified date (newest first)
         sorted_files = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
-        
+
         # Calculate pagination
         total_files = len(sorted_files)
         total_pages = (total_files + self._items_per_page - 1) // self._items_per_page
-        
+
         # Validate current page
         current_page = min(self._initial_page, total_pages)
         current_page = max(1, current_page)
-        
+
         # Get files for current page
         start = (current_page - 1) * self._items_per_page
         end = min(start + self._items_per_page, total_files)
         page_files = sorted_files[start:end]
-        
+
         # Create chronological index
         chronological_ids = {}
         for i, file in enumerate(sorted_files):
             file_key = f"{file['name']}|{file['path']}"
             chronological_ids[file_key] = i + 1
-        
+
         # Define column widths
-        col_widths = {
-            'num': 5,
-            'url': 60,
-            'modified': 16,
-            'type': 8,
-            'size': 10,
-            'perms': 12
-        }
-        
+        col_widths = {"num": 5, "url": 60, "modified": 16, "type": 8, "size": 10, "perms": 12}
+
         # Build header
         header = (
             f"{'#':<{col_widths['num']}} "
@@ -798,35 +800,35 @@ class Files:
             f"{'Size':<{col_widths['size']}} "
             f"{'Permissions':<{col_widths['perms']}}"
         )
-        
+
         separator = "-" * len(header)
-        
+
         # Build rows
         rows = []
         for file in page_files:
             # Get chronological number
             file_key = f"{file['name']}|{file['path']}"
             num = chronological_ids.get(file_key, 0)
-            
+
             # Format URL (truncate if needed)
-            url = file['name']
-            if len(url) > col_widths['url']:
-                url = url[:col_widths['url']-3] + "..."
-            
+            url = file["name"]
+            if len(url) > col_widths["url"]:
+                url = url[: col_widths["url"] - 3] + "..."
+
             # Format modified date
-            modified_ts = file.get('modified', 0)
+            modified_ts = file.get("modified", 0)
             if modified_ts:
-                modified = datetime.fromtimestamp(modified_ts).strftime('%Y-%m-%d %H:%M')
+                modified = datetime.fromtimestamp(modified_ts).strftime("%Y-%m-%d %H:%M")
             else:
-                modified = 'Unknown'
-            
+                modified = "Unknown"
+
             # Format file type
-            file_type = file.get('extension', '').lstrip('.') or 'file'
-            if len(file_type) > col_widths['type']:
-                file_type = file_type[:col_widths['type']-3] + "..."
-            
+            file_type = file.get("extension", "").lstrip(".") or "file"
+            if len(file_type) > col_widths["type"]:
+                file_type = file_type[: col_widths["type"] - 3] + "..."
+
             # Format size
-            size_bytes = file.get('size', 0)
+            size_bytes = file.get("size", 0)
             if size_bytes < 1024:
                 size = f"{size_bytes} B"
             elif size_bytes < 1024 * 1024:
@@ -835,11 +837,11 @@ class Files:
                 size = f"{size_bytes / (1024 * 1024):.1f} MB"
             else:
                 size = f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-            
+
             # Format permissions count
-            perms = file.get('permissions_summary', [])
+            perms = file.get("permissions_summary", [])
             perm_str = f"{len(perms)} users"
-            
+
             # Build row
             row = (
                 f"{num:<{col_widths['num']}} "
@@ -850,19 +852,19 @@ class Files:
                 f"{perm_str:<{col_widths['perms']}}"
             )
             rows.append(row)
-        
+
         # Calculate totals for footer
         file_count = 0
         folder_count = 0
         total_size = 0
-        
+
         for file in sorted_files:
-            if file.get('is_dir', False):
+            if file.get("is_dir", False):
                 folder_count += 1
             else:
                 file_count += 1
-                total_size += file.get('size', 0)
-        
+                total_size += file.get("size", 0)
+
         # Format total size
         if total_size < 1024:
             size_str = f"{total_size} B"
@@ -872,19 +874,21 @@ class Files:
             size_str = f"{total_size / (1024 * 1024):.1f} MB"
         else:
             size_str = f"{total_size / (1024 * 1024 * 1024):.1f} GB"
-        
+
         # Build output
         output = [
             f"Files (Page {current_page} of {total_pages}, showing {start+1}-{end} of {total_files} items)",
             separator,
             header,
-            separator
+            separator,
         ]
         output.extend(rows)
         output.append(separator)
         output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
-        output.append(f"Use sp.files.page(n) to view other pages or sp.files in Jupyter for interactive view")
-        
+        output.append(
+            f"Use sp.files.page(n) to view other pages or sp.files in Jupyter for interactive view"
+        )
+
         return "\n".join(output)
 
     def _repr_html_(self) -> str:
@@ -904,31 +908,34 @@ class Files:
             import urllib.request
             import urllib.error
             import json
-            
+
             server_available = False
             server_port = None
-            
+
             def check_server(port):
                 try:
-                    with urllib.request.urlopen(f"http://localhost:{port}/", timeout=0.1) as response:
+                    with urllib.request.urlopen(
+                        f"http://localhost:{port}/", timeout=0.1
+                    ) as response:
                         if response.status == 200:
                             # Only read first 100 bytes to check for "SyftPerm"
-                            content = response.read(100).decode('utf-8')
+                            content = response.read(100).decode("utf-8")
                             return "SyftPerm" in content
                 except:
                     pass
                 return False
-            
+
             tried_ports = []
-            
+
             # First, try to read port from config file
             config_path = Path.home() / ".syftperm" / "config.json"
             if config_path.exists():
                 try:
                     import builtins
-                    with builtins.open(config_path, 'r') as f:
+
+                    with builtins.open(config_path, "r") as f:
                         config = json.load(f)
-                        configured_port = config.get('port')
+                        configured_port = config.get("port")
                         if configured_port:
                             tried_ports.append(configured_port)
                             if check_server(configured_port):
@@ -936,7 +943,7 @@ class Files:
                                 server_port = configured_port
                 except Exception as e:
                     pass
-            
+
             # If not found via config, fall back to scanning ports 8000-8100
             if not server_available:
                 for port in range(8000, 8101):
@@ -945,12 +952,12 @@ class Files:
                         server_available = True
                         server_port = port
                         break
-            
+
             if server_available:
                 # Detect dark mode for iframe styling
                 is_dark_mode = is_dark()
                 border_color = "#3e3e42" if is_dark_mode else "#ddd"
-                
+
                 # Return iframe pointing to the server's files-widget endpoint
                 iframe_html = f"""
                 <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 8px; overflow: hidden;">
@@ -969,36 +976,37 @@ class Files:
             pass
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-        
+
         # Detect dark mode early for loading animation
         is_dark_mode = is_dark()
-        
+
         # Non-obvious tips for users
         tips = [
             'Use quotation marks to search for exact phrases like "machine learning"',
-            'Multiple words without quotes searches for files containing ALL words',
-            'Press Tab in search boxes for auto-completion suggestions',
-            'Tab completion in Admin filter shows all available datasite emails',
-            'Use sp.files.page(5) to jump directly to page 5',
-            'Click any row to copy its syft:// path to clipboard',
+            "Multiple words without quotes searches for files containing ALL words",
+            "Press Tab in search boxes for auto-completion suggestions",
+            "Tab completion in Admin filter shows all available datasite emails",
+            "Use sp.files.page(5) to jump directly to page 5",
+            "Click any row to copy its syft:// path to clipboard",
             'Try sp.files.search("keyword") for programmatic filtering',
             'Use sp.files.filter(extension=".csv") to find specific file types',
             'Chain filters: sp.files.filter(extension=".py").search("test")',
-            'Escape special characters with backslash when searching',
-            'ASCII loading bar only appears with print(sp.files), not in Jupyter',
-            'Loading progress: first 10% is setup, 10-100% is file scanning',
-            'Press Escape to close the tab-completion dropdown',
+            "Escape special characters with backslash when searching",
+            "ASCII loading bar only appears with print(sp.files), not in Jupyter",
+            "Loading progress: first 10% is setup, 10-100% is file scanning",
+            "Press Escape to close the tab-completion dropdown",
             'Use sp.open("syft://path") to access files programmatically',
-            'Search for dates in various formats: 2024-01-15, Jan-15, etc',
+            "Search for dates in various formats: 2024-01-15, Jan-15, etc",
             'Admin filter supports partial matching - type "gmail" for all Gmail users',
-            'File sizes show as B, KB, MB, or GB automatically',
-            'The # column shows files in chronological order by modified date',
-            'Empty search returns all files - useful for resetting filters',
-            'Search works across file names, paths, and extensions at once'
+            "File sizes show as B, KB, MB, or GB automatically",
+            "The # column shows files in chronological order by modified date",
+            "Empty search returns all files - useful for resetting filters",
+            "Search works across file names, paths, and extensions at once",
         ]
-        
+
         # Pick a random tip for loading and footer
         import random
+
         loading_tip = random.choice(tips)
         footer_tip = random.choice(tips)
         show_footer_tip = random.random() < 0.5  # 50% chance
@@ -1072,7 +1080,7 @@ class Files:
         </div>
         """
         display(HTML(loading_html))
-        
+
         # Helper function to update loading bar
         def update_loading_display(percent, status):
             update_html = f"""
@@ -1092,10 +1100,10 @@ class Files:
             """
             display(HTML(update_html))
             time.sleep(0.01)
-        
+
         # Count datasites with progress (0-10% of loading bar)
         update_loading_display(2, "Finding SyftBox directory...")
-        
+
         syftbox_dirs = [
             Path.home() / "SyftBox",
             Path.home() / ".syftbox",
@@ -1110,63 +1118,74 @@ class Files:
                 datasites_path = path / "datasites"
                 if datasites_path.exists():
                     break
-        
+
         # Check syft-perm installation status in background
         def check_syft_perm_status():
             import subprocess
-            
+
             if syftbox_path:
                 syft_perm_path = syftbox_path / "apps" / "syft-perm"
                 if syft_perm_path.exists():
                     # Get last modified time of the directory
                     import os
                     from datetime import datetime
+
                     mod_time = os.path.getmtime(syft_perm_path)
-                    last_modified = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M:%S')
+                    last_modified = datetime.fromtimestamp(mod_time).strftime("%Y-%m-%d %H:%M:%S")
                     # Found syft-perm (no print)
-                    
+
                     # Check if run.sh is running
                     try:
                         # Check for running processes containing the syft-perm path
-                        result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
+                        result = subprocess.run(["ps", "aux"], capture_output=True, text=True)
                         if result.returncode == 0:
                             processes = result.stdout
-                            if str(syft_perm_path) in processes and 'run.sh' in processes:
+                            if str(syft_perm_path) in processes and "run.sh" in processes:
                                 pass  # run.sh is running
                             else:
                                 # run.sh is not running
-                                
+
                                 # Check if it was cloned/modified recently (within 2 minutes)
                                 import time
+
                                 current_time = time.time()
                                 time_since_modified = current_time - mod_time
-                                
+
                                 if time_since_modified < 120:  # 120 seconds = 2 minutes
                                     # Recently modified - likely still starting up
                                     return
-                                
+
                                 # Delete and re-clone only if it's been more than 2 minutes
                                 # Remove non-running installation
                                 try:
                                     import shutil
+
                                     shutil.rmtree(syft_perm_path)
                                     # Removed old directory
-                                    
+
                                     # Re-clone
                                     # Re-clone syft-perm
                                     clone_result = subprocess.run(
-                                        ['git', 'clone', 'https://github.com/OpenMined/syft-perm.git', str(syft_perm_path)],
+                                        [
+                                            "git",
+                                            "clone",
+                                            "https://github.com/OpenMined/syft-perm.git",
+                                            str(syft_perm_path),
+                                        ],
                                         capture_output=True,
-                                        text=True
+                                        text=True,
                                     )
-                                    
+
                                     if clone_result.returncode == 0:
                                         # Successfully re-cloned
-                                        
+
                                         # Make run.sh executable
                                         run_sh_path = syft_perm_path / "run.sh"
                                         if run_sh_path.exists():
-                                            subprocess.run(['chmod', '+x', str(run_sh_path)], capture_output=True)
+                                            subprocess.run(
+                                                ["chmod", "+x", str(run_sh_path)],
+                                                capture_output=True,
+                                            )
                                             pass  # Made executable
                                     else:
                                         pass  # Failed to re-clone
@@ -1176,43 +1195,53 @@ class Files:
                         pass  # Could not check process status
                 else:
                     # syft-perm not found
-                    
+
                     # Clone syft-perm in the background
                     # Clone syft-perm
                     try:
                         # Ensure apps directory exists
                         apps_dir = syftbox_path / "apps"
                         apps_dir.mkdir(exist_ok=True)
-                        
+
                         # Clone the repository
                         clone_result = subprocess.run(
-                            ['git', 'clone', 'https://github.com/OpenMined/syft-perm.git', str(syft_perm_path)],
+                            [
+                                "git",
+                                "clone",
+                                "https://github.com/OpenMined/syft-perm.git",
+                                str(syft_perm_path),
+                            ],
                             capture_output=True,
-                            text=True
+                            text=True,
                         )
-                        
+
                         if clone_result.returncode == 0:
                             # Successfully cloned
-                            
+
                             # Make run.sh executable
                             run_sh_path = syft_perm_path / "run.sh"
                             if run_sh_path.exists():
-                                subprocess.run(['chmod', '+x', str(run_sh_path)], capture_output=True)
+                                subprocess.run(
+                                    ["chmod", "+x", str(run_sh_path)], capture_output=True
+                                )
                         else:
                             pass  # Failed to clone
                     except Exception as e:
                         pass  # Error cloning
-        
+
         # Run the check in a background thread
         import threading
+
         background_thread = threading.Thread(target=check_syft_perm_status, daemon=True)
         background_thread.start()
-        
+
         update_loading_display(5, "Counting datasites...")
-        
+
         total_datasites = 0
         if datasites_path and datasites_path.exists():
-            datasite_dirs = [d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+            datasite_dirs = [
+                d for d in datasites_path.iterdir() if d.is_dir() and not d.name.startswith(".")
+            ]
             total_datasites = len(datasite_dirs)
             update_loading_display(10, f"Found {total_datasites} datasites. Starting scan...")
         else:
@@ -1221,22 +1250,24 @@ class Files:
         # Variables for throttling updates
         datasite_count = [0]  # Use list to make it mutable in nested function
         last_datasite = [None]  # Track last datasite to detect changes
-        update_interval = max(1, total_datasites // 20) if total_datasites > 0 else 1  # Update at most 20 times
-        
+        update_interval = (
+            max(1, total_datasites // 20) if total_datasites > 0 else 1
+        )  # Update at most 20 times
+
         # Progress callback function for file scanning (10-100%)
         def update_progress(current, total, status):
             progress_data["current"] = current
             progress_data["total"] = total
             progress_data["status"] = status
-            
+
             # Extract datasite from status (status format: "Scanning email@domain.com")
             current_datasite = status.split(" ")[-1] if " " in status else status
-            
+
             # Check if datasite changed
             if current_datasite != last_datasite[0]:
                 last_datasite[0] = current_datasite
                 datasite_count[0] += 1
-            
+
             # Only update every update_interval datasites or on the last one
             if datasite_count[0] % update_interval != 0 and current < total:
                 return  # Skip this update unless it's time for an update or the last one
@@ -1245,7 +1276,7 @@ class Files:
             scan_percent = (current / max(total, 1)) * 100
             # Map to 10-100% range (first 10% was for initialization)
             progress_percent = 10 + (scan_percent * 0.9)
-            
+
             update_html = f"""
             <script>
             (function() {{
@@ -1659,7 +1690,7 @@ class Files:
                         f"                                <span>+{len(perms) - 3} more...</span>\n"
                     )
             else:
-                html += '                                <span style="color: {'#6b7280' if is_dark_mode else '#9ca3af'};">No permissions</span>\n'
+                html += '                                <span style="color: {'  # 6b7280' if is_dark_mode else '#9ca3af'};">No permissions</span>\n'
 
             html += f"""
                             </div>
@@ -2678,7 +2709,7 @@ class Files:
                     console.log('Port 62050 response data:', data);
                     
                     if (data.main_server_port) {{
-                        console.log(`✅ FOUND DISCOVERY SERVER on port 62050, main server on port ${{data.main_server_port}}!`);
+                        console.log(`FOUND DISCOVERY SERVER on port 62050, main server on port ${{data.main_server_port}}!`);
                         window.syftPermServerFound_{container_id} = true;
                         
                         // Clear the interval to stop checking immediately
@@ -2826,17 +2857,19 @@ class FilteredFiles(Files):
     Filtered version of Files that works with a predefined set of files.
     Used for search(), filter(), and slice operations.
     """
-    
+
     def __init__(self, filtered_files: list, limit: int = None, offset: int = 0):
         super().__init__()
         self._filtered_files = filtered_files
         self._limit = limit
         self._offset = offset
-    
-    def _scan_files(self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False) -> list:
+
+    def _scan_files(
+        self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False
+    ) -> list:
         """Return the pre-filtered files instead of scanning."""
         return self._filtered_files
-    
+
     def _repr_html_(self) -> str:
         """Generate HTML widget with filtered files."""
         import html as html_module
@@ -2849,13 +2882,13 @@ class FilteredFiles(Files):
         from IPython.display import HTML, clear_output, display
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-        
+
         # Check if Jupyter is in dark mode
         is_dark_mode = is_dark()
 
         # Use the filtered files directly
         all_files = self._filtered_files
-        
+
         # Create chronological index based on modified date (oldest first)
         sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0))  # Ascending order
         chronological_ids = {}
@@ -2865,13 +2898,13 @@ class FilteredFiles(Files):
 
         # Sort files by modified date (newest first) for display
         sorted_files = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
-        
+
         # Apply pagination if specified
         if self._limit:
-            files = sorted_files[self._offset:self._offset + self._limit]
+            files = sorted_files[self._offset : self._offset + self._limit]
         else:
             files = sorted_files[:100]  # Default limit for display
-        
+
         total = len(all_files)
 
         if not files:
@@ -3198,17 +3231,19 @@ class FilteredFiles(Files):
     def __repr__(self) -> str:
         """Generate ASCII table representation of filtered files."""
         from datetime import datetime
-        
+
         if not self._filtered_files:
             return "FilteredFiles: No files match the filter criteria"
-        
+
         # Sort by modified date (newest first) to match main Files display
-        sorted_files = sorted(self._filtered_files, key=lambda x: x.get("modified", 0), reverse=True)
-        
+        sorted_files = sorted(
+            self._filtered_files, key=lambda x: x.get("modified", 0), reverse=True
+        )
+
         # Calculate display range
         total_files = len(sorted_files)
         items_per_page = self._limit if self._limit else 50
-        
+
         # Get files to display
         if self._limit:
             # If limit is set, show from offset to offset+limit
@@ -3221,23 +3256,16 @@ class FilteredFiles(Files):
             end = min(items_per_page, total_files)
             display_files = sorted_files[:end]
             page_info = f"FilteredFiles (showing 1-{end} of {total_files} filtered files)"
-        
+
         # Create chronological index for all filtered files
         chronological_ids = {}
         for i, file in enumerate(sorted_files):
             file_key = f"{file['name']}|{file['path']}"
             chronological_ids[file_key] = i + 1
-        
+
         # Define column widths (same as main Files class)
-        col_widths = {
-            'num': 5,
-            'url': 60,
-            'modified': 16,
-            'type': 8,
-            'size': 10,
-            'perms': 12
-        }
-        
+        col_widths = {"num": 5, "url": 60, "modified": 16, "type": 8, "size": 10, "perms": 12}
+
         # Build header
         header = (
             f"{'#':<{col_widths['num']}} "
@@ -3247,35 +3275,35 @@ class FilteredFiles(Files):
             f"{'Size':<{col_widths['size']}} "
             f"{'Permissions':<{col_widths['perms']}}"
         )
-        
+
         separator = "-" * len(header)
-        
+
         # Build rows
         rows = []
         for file in display_files:
             # Get chronological number
             file_key = f"{file['name']}|{file['path']}"
             num = chronological_ids.get(file_key, 0)
-            
+
             # Format URL (truncate if needed)
-            url = file['name']
-            if len(url) > col_widths['url']:
-                url = url[:col_widths['url']-3] + "..."
-            
+            url = file["name"]
+            if len(url) > col_widths["url"]:
+                url = url[: col_widths["url"] - 3] + "..."
+
             # Format modified date
-            modified_ts = file.get('modified', 0)
+            modified_ts = file.get("modified", 0)
             if modified_ts:
-                modified = datetime.fromtimestamp(modified_ts).strftime('%Y-%m-%d %H:%M')
+                modified = datetime.fromtimestamp(modified_ts).strftime("%Y-%m-%d %H:%M")
             else:
-                modified = 'Unknown'
-            
+                modified = "Unknown"
+
             # Format file type
-            file_type = file.get('extension', '').lstrip('.') or 'file'
-            if len(file_type) > col_widths['type']:
-                file_type = file_type[:col_widths['type']-3] + "..."
-            
+            file_type = file.get("extension", "").lstrip(".") or "file"
+            if len(file_type) > col_widths["type"]:
+                file_type = file_type[: col_widths["type"] - 3] + "..."
+
             # Format size
-            size_bytes = file.get('size', 0)
+            size_bytes = file.get("size", 0)
             if size_bytes < 1024:
                 size = f"{size_bytes} B"
             elif size_bytes < 1024 * 1024:
@@ -3284,11 +3312,11 @@ class FilteredFiles(Files):
                 size = f"{size_bytes / (1024 * 1024):.1f} MB"
             else:
                 size = f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-            
+
             # Format permissions count
-            perms = file.get('permissions_summary', [])
+            perms = file.get("permissions_summary", [])
             perm_str = f"{len(perms)} users"
-            
+
             # Build row
             row = (
                 f"{num:<{col_widths['num']}} "
@@ -3299,19 +3327,19 @@ class FilteredFiles(Files):
                 f"{perm_str:<{col_widths['perms']}}"
             )
             rows.append(row)
-        
+
         # Calculate totals for footer
         file_count = 0
         folder_count = 0
         total_size = 0
-        
+
         for file in sorted_files:
-            if file.get('is_dir', False):
+            if file.get("is_dir", False):
                 folder_count += 1
             else:
                 file_count += 1
-                total_size += file.get('size', 0)
-        
+                total_size += file.get("size", 0)
+
         # Format total size
         if total_size < 1024:
             size_str = f"{total_size} B"
@@ -3321,40 +3349,43 @@ class FilteredFiles(Files):
             size_str = f"{total_size / (1024 * 1024):.1f} MB"
         else:
             size_str = f"{total_size / (1024 * 1024 * 1024):.1f} GB"
-        
+
         # Build output
-        output = [
-            page_info,
-            separator,
-            header,
-            separator
-        ]
+        output = [page_info, separator, header, separator]
         output.extend(rows)
         output.append(separator)
         output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
         if total_files > len(display_files):
-            output.append(f"Use FilteredFiles in Jupyter for interactive view of all {total_files} results")
-        
+            output.append(
+                f"Use FilteredFiles in Jupyter for interactive view of all {total_files} results"
+            )
+
         return "\n".join(output)
 
 
 class FastAPIFiles(Files):
     """FastAPI version of Files that generates URLs with query parameters"""
-    
+
     def __init__(self, server_url: str = "http://localhost:8005"):
         super().__init__()
-        self.server_url = server_url.rstrip('/')
-    
-    def search(self, files: _Union[str, None] = None, admin: _Union[str, None] = None, limit: int = 50, offset: int = 0) -> "FastAPIFiles":
+        self.server_url = server_url.rstrip("/")
+
+    def search(
+        self,
+        files: _Union[str, None] = None,
+        admin: _Union[str, None] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> "FastAPIFiles":
         """
         Generate URL for search filters.
-        
+
         Args:
             files: Search term for file names
             admin: Filter by admin email
             limit: Number of items per page
             offset: Starting index
-            
+
         Returns:
             FastAPIFiles instance with URL
         """
@@ -3363,77 +3394,77 @@ class FastAPIFiles(Files):
             params.append(f"search={files}")
         if admin:
             params.append(f"admin={admin}")
-        
+
         url = f"{self.server_url}/files-widget"
         if params:
             url += "?" + "&".join(params)
-            
+
         # Return a new instance that will display as URL
         result = FastAPIFiles(self.server_url)
         result._url = url
         return result
-    
+
     def filter(self, folders: _Union[list, str, None] = None) -> "FastAPIFiles":
         """
         Generate URL for folder filter.
-        
+
         Args:
             folders: List of file or folder paths to include, or a single string
-            
+
         Returns:
             FastAPIFiles instance with URL
         """
         if not folders:
             return self
-        
+
         # Convert string to list if needed
         if isinstance(folders, str):
             folders = [folders]
-            
+
         # Convert folders list to comma-separated string
         folders_str = ",".join(str(f) for f in folders)
         url = f"{self.server_url}/files-widget?folders={folders_str}"
-        
+
         result = FastAPIFiles(self.server_url)
         result._url = url
         return result
-    
+
     def page(self, page_number: int, items_per_page: int = 50) -> "FastAPIFiles":
         """
         Generate URL for pagination.
-        
+
         Args:
             page_number: Page number (1-based)
             items_per_page: Items per page
-            
+
         Returns:
             FastAPIFiles instance with URL
         """
         url = f"{self.server_url}/files-widget?page={page_number}&items_per_page={items_per_page}"
-        
+
         result = FastAPIFiles(self.server_url)
         result._url = url
         return result
-    
+
     def all(self) -> "FastAPIFiles":
         """Return URL for all files."""
         url = f"{self.server_url}/files-widget"
         result = FastAPIFiles(self.server_url)
         result._url = url
         return result
-    
+
     def __repr__(self) -> str:
         """Return the URL when printed."""
-        if hasattr(self, '_url'):
+        if hasattr(self, "_url"):
             return f"FastAPI Files Widget: {self._url}"
         return f"FastAPI Files Widget: {self.server_url}/files-widget"
-    
+
     def _repr_html_(self) -> str:
         """Display as iframe in Jupyter."""
-        url = getattr(self, '_url', f"{self.server_url}/files-widget")
+        url = getattr(self, "_url", f"{self.server_url}/files-widget")
         is_dark_mode = is_dark()
         border_color = "#3e3e42" if is_dark_mode else "#ddd"
-        
+
         return f"""
         <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 8px; overflow: hidden;">
             <iframe 
@@ -3446,7 +3477,6 @@ class FastAPIFiles(Files):
             </iframe>
         </div>
         """
-    
 
 
 # Create singleton instance
@@ -3456,7 +3486,7 @@ files = Files()
 def is_dark():
     """
     Check if Jupyter Notebook/Lab is running in dark mode.
-    
+
     Returns:
         bool: True if dark mode is detected, False otherwise
     """
@@ -3466,85 +3496,108 @@ def is_dark():
         from pathlib import Path
         import re
         import builtins
-        
+
         # First, try to read JupyterLab theme settings file
         jupyter_config_paths = [
-            Path.home() / ".jupyter" / "lab" / "user-settings" / "@jupyterlab" / "apputils-extension" / "themes.jupyterlab-settings",
-            Path.home() / ".jupyter" / "lab" / "user-settings" / "@jupyterlab" / "apputils-extension" / "themes.jupyterlab-settings.json",
+            Path.home()
+            / ".jupyter"
+            / "lab"
+            / "user-settings"
+            / "@jupyterlab"
+            / "apputils-extension"
+            / "themes.jupyterlab-settings",
+            Path.home()
+            / ".jupyter"
+            / "lab"
+            / "user-settings"
+            / "@jupyterlab"
+            / "apputils-extension"
+            / "themes.jupyterlab-settings.json",
         ]
-        
+
         for config_path in jupyter_config_paths:
             if config_path.exists():
                 try:
-                    with builtins.open(config_path, 'r') as f:
+                    with builtins.open(config_path, "r") as f:
                         content = f.read()
                         # Remove comments from the JSON (JupyterLab allows comments)
                         # Remove single-line comments
-                        content = re.sub(r'//.*$', '', content, flags=re.MULTILINE)
+                        content = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
                         # Remove multi-line comments
-                        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
-                        
+                        content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+
                         settings = json.loads(content)
-                        theme = settings.get('theme', '').lower()
+                        theme = settings.get("theme", "").lower()
                         # Check if it's a dark theme
-                        if 'dark' in theme:
+                        if "dark" in theme:
                             return True
                         # If theme is explicitly set to light, return False
-                        if 'light' in theme:
+                        if "light" in theme:
                             return False
                 except Exception:
                     pass
-        
+
         # Check VS Code settings
-        if 'VSCODE_PID' in os.environ:
+        if "VSCODE_PID" in os.environ:
             # VS Code Jupyter might have its own theme
             # Check workspace settings
             vscode_settings_paths = [
                 Path.cwd() / ".vscode" / "settings.json",
                 Path.home() / ".config" / "Code" / "User" / "settings.json",
-                Path.home() / "Library" / "Application Support" / "Code" / "User" / "settings.json",  # macOS
+                Path.home()
+                / "Library"
+                / "Application Support"
+                / "Code"
+                / "User"
+                / "settings.json",  # macOS
             ]
-            
+
             for settings_path in vscode_settings_paths:
                 if settings_path.exists():
                     try:
-                        with builtins.open(settings_path, 'r') as f:
+                        with builtins.open(settings_path, "r") as f:
                             settings = json.load(f)
                             # Check workbench color theme
-                            theme = settings.get('workbench.colorTheme', '').lower()
-                            if 'dark' in theme:
+                            theme = settings.get("workbench.colorTheme", "").lower()
+                            if "dark" in theme:
                                 return True
                     except Exception:
                         pass
-        
+
         # Try JavaScript detection as fallback
         try:
             from IPython import get_ipython
+
             ipython = get_ipython()
-            
+
             if ipython is not None:
                 # Execute JavaScript to check theme
-                result = ipython.run_cell_magic('javascript', '', '''
+                result = ipython.run_cell_magic(
+                    "javascript",
+                    "",
+                    """
                 if (typeof IPython !== 'undefined' && IPython.notebook) {
                     IPython.notebook.kernel.execute("_is_dark_mode = " + 
                         (document.body.classList.contains('theme-dark') || 
                          (document.body.getAttribute('data-jp-theme-name') && 
                           document.body.getAttribute('data-jp-theme-name').includes('dark'))));
                 }
-                ''')
-                
+                """,
+                )
+
                 # Check if we got a result
                 import sys
-                if hasattr(sys.modules['__main__'], '_is_dark_mode'):
-                    is_dark = sys.modules['__main__']._is_dark_mode
-                    delattr(sys.modules['__main__'], '_is_dark_mode')
+
+                if hasattr(sys.modules["__main__"], "_is_dark_mode"):
+                    is_dark = sys.modules["__main__"]._is_dark_mode
+                    delattr(sys.modules["__main__"], "_is_dark_mode")
                     return is_dark
         except Exception:
             pass
-            
+
         # Default to False (light mode) if we can't detect
         return False
-        
+
     except Exception:
         # If any error occurs, assume light mode
         return False

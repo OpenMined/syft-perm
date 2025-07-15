@@ -101,6 +101,7 @@ python_functions = ["test_*"]
 [tool.uv]
 dev-dependencies = [
     "autopep8>=2.3.2",
+    "black>=25.1.0",
     "mypy>=1.16.1",
     "nbformat>=5.10.4",
     "pytest>=8.4.1",
