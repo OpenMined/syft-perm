@@ -584,6 +584,10 @@ if _SERVER_AVAILABLE:
         end: Optional[int] = Query(None, ge=0, description="End index for slicing"),
     ) -> str:
         """Serve the files widget interface with filtering support."""
+        # Get current user email
+        from .filesystem_editor import get_current_user_email
+        current_user_email = get_current_user_email() or ""
+        
         # Parse folders if provided
         folder_list = None
         if folders:
@@ -597,7 +601,8 @@ if _SERVER_AVAILABLE:
             page=page,
             items_per_page=items_per_page,
             start=start,
-            end=end
+            end=end,
+            current_user_email=current_user_email
         )
     
     @app.get("/api/scan-progress")  # type: ignore[misc]
@@ -1395,7 +1400,8 @@ def get_files_widget_html(
     page: int = 1,
     items_per_page: int = 50,
     start: Optional[int] = None,
-    end: Optional[int] = None
+    end: Optional[int] = None,
+    current_user_email: str = ""
 ) -> str:
     """Generate the files widget HTML for web serving."""
     import html as html_module
@@ -1968,7 +1974,7 @@ def get_files_widget_html(
         </svg>
         
         <div style="font-size: 20px; font-weight: 600; color: {text_color}; margin-top: 2rem; text-align: center;">
-            the internet of private data...
+            loading <br />the private internet
         </div>
         
         <div style="width: 340px; height: 6px; background-color: {'#2d2d30' if is_dark_mode else '#e5e5e5'}; border-radius: 3px; margin: 1.5rem auto; overflow: hidden;">
@@ -2050,8 +2056,11 @@ def get_files_widget_html(
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">File Path</label>
-                    <input type="text" id="newFilePath" class="form-input" placeholder="syft://user@example.com/path/to/file.txt">
-                    <div class="form-hint">Enter a syft:// path for the new file</div>
+                    <div style="position: relative;">
+                        <input type="text" id="newFilePath" class="form-input" placeholder="syft://user@example.com/path/to/file.txt" autocomplete="off">
+                        <div id="newFileAutocomplete" class="autocomplete-dropdown"></div>
+                    </div>
+                    <div class="form-hint">Enter a syft:// path for the new file. Press Tab to autocomplete.</div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2082,7 +2091,10 @@ def get_files_widget_html(
             // Rainbow animation speed (duration of one color cycle in seconds)
             // Lower values = faster rainbow, higher values = slower rainbow
             // Default: 0.8 seconds per color cycle
-            rainbowCycleSpeed: 0.8
+            rainbowCycleSpeed: 0.8,
+            
+            // Current user email
+            currentUserEmail: '{current_user_email}'
         }};
         
         // Calculate iteration count based on config
@@ -2121,6 +2133,7 @@ def get_files_widget_html(
         var sortColumn = 'modified';  // Default sort by modified date
         var sortDirection = 'desc';    // Default descending (newest first)
         var chronologicalIds = {{}};
+        var currentUserEmail = {json.dumps(current_user_email)};
         
         // WebSocket for real-time file updates
         var ws = null;
@@ -2375,12 +2388,37 @@ def get_files_widget_html(
         // Modal functions - expose globally
         window.openNewFileModal = function() {{
             document.getElementById('newFileModal').style.display = 'block';
-            document.getElementById('newFilePath').focus();
+            var pathInput = document.getElementById('newFilePath');
+            
+            // Try to auto-populate with current user's datasite
+            if (typeof currentUserEmail !== 'undefined' && currentUserEmail) {{
+                pathInput.value = 'syft://' + currentUserEmail + '/';
+            }} else {{
+                // Try to detect from existing files
+                var userEmails = new Set();
+                allFiles.forEach(function(file) {{
+                    if (file.datasite_owner) {{
+                        userEmails.add(file.datasite_owner);
+                    }}
+                }});
+                
+                // If only one user, use that
+                if (userEmails.size === 1) {{
+                    var email = Array.from(userEmails)[0];
+                    pathInput.value = 'syft://' + email + '/';
+                }}
+            }}
+            
+            pathInput.focus();
+            // Move cursor to end
+            pathInput.setSelectionRange(pathInput.value.length, pathInput.value.length);
         }};
         
         window.closeNewFileModal = function() {{
             document.getElementById('newFileModal').style.display = 'none';
             document.getElementById('newFilePath').value = '';
+            document.getElementById('newFileAutocomplete').innerHTML = '';
+            document.getElementById('newFileAutocomplete').classList.remove('show');
         }};
         
         window.createNewFile = function() {{
@@ -2417,6 +2455,168 @@ def get_files_widget_html(
                 document.getElementById('fileEditorModal').style.display = 'none';
                 document.getElementById('fileEditorFrame').src = '';
             }}
+        }}
+        
+        // Autocomplete for new file path
+        var autocompleteIndex = -1;
+        var autocompleteSuggestions = [];
+        
+        function setupNewFileAutocomplete() {{
+            var input = document.getElementById('newFilePath');
+            var dropdown = document.getElementById('newFileAutocomplete');
+            
+            function showAutocompleteSuggestions() {{
+                var value = input.value;
+                autocompleteIndex = -1;
+                
+                if (!value || !value.includes('://')) {{
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('show');
+                    return;
+                }}
+                
+                // Parse the current input
+                var parts = value.split('://');
+                if (parts.length !== 2 || parts[0] !== 'syft') {{
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('show');
+                    return;
+                }}
+                
+                var pathPart = parts[1];
+                var pathSegments = pathPart.split('/');
+                var userPart = pathSegments[0];
+                var currentPath = pathSegments.slice(1).join('/');
+                
+                // Get unique datasites
+                var datasites = new Set();
+                allFiles.forEach(function(file) {{
+                    if (file.datasite_owner) {{
+                        datasites.add(file.datasite_owner);
+                    }}
+                }});
+                
+                autocompleteSuggestions = [];
+                
+                // If still typing the user part
+                if (!userPart.includes('@') || pathSegments.length === 1) {{
+                    // Suggest datasites
+                    Array.from(datasites).forEach(function(datasite) {{
+                        if (datasite.toLowerCase().includes(userPart.toLowerCase())) {{
+                            autocompleteSuggestions.push('syft://' + datasite + '/');
+                        }}
+                    }});
+                }} else {{
+                    // Suggest paths within the datasite
+                    var uniquePaths = new Set();
+                    allFiles.forEach(function(file) {{
+                        if (file.datasite_owner === userPart && file.name.startsWith(userPart + '/')) {{
+                            var filePath = file.name.substring(userPart.length + 1);
+                            var segments = filePath.split('/');
+                            
+                            // Build partial paths for autocomplete
+                            var partialPath = '';
+                            for (var i = 0; i < segments.length; i++) {{
+                                if (i > 0) partialPath += '/';
+                                partialPath += segments[i];
+                                
+                                // Only suggest if it matches current input
+                                if (partialPath.toLowerCase().startsWith(currentPath.toLowerCase()) && 
+                                    partialPath.length > currentPath.length) {{
+                                    uniquePaths.add('syft://' + userPart + '/' + partialPath);
+                                }}
+                            }}
+                        }}
+                    }});
+                    autocompleteSuggestions = Array.from(uniquePaths).sort();
+                }}
+                
+                // Show suggestions
+                if (autocompleteSuggestions.length > 0) {{
+                    dropdown.innerHTML = '';
+                    autocompleteSuggestions.slice(0, 10).forEach(function(suggestion, index) {{
+                        var option = document.createElement('div');
+                        option.className = 'autocomplete-option';
+                        option.textContent = suggestion;
+                        option.onclick = function() {{
+                            input.value = suggestion;
+                            dropdown.innerHTML = '';
+                            dropdown.classList.remove('show');
+                            input.focus();
+                        }};
+                        dropdown.appendChild(option);
+                    }});
+                    dropdown.classList.add('show');
+                }} else {{
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('show');
+                }}
+            }}
+            
+            input.addEventListener('input', showAutocompleteSuggestions);
+            input.addEventListener('focus', showAutocompleteSuggestions);
+            
+            // Handle keyboard navigation
+            input.addEventListener('keydown', function(e) {{
+                var dropdown = document.getElementById('newFileAutocomplete');
+                var options = dropdown.querySelectorAll('.autocomplete-option');
+                
+                if (e.key === 'Tab') {{
+                    e.preventDefault();
+                    if (autocompleteSuggestions.length > 0) {{
+                        if (autocompleteIndex === -1) {{
+                            // Use first suggestion
+                            input.value = autocompleteSuggestions[0];
+                        }} else {{
+                            // Use selected suggestion
+                            input.value = autocompleteSuggestions[autocompleteIndex];
+                        }}
+                        dropdown.innerHTML = '';
+                        dropdown.classList.remove('show');
+                    }}
+                }} else if (e.key === 'ArrowDown') {{
+                    if (dropdown.classList.contains('show') && options.length > 0) {{
+                        e.preventDefault();
+                        autocompleteIndex = Math.min(autocompleteIndex + 1, options.length - 1);
+                        updateAutocompleteSelection(options);
+                    }}
+                }} else if (e.key === 'ArrowUp') {{
+                    if (dropdown.classList.contains('show') && options.length > 0) {{
+                        e.preventDefault();
+                        autocompleteIndex = Math.max(autocompleteIndex - 1, -1);
+                        updateAutocompleteSelection(options);
+                    }}
+                }} else if (e.key === 'Enter') {{
+                    if (autocompleteIndex >= 0 && autocompleteIndex < autocompleteSuggestions.length) {{
+                        e.preventDefault();
+                        input.value = autocompleteSuggestions[autocompleteIndex];
+                        dropdown.innerHTML = '';
+                        dropdown.classList.remove('show');
+                    }}
+                }} else if (e.key === 'Escape') {{
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('show');
+                    autocompleteIndex = -1;
+                }}
+            }});
+            
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', function(e) {{
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {{
+                    dropdown.innerHTML = '';
+                    dropdown.classList.remove('show');
+                }}
+            }});
+        }}
+        
+        function updateAutocompleteSelection(options) {{
+            options.forEach(function(option, index) {{
+                if (index === autocompleteIndex) {{
+                    option.classList.add('selected');
+                }} else {{
+                    option.classList.remove('selected');
+                }}
+            }});
         }}
         
         // Update rainbow duration from dropdown
@@ -2633,6 +2833,9 @@ def get_files_widget_html(
                 var fileKey = file.name + '|' + file.path;
                 var chronoId = file.chronoId !== undefined ? file.chronoId : (chronologicalIds[fileKey] !== undefined ? chronologicalIds[fileKey] : i);
                 
+                // Prepare escaped path for onclick handlers
+                var escapedPath = (file.path || filePath || '').replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'");
+                
                 // Check if this file was modified within the threshold (rainbow duration + buffer)
                 var wsActionClass = '';
                 var now = Date.now() / 1000; // Convert to seconds
@@ -2678,13 +2881,49 @@ def get_files_widget_html(
                     html += '<span style="color: #9ca3af;">No permissions</span>';
                 }}
                 
+                // Check if current user is admin for this file
+                var isAdmin = false;
+                
+                // Check permissions object first
+                if (file.permissions && file.permissions.admin && CONFIG.currentUserEmail) {{
+                    isAdmin = file.permissions.admin.includes(CONFIG.currentUserEmail);
+                }}
+                
+                // If not found in permissions object, check permissions_summary
+                if (!isAdmin && file.permissions_summary && CONFIG.currentUserEmail) {{
+                    // Look for "admin: user@email.com" pattern in permissions_summary
+                    for (var j = 0; j < file.permissions_summary.length; j++) {{
+                        var summary = file.permissions_summary[j];
+                        if (summary.startsWith('admin: ') && summary.includes(CONFIG.currentUserEmail)) {{
+                            isAdmin = true;
+                            break;
+                        }}
+                    }}
+                }}
+                
                 html += '</div>' +
                     '</td>' +
                     '<td>' +
                         '<div style="display: flex; gap: 0.125rem;">' +
-                            '<button class="btn btn-gray" title="Open in editor">File</button>' +
-                            '<button class="btn btn-blue" title="View file info">Info</button>' +
-                            '<button class="btn btn-purple" title="Copy path">Copy</button>' +
+                            '<button class="btn btn-gray btn-clickable" onclick="event.stopPropagation(); openFileEditor_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Open in editor">Open</button>';
+                
+                if (isAdmin) {{
+                    html += '<button class="btn btn-blue btn-clickable" onclick="event.stopPropagation(); openShareModal_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Share permissions">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                                    '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>' +
+                                    '<polyline points="16 6 12 2 8 6"/>' +
+                                    '<line x1="12" y1="2" x2="12" y2="15"/>' +
+                                '</svg> Share</button>';
+                }} else {{
+                    html += '<button class="btn btn-gray" disabled title="Only admins can share">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5;">' +
+                                    '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>' +
+                                    '<polyline points="16 6 12 2 8 6"/>' +
+                                    '<line x1="12" y1="2" x2="12" y2="15"/>' +
+                                '</svg> Share</button>';
+                }}
+                
+                html += '<button class="btn btn-purple btn-clickable" onclick="event.stopPropagation(); copyPath_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Copy path">Copy</button>' +
                             '<button class="btn btn-red" title="Delete file">' +
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
                                     '<path d="M3 6h18"></path>' +
@@ -2824,8 +3063,22 @@ def get_files_widget_html(
             renderTable();
         }};
 
-        // Copy path
+        // Copy path - for button click
         window.copyPath_{container_id} = function(path, rowElement) {{
+            // When called from button, just copy the path
+            if (typeof rowElement === 'string' || !rowElement) {{
+                navigator.clipboard.writeText(path).then(function() {{
+                    showStatus('Path copied to clipboard!');
+                    setTimeout(function() {{
+                        updateStatus();
+                    }}, 2000);
+                }}).catch(function() {{
+                    showStatus('Failed to copy to clipboard');
+                }});
+                return;
+            }}
+            
+            // When called from row click, copy the sp.open command
             var command = 'sp.open("' + path + '")';
             
             navigator.clipboard.writeText(command).then(function() {{
@@ -2869,6 +3122,95 @@ def get_files_widget_html(
             
             selectAllCheckbox.checked = allChecked;
             selectAllCheckbox.indeterminate = !allChecked && someChecked;
+        }};
+        
+        // Open share modal
+        window.openShareModal_{container_id} = function(filePath) {{
+            // Create modal overlay
+            var overlay = document.createElement('div');
+            overlay.className = 'modal';
+            overlay.style.display = 'block';
+            
+            // Create modal content with iframe
+            var modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            modalContent.style.width = '90%';
+            modalContent.style.maxWidth = '640px';
+            modalContent.style.height = '600px';
+            modalContent.style.padding = '0';
+            
+            // Create iframe
+            var iframe = document.createElement('iframe');
+            iframe.src = '/share-modal?path=' + encodeURIComponent(filePath);
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.borderRadius = '8px';
+            
+            modalContent.appendChild(iframe);
+            overlay.appendChild(modalContent);
+            document.body.appendChild(overlay);
+            
+            // Handle close on click outside
+            overlay.addEventListener('click', function(e) {{
+                if (e.target === overlay) {{
+                    document.body.removeChild(overlay);
+                }}
+            }});
+            
+            // Handle close message from iframe
+            var messageHandler = function(e) {{
+                if (e.data && e.data.action === 'closeShareModal') {{
+                    document.body.removeChild(overlay);
+                    window.removeEventListener('message', messageHandler);
+                }}
+            }};
+            window.addEventListener('message', messageHandler);
+        }};
+        
+        // Open file editor modal
+        window.openFileEditor_{container_id} = function(filePath) {{
+            // Create modal overlay
+            var overlay = document.createElement('div');
+            overlay.className = 'modal';
+            overlay.style.display = 'block';
+            
+            // Create modal content with iframe
+            var modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            modalContent.style.width = 'calc(100vw - 40px)';
+            modalContent.style.maxWidth = 'calc(100vw - 40px)';
+            modalContent.style.height = 'calc(100vh - 40px)';
+            modalContent.style.padding = '0';
+            modalContent.style.margin = '20px auto';
+            
+            // Create iframe
+            var iframe = document.createElement('iframe');
+            iframe.src = '/file-editor/' + encodeURIComponent(filePath) + '?syft_user=' + encodeURIComponent(CONFIG.currentUserEmail);
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.borderRadius = '8px';
+            
+            modalContent.appendChild(iframe);
+            overlay.appendChild(modalContent);
+            document.body.appendChild(overlay);
+            
+            // Handle close on click outside
+            overlay.addEventListener('click', function(e) {{
+                if (e.target === overlay) {{
+                    document.body.removeChild(overlay);
+                }}
+            }});
+            
+            // Handle close message from iframe
+            var messageHandler = function(e) {{
+                if (e.data && (e.data === 'closeFileEditor' || e.data.action === 'closeFileEditor')) {{
+                    document.body.removeChild(overlay);
+                    window.removeEventListener('message', messageHandler);
+                }}
+            }};
+            window.addEventListener('message', messageHandler);
         }};
 
         // Sort table
@@ -2934,6 +3276,9 @@ def get_files_widget_html(
         
         // Start loading files when page loads
         loadFiles();
+        
+        // Setup autocomplete for new file modal
+        setupNewFileAutocomplete();
     }})();
     </script>
 </body>

@@ -20,7 +20,18 @@ def get_current_user_email() -> Optional[str]:
     # Try environment variable first
     user_email = os.environ.get("SYFTBOX_USER_EMAIL")
     
-    # If not found, try to detect from local datasite
+    # If not found, try to read from syftbox config
+    if not user_email:
+        try:
+            config_path = Path(os.path.expanduser("~/.syftbox/config.json"))
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                    user_email = config.get('email')
+        except Exception:
+            pass
+    
+    # If still not found, try to detect from local datasite
     if not user_email:
         datasites_path = Path(os.path.expanduser("~/SyftBox/datasites"))
         if datasites_path.exists():
@@ -189,11 +200,12 @@ class FileSystemManager:
                     can_write = syft_file.has_write_access(current_user)
                     can_admin = syft_file.has_admin_access(current_user)
                     
+                    
                     # Get write users from the permission system
-                    permissions = syft_file.get_permissions()
+                    permissions = syft_file._get_all_permissions()
                     write_users = permissions.get('write', [])
                     
-                except Exception:
+                except Exception as e:
                     # If syft-perm check fails, fall back to conservative approach
                     can_write = False
                     can_admin = False
@@ -209,6 +221,8 @@ class FileSystemManager:
                 content = f.read()
             
             stat = file_path.stat()
+            
+            
             return {
                 'path': str(file_path),
                 'content': content,
@@ -1603,6 +1617,7 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                     this.isReadOnly = !data.can_write;
                     this.isAdmin = data.can_admin || false;
                     this.isUncertainPermissions = false;
+                    
                     
                     // Backend now uses syft-perm for proper permission checking
                     // can_write reflects the actual syft-perm decision

@@ -41,7 +41,8 @@
       "Bash(./check_chrono_ids.sh:*)",
       "Bash(./test_final.sh:*)",
       "Bash(grep -n \"^def open\" /Users/atrask/Desktop/Laboratory/syft-perm/src/syft_perm/__init__.py)",
-      "Bash(PYTHONPATH=src python3 test_syft_url_context.py)"
+      "Bash(PYTHONPATH=src python3 test_syft_url_context.py)",
+      "Bash(echo $SYFTBOX_USER_EMAIL)"
     ],
     "deny": []
   }
