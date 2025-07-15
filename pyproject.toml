@@ -78,6 +78,9 @@ Issues = "https://github.com/OpenMined/syft-perm/issues"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+syft_perm = ["static/*"]
+
 [tool.setuptools.package-dir]
 "" = "src"
 
