@@ -157,7 +157,8 @@ def _match_doublestar(pattern: str, path: str) -> bool:
     """
     Handle patterns containing ** (doublestar) recursion.
 
-    This implements the doublestar algorithm similar to the Go library used in old syftbox.
+    This implements the doublestar algorithm similar to the Go library used in
+    old syftbox.
     Key behavior: ** matches zero or more path segments (directories).
     """
     # Handle the simplest cases first
@@ -180,8 +181,9 @@ def _match_doublestar(pattern: str, path: str) -> bool:
 
     # Match the prefix
     if prefix:
-        # For doublestar patterns, prefix should match at the beginning of the path
-        # or we need to try matching the entire pattern at later positions (for leading **)
+        # For doublestar patterns, prefix should match at the beginning of the
+        # path or we need to try matching the entire pattern at later positions
+        # (for leading **)
         if path == prefix:
             # Exact match
             remaining = ""
@@ -505,7 +507,7 @@ class SyftFile:
                 url_parts = path[7:].split("/", 1)  # Remove "syft://" prefix
                 if "@" in url_parts[0]:
                     self._syft_user = url_parts[0]
-            except:
+            except Exception:
                 pass
 
         resolved_path = resolve_path(str(path))
@@ -536,7 +538,8 @@ class SyftFile:
     def has_yaml(self) -> bool:
         """Check if this file has any associated yaml permission files."""
         # Check if any yaml files were found during permission resolution
-        # This is simpler: if we have ANY permissions (including "*"), then yaml files exist
+        # This is simpler: if we have ANY permissions (including "*"),
+        # then yaml files exist
         perms = self._get_all_permissions()
 
         # Check each permission type
@@ -615,7 +618,8 @@ class SyftFile:
                                     continue  # Skip this rule for directories
 
                                 # Check if symlinks are allowed
-                                if not limits.get("allow_symlinks", True) and self._is_symlink:
+                                if not limits.get("allow_symlinks",
+                                    True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
 
                                 # Check file size limits
@@ -651,11 +655,13 @@ class SyftFile:
                         limits = rule.get("limits", {})
                         if limits:
                             # Check if directories are allowed
-                            if not limits.get("allow_dirs", True) and self._path.is_dir():
+                            if not limits.get("allow_dirs",
+                                True) and self._path.is_dir():
                                 continue  # Skip this rule for directories
 
                             # Check if symlinks are allowed
-                            if not limits.get("allow_symlinks", True) and self._is_symlink:
+                            if not limits.get("allow_symlinks",
+                                True) and self._is_symlink:
                                 continue  # Skip this rule for symlinks
 
                             # Check file size limits
@@ -716,7 +722,8 @@ class SyftFile:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons("*", "read")
-            create_has, create_reasons = self._check_permission_with_reasons("*", "create")
+            create_has, create_reasons = self._check_permission_with_reasons(
+                "*", "create")
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
 
@@ -754,7 +761,10 @@ class SyftFile:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
+            if not permission_reasons and not any([read_has,
+                create_has,
+                write_has,
+                admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -800,9 +810,12 @@ class SyftFile:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons(user, "read")
-            create_has, create_reasons = self._check_permission_with_reasons(user, "create")
-            write_has, write_reasons = self._check_permission_with_reasons(user, "write")
-            admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
+            create_has, create_reasons = self._check_permission_with_reasons(
+                user, "create")
+            write_has, write_reasons = self._check_permission_with_reasons(
+                user, "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons(
+                user, "admin")
 
             # Collect reasons with permission level prefixes
             permission_reasons = []
@@ -838,7 +851,10 @@ class SyftFile:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
+            if not permission_reasons and not any([read_has,
+                create_has,
+                write_has,
+                admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -1049,9 +1065,11 @@ class SyftFile:
 
             # Create iframe to display the file-editor
             return f"""
-            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42; border-radius: 8px; overflow: hidden; background: #1e1e1e;">
-                <iframe src="{editor_url}" 
-                        style="width: 100%; height: 100%; border: none; background: transparent;" 
+            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42;
+                         border-radius: 8px; overflow: hidden; background: #1e1e1e;">
+                <iframe src="{editor_url}"
+                        style="width: 100%; height: 100%; border: none;
+                               background: transparent;"
                         frameborder="0"
                         allow="clipboard-read; clipboard-write">
                 </iframe>
@@ -1275,7 +1293,8 @@ class SyftFile:
                                         continue  # Skip this rule for directories
 
                                     # Check if symlinks are allowed
-                                    if not limits.get("allow_symlinks", True) and self._is_symlink:
+                                    if not limits.get("allow_symlinks",
+                                        True) and self._is_symlink:
                                         continue  # Skip this rule for symlinks
 
                                     # Check file size limits
@@ -1332,11 +1351,13 @@ class SyftFile:
                             limits = rule.get("limits", {})
                             if limits:
                                 # Check if directories are allowed
-                                if not limits.get("allow_dirs", True) and self._path.is_dir():
+                                if not limits.get("allow_dirs",
+                                    True) and self._path.is_dir():
                                     continue  # Skip this rule for directories
 
                                 # Check if symlinks are allowed
-                                if not limits.get("allow_symlinks", True) and self._is_symlink:
+                                if not limits.get("allow_symlinks",
+                                    True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
 
                                 # Check file size limits
@@ -1502,7 +1523,8 @@ class SyftFile:
         explanation = f"Permission analysis for {user} on {self._path}:\n\n"
 
         for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
+            has_perm, reasons = self._check_permission_with_reasons(
+                user, perm)  # type: ignore
             status = "✓ GRANTED" if has_perm else "✗ DENIED"
             explanation += f"{perm.upper()}: {status}\n"
             for reason in reasons:
@@ -1521,7 +1543,8 @@ class SyftFile:
         Set file limits for this file's permissions (compatible with old ACL).
 
         Args:
-            max_size: Maximum file size in bytes (None to keep current, pass explicitly to change)
+            max_size: Maximum file size in bytes (None to keep current,
+                pass explicitly to change)
             allow_dirs: Whether to allow directories (None to keep current)
             allow_symlinks: Whether to allow symlinks (None to keep current)
         """
@@ -1643,7 +1666,7 @@ class SyftFolder:
                 url_parts = path[7:].split("/", 1)  # Remove "syft://" prefix
                 if "@" in url_parts[0]:
                     self._syft_user = url_parts[0]
-            except:
+            except Exception:
                 pass
 
         resolved_path = resolve_path(str(path))
@@ -1877,7 +1900,8 @@ class SyftFolder:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons("*", "read")
-            create_has, create_reasons = self._check_permission_with_reasons("*", "create")
+            create_has, create_reasons = self._check_permission_with_reasons(
+                "*", "create")
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
 
@@ -1915,7 +1939,10 @@ class SyftFolder:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
+            if not permission_reasons and not any([read_has,
+                create_has,
+                write_has,
+                admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -1961,9 +1988,12 @@ class SyftFolder:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons(user, "read")
-            create_has, create_reasons = self._check_permission_with_reasons(user, "create")
-            write_has, write_reasons = self._check_permission_with_reasons(user, "write")
-            admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
+            create_has, create_reasons = self._check_permission_with_reasons(
+                user, "create")
+            write_has, write_reasons = self._check_permission_with_reasons(
+                user, "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons(
+                user, "admin")
 
             # Collect reasons with permission level prefixes
             permission_reasons = []
@@ -1999,7 +2029,10 @@ class SyftFolder:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
+            if not permission_reasons and not any([read_has,
+                create_has,
+                write_has,
+                admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -2210,9 +2243,11 @@ class SyftFolder:
 
             # Create iframe to display the file-editor
             return f"""
-            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42; border-radius: 8px; overflow: hidden; background: #1e1e1e;">
-                <iframe src="{editor_url}" 
-                        style="width: 100%; height: 100%; border: none; background: transparent;" 
+            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42;
+                         border-radius: 8px; overflow: hidden; background: #1e1e1e;">
+                <iframe src="{editor_url}"
+                        style="width: 100%; height: 100%; border: none;
+                               background: transparent;"
                         frameborder="0"
                         allow="clipboard-read; clipboard-write">
                 </iframe>
@@ -2504,7 +2539,8 @@ class SyftFolder:
         explanation = f"Permission analysis for {user} on {self._path}:\n\n"
 
         for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
+            has_perm, reasons = self._check_permission_with_reasons(
+                user, perm)  # type: ignore
             status = "✓ GRANTED" if has_perm else "✗ DENIED"
             explanation += f"{perm.upper()}: {status}\n"
             for reason in reasons:
@@ -2523,7 +2559,8 @@ class SyftFolder:
         Set file limits for this folder's permissions.
 
         Args:
-            max_size: Maximum file size in bytes (None to keep current, pass explicitly to change)
+            max_size: Maximum file size in bytes (None to keep current,
+                pass explicitly to change)
             allow_dirs: Whether to allow directories (None to keep current)
             allow_symlinks: Whether to allow symlinks (None to keep current)
         """
@@ -2656,13 +2693,15 @@ class SyftFolder:
                 for permission, users in perms.items():
                     for user in users:
                         if permission in ["read", "create", "write", "admin"]:
-                            file_obj._grant_access(user, permission)  # type: ignore[arg-type]
+                            file_obj._grant_access(user,
+                                permission)  # type: ignore[arg-type]
             elif new_item_path.is_dir():
                 folder_obj = SyftFolder(new_item_path)
                 for permission, users in perms.items():
                     for user in users:
                         if permission in ["read", "create", "write", "admin"]:
-                            folder_obj._grant_access(user, permission)  # type: ignore[arg-type]
+                            folder_obj._grant_access(user,
+                                permission)  # type: ignore[arg-type]
 
         return new_folder
 

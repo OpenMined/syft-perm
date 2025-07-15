@@ -117,8 +117,8 @@ class Files:
     def _check_server(self) -> _Union[str, None]:
         """Check if syft-perm server is available. Returns server URL or None."""
         try:
-            import urllib.request
             import json
+            import urllib.request
             from pathlib import Path
 
             # First check config file for port
@@ -905,9 +905,9 @@ class Files:
 
         # Check if server is available
         try:
-            import urllib.request
-            import urllib.error
             import json
+            import urllib.error
+            import urllib.request
 
             server_available = False
             server_port = None
@@ -1733,7 +1733,7 @@ class Files:
         <script>
         (function() {{
             // Store all files data
-            var allFiles = {json.dumps(all_files)};
+            var allFiles = {json.dumps(all_files, ensure_ascii=True, separators=(',', ':'))};
             
             // Create chronological index based on modified date (oldest first)
             var sortedByDate = allFiles.slice().sort(function(a, b) {{
@@ -1756,7 +1756,7 @@ class Files:
             var searchHistory = [];
             var adminHistory = [];
             var showFooterTip = {'true' if show_footer_tip else 'false'};
-            var footerTip = {json.dumps(footer_tip)};
+            var footerTip = {json.dumps(footer_tip, ensure_ascii=True, separators=(',', ':'))};
             
             // WebSocket for real-time file updates
             var ws = null;
@@ -2680,7 +2680,7 @@ class Files:
         }})();
         
         // Background server checking - only run when server was not initially available
-        {"" if server_available else f"""
+        {"" if server_available else """
         // Use a unique variable name to avoid redeclaration errors
         if (typeof window.syftPermServerFound_{container_id} === 'undefined') {{
             window.syftPermServerFound_{container_id} = false;
@@ -3491,11 +3491,11 @@ def is_dark():
         bool: True if dark mode is detected, False otherwise
     """
     try:
-        import os
-        import json
-        from pathlib import Path
-        import re
         import builtins
+        import json
+        import os
+        import re
+        from pathlib import Path
 
         # First, try to read JupyterLab theme settings file
         jupyter_config_paths = [

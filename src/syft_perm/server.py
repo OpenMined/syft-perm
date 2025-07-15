@@ -108,8 +108,8 @@ if _SERVER_AVAILABLE:
 
     async def broadcast_file_change(action: str, file_path: str):
         """Broadcast file change to all connected WebSocket clients."""
-        from pathlib import Path
         import json
+        from pathlib import Path
 
         # Skip hidden files and non-datasite files
         path = Path(file_path)
@@ -179,7 +179,7 @@ if _SERVER_AVAILABLE:
                                 user_list = ", ".join(users)
                             permissions_summary.append(f"{perm_level}: {user_list}")
                     file_info["permissions_summary"] = permissions_summary
-                except:
+                except Exception:
                     pass
 
             message = json.dumps({"action": action, "file": file_info})
@@ -216,11 +216,12 @@ if _SERVER_AVAILABLE:
     def setup_file_watcher():
         """Set up file system watcher for SyftBox datasites directory."""
         logger.info("[FILE WATCHER] Setting up file watcher...")
+        import asyncio
         import threading
         from pathlib import Path
-        from watchdog.observers import Observer
+
         from watchdog.events import FileSystemEventHandler
-        import asyncio
+        from watchdog.observers import Observer
 
         class SyftBoxFileHandler(FileSystemEventHandler):
             """Handler for file system events in SyftBox datasites."""
@@ -355,8 +356,8 @@ if _SERVER_AVAILABLE:
         return {"message": "SyftPerm Permission Editor", "docs": "/docs"}
 
     @app.get("/permissions/{path:path}", response_model=PermissionResponse)  # type: ignore[misc]
-    async def get_permissions(path: str) -> PermissionResponse:
-        """Get permissions for a file or folder."""
+    async def get_permissions(path: str, include_reasons: bool = Query(False)) -> PermissionResponse:
+        """Get permissions for a file or folder, optionally with detailed reasons."""
         try:
             # Resolve the path
             file_path = Path(path)
@@ -368,6 +369,23 @@ if _SERVER_AVAILABLE:
 
             # Get current permissions
             permissions = syft_obj._get_all_permissions()
+            
+            # Add permission reasons if requested
+            if include_reasons:
+                permissions_with_reasons = {}
+                for user, user_perms in permissions.items():
+                    permissions_with_reasons[user] = {
+                        "permissions": user_perms,
+                        "reasons": {}
+                    }
+                    # Get detailed reasons for each permission level
+                    for perm in ["read", "create", "write", "admin"]:
+                        has_perm, reasons = syft_obj._check_permission_with_reasons(user, perm)
+                        permissions_with_reasons[user]["reasons"][perm] = {
+                            "granted": has_perm,
+                            "reasons": reasons
+                        }
+                permissions = permissions_with_reasons
 
             # Get compliance information
             if hasattr(syft_obj, "get_file_limits"):
@@ -626,6 +644,7 @@ if _SERVER_AVAILABLE:
     ) -> Dict[str, Any]:
         """Get files data for the widget with filtering support."""
         import asyncio
+
         from . import files as sp_files
 
         # Reset progress
@@ -702,7 +721,6 @@ if _SERVER_AVAILABLE:
         """Restart the server."""
         import os
         import sys
-        import signal
 
         # Send response before restarting
         response = {"status": "restarting", "message": "Server is restarting..."}
@@ -1442,15 +1460,11 @@ def get_files_widget_html(
     current_user_email: str = "",
 ) -> str:
     """Generate the files widget HTML for web serving."""
-    import html as html_module
     import json
     import random
     import uuid
-    from datetime import datetime
-    from pathlib import Path
 
     # Import needed functions
-    from . import files as sp_files
     from . import is_dark
 
     container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
@@ -2181,7 +2195,7 @@ def get_files_widget_html(
         var sortColumn = 'modified';  // Default sort by modified date
         var sortDirection = 'desc';    // Default descending (newest first)
         var chronologicalIds = {{}};
-        var currentUserEmail = {json.dumps(current_user_email)};
+        var currentUserEmail = {json.dumps(current_user_email, ensure_ascii=True, separators=(',', ':'))};
         
         // WebSocket for real-time file updates
         var ws = null;
@@ -2345,7 +2359,7 @@ def get_files_widget_html(
         }}
         
         var showFooterTip = {'true' if show_footer_tip else 'false'};
-        var footerTip = {json.dumps(footer_tip)};
+        var footerTip = {json.dumps(footer_tip, ensure_ascii=True, separators=(',', ':'))};
 
         // All the JavaScript functions from the template
         function escapeHtml(text) {{
@@ -3085,14 +3099,14 @@ def get_files_widget_html(
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
                                     '<line x1="12" y1="5" x2="12" y2="19"></line>' +
                                     '<line x1="5" y1="12" x2="19" y2="12"></line>' +
-                                '</svg> New</button>';
+                                '</svg></button>';
                 }} else {{
                     var disabledReason = !file.is_dir ? "New files can only be created in folders" : "You need create, write, or admin permissions to create files";
                     html += '<button class="btn btn-gray" style="opacity: 0.3; cursor: not-allowed;" title="' + disabledReason + '" disabled>' +
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
                                     '<line x1="12" y1="5" x2="12" y2="19"></line>' +
                                     '<line x1="5" y1="12" x2="19" y2="12"></line>' +
-                                '</svg> New</button>';
+                                '</svg></button>';
                 }}
                 
                 html += '<button class="btn btn-gray btn-clickable" onclick="event.stopPropagation(); openFileEditor_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Open in editor">Open</button>';
@@ -3113,8 +3127,12 @@ def get_files_widget_html(
                                 '</svg> Share</button>';
                 }}
                 
-                html += '<button class="btn btn-purple btn-clickable" onclick="event.stopPropagation(); copyPath_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Copy path">Copy</button>' +
-                            '<button class="btn btn-red" title="Delete file">' +
+                html += '<button class="btn btn-purple btn-clickable" onclick="event.stopPropagation(); copyPath_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Copy path">Copy</button>';
+                
+                // Add delete button with permission check
+                var canDelete = isAdmin || canCreate; // Users with write or admin permissions can delete
+                if (canDelete) {{
+                    html += '<button class="btn btn-red btn-clickable" onclick="event.stopPropagation(); confirmDelete_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Delete ' + (isDir ? 'folder' : 'file') + '">' +
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
                                     '<path d="M3 6h18"></path>' +
                                     '<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>' +
@@ -3122,8 +3140,20 @@ def get_files_widget_html(
                                     '<line x1="10" x2="10" y1="11" y2="17"></line>' +
                                     '<line x1="14" x2="14" y1="11" y2="17"></line>' +
                                 '</svg>' +
-                            '</button>' +
-                        '</div>' +
+                            '</button>';
+                }} else {{
+                    html += '<button class="btn btn-gray" disabled title="You need write or admin permissions to delete" style="opacity: 0.3; cursor: not-allowed;">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5;">' +
+                                    '<path d="M3 6h18"></path>' +
+                                    '<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>' +
+                                    '<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>' +
+                                    '<line x1="10" x2="10" y1="11" y2="17"></line>' +
+                                    '<line x1="14" x2="14" y1="11" y2="17"></line>' +
+                                '</svg>' +
+                            '</button>';
+                }}
+                
+                html += '</div>' +
                     '</td>' +
                 '</tr>';
             }}
@@ -3285,6 +3315,63 @@ def get_files_widget_html(
                 }}, 2000);
             }}).catch(function() {{
                 showStatus('Failed to copy to clipboard');
+            }});
+        }};
+
+        // Confirm delete dialog
+        window.confirmDelete_{container_id} = function(path) {{
+            var isDir = false;
+            // Check if it's a directory based on the files array
+            for (var i = 0; i < {container_id}_files.length; i++) {{
+                if ({container_id}_files[i].path === path) {{
+                    isDir = {container_id}_files[i].is_dir;
+                    break;
+                }}
+            }}
+            
+            var itemType = isDir ? 'folder' : 'file';
+            var filename = path.split('/').pop() || path;
+            var message = 'Are you sure you want to delete this ' + itemType + '?\\n\\n' + filename;
+            
+            if (isDir) {{
+                message += '\\n\\nWarning: This will delete the folder and all its contents permanently.';
+            }}
+            
+            if (confirm(message)) {{
+                deleteItem_{container_id}(path, isDir);
+            }}
+        }};
+
+        // Delete item function
+        window.deleteItem_{container_id} = function(path, isDir) {{
+            showStatus('Deleting ' + (isDir ? 'folder' : 'file') + '...');
+            
+            fetch('/api/filesystem/delete?path=' + encodeURIComponent(path) + '&recursive=' + isDir, {{
+                method: 'DELETE',
+                headers: {{
+                    'Content-Type': 'application/json'
+                }}
+            }})
+            .then(function(response) {{
+                if (response.ok) {{
+                    showStatus((isDir ? 'Folder' : 'File') + ' deleted successfully!');
+                    // Refresh the file list
+                    loadFiles_{container_id}();
+                    setTimeout(function() {{
+                        updateStatus();
+                    }}, 2000);
+                }} else {{
+                    return response.text().then(function(text) {{
+                        throw new Error(text || 'Failed to delete ' + (isDir ? 'folder' : 'file'));
+                    }});
+                }}
+            }})
+            .catch(function(error) {{
+                console.error('Delete error:', error);
+                showStatus('Error: ' + error.message);
+                setTimeout(function() {{
+                    updateStatus();
+                }}, 3000);
             }});
         }};
 

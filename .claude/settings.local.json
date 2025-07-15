@@ -42,7 +42,12 @@
       "Bash(./test_final.sh:*)",
       "Bash(grep -n \"^def open\" /Users/atrask/Desktop/Laboratory/syft-perm/src/syft_perm/__init__.py)",
       "Bash(PYTHONPATH=src python3 test_syft_url_context.py)",
-      "Bash(echo $SYFTBOX_USER_EMAIL)"
+      "Bash(echo $SYFTBOX_USER_EMAIL)",
+      "Bash(isort:*)",
+      "Bash(flake8:*)",
+      "Bash(mypy:*)",
+      "Bash(pip install isort flake8 mypy)",
+      "Bash(black:*)"
     ],
     "deny": []
   }
