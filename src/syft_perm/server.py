@@ -813,10 +813,11 @@ if _SERVER_AVAILABLE:
         return HTMLResponse(content=generate_editor_html(is_dark_mode=is_dark(), syft_user=syft_user))
     
     @app.get("/file-editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
-    async def file_editor_with_path(path: str, syft_user: Optional[str] = Query(None)) -> HTMLResponse:
+    async def file_editor_with_path(path: str, syft_user: Optional[str] = Query(None), new: Optional[str] = Query(None)) -> HTMLResponse:
         """Serve the file editor interface with a specific path."""
         from . import is_dark
-        return HTMLResponse(content=generate_editor_html(initial_path=path, is_dark_mode=is_dark(), syft_user=syft_user))
+        is_new_file = new == "true"
+        return HTMLResponse(content=generate_editor_html(initial_path=path, is_dark_mode=is_dark(), syft_user=syft_user, is_new_file=is_new_file))
     
     @app.get("/share-modal", response_class=HTMLResponse)  # type: ignore[misc]
     async def share_modal(path: str = Query(...), syft_user: Optional[str] = Query(None)) -> HTMLResponse:
@@ -1715,6 +1716,11 @@ def get_files_widget_html(
         background: {'#1e3a5f' if is_dark_mode else '#dbeafe'};
         color: {'#60a5fa' if is_dark_mode else '#3b82f6'};
     }}
+    
+    #{container_id} .btn-green {{
+        background: {'#14532d' if is_dark_mode else '#d1fae5'};
+        color: {'#4ade80' if is_dark_mode else '#16a34a'};
+    }}
 
     #{container_id} .btn-purple {{
         background: {'#3b2e4d' if is_dark_mode else '#e9d5ff'};
@@ -1924,6 +1930,11 @@ def get_files_widget_html(
     
     .btn-secondary:hover {{
         background: {'#374151' if is_dark_mode else '#d1d5db'};
+    }}
+    
+    .autocomplete-option:focus {{
+        background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
+        outline: none;
     }}
     
     #{container_id} .date-text {{
@@ -2386,39 +2397,55 @@ def get_files_widget_html(
         }};
         
         // Modal functions - expose globally
-        window.openNewFileModal = function() {{
+        window.openNewFileModal = function(prefilledPath) {{
             document.getElementById('newFileModal').style.display = 'block';
             var pathInput = document.getElementById('newFilePath');
             
-            // Try to auto-populate with current user's datasite
-            if (typeof currentUserEmail !== 'undefined' && currentUserEmail) {{
-                pathInput.value = 'syft://' + currentUserEmail + '/';
+            // If a path is provided, use it (from row "New" button)
+            if (prefilledPath) {{
+                pathInput.value = 'syft://' + prefilledPath + '/';
             }} else {{
-                // Try to detect from existing files
-                var userEmails = new Set();
-                allFiles.forEach(function(file) {{
-                    if (file.datasite_owner) {{
-                        userEmails.add(file.datasite_owner);
+                // Try to auto-populate with current user's datasite
+                if (typeof currentUserEmail !== 'undefined' && currentUserEmail) {{
+                    pathInput.value = 'syft://' + currentUserEmail + '/';
+                }} else {{
+                    // Try to detect from existing files
+                    var userEmails = new Set();
+                    allFiles.forEach(function(file) {{
+                        if (file.datasite_owner) {{
+                            userEmails.add(file.datasite_owner);
+                        }}
+                    }});
+                    
+                    // If only one user, use that
+                    if (userEmails.size === 1) {{
+                        var email = Array.from(userEmails)[0];
+                        pathInput.value = 'syft://' + email + '/';
                     }}
-                }});
-                
-                // If only one user, use that
-                if (userEmails.size === 1) {{
-                    var email = Array.from(userEmails)[0];
-                    pathInput.value = 'syft://' + email + '/';
                 }}
             }}
             
             pathInput.focus();
             // Move cursor to end
             pathInput.setSelectionRange(pathInput.value.length, pathInput.value.length);
+            
+            // Trigger autocomplete to show suggestions
+            if (pathInput.value) {{
+                // Use setTimeout to ensure the focus and DOM updates are complete
+                setTimeout(function() {{
+                    var event = new Event('input', {{ bubbles: true }});
+                    pathInput.dispatchEvent(event);
+                }}, 10);
+            }}
         }};
         
         window.closeNewFileModal = function() {{
             document.getElementById('newFileModal').style.display = 'none';
             document.getElementById('newFilePath').value = '';
-            document.getElementById('newFileAutocomplete').innerHTML = '';
-            document.getElementById('newFileAutocomplete').classList.remove('show');
+            var dropdown = document.getElementById('newFileAutocomplete');
+            dropdown.innerHTML = '';
+            dropdown.classList.remove('show');
+            // Note: restoreArrowKeys is scoped to setupNewFileAutocomplete
         }};
         
         window.createNewFile = function() {{
@@ -2468,6 +2495,7 @@ def get_files_widget_html(
             function showAutocompleteSuggestions() {{
                 var value = input.value;
                 autocompleteIndex = -1;
+                autocompleteSuggestions = [];
                 
                 if (!value || !value.includes('://')) {{
                     dropdown.innerHTML = '';
@@ -2538,27 +2566,84 @@ def get_files_widget_html(
                         var option = document.createElement('div');
                         option.className = 'autocomplete-option';
                         option.textContent = suggestion;
+                        option.tabIndex = -1; // Make focusable but not in tab order
                         option.onclick = function() {{
                             input.value = suggestion;
                             dropdown.innerHTML = '';
                             dropdown.classList.remove('show');
+                            autocompleteIndex = -1;
+                            autocompleteSuggestions = [];
                             input.focus();
                         }};
+                        // Handle keyboard events on the option itself
+                        option.addEventListener('keydown', function(e) {{
+                            if (e.key === 'Enter') {{
+                                e.preventDefault();
+                                input.value = suggestion;
+                                dropdown.innerHTML = '';
+                                dropdown.classList.remove('show');
+                                input.focus();
+                            }} else if (e.key === 'Escape') {{
+                                dropdown.innerHTML = '';
+                                dropdown.classList.remove('show');
+                                input.focus();
+                            }} else if (e.key === 'ArrowDown') {{
+                                e.preventDefault();
+                                var nextOption = option.nextElementSibling;
+                                if (nextOption) {{
+                                    nextOption.focus();
+                                }}
+                            }} else if (e.key === 'ArrowUp') {{
+                                e.preventDefault();
+                                var prevOption = option.previousElementSibling;
+                                if (prevOption) {{
+                                    prevOption.focus();
+                                }} else {{
+                                    input.focus();
+                                }}
+                            }}
+                        }});
                         dropdown.appendChild(option);
                     }});
                     dropdown.classList.add('show');
+                    overrideArrowKeys(); // Override arrow keys when showing dropdown
                 }} else {{
                     dropdown.innerHTML = '';
                     dropdown.classList.remove('show');
+                    restoreArrowKeys(); // Restore arrow keys when hiding dropdown
                 }}
             }}
             
             input.addEventListener('input', showAutocompleteSuggestions);
             input.addEventListener('focus', showAutocompleteSuggestions);
             
-            // Handle keyboard navigation
+            // Override the input's default arrow key behavior
+            var originalKeyDown = null;
+            
+            // When dropdown is shown, override arrow key behavior
+            function overrideArrowKeys() {{
+                if (!originalKeyDown) {{
+                    originalKeyDown = input.onkeydown;
+                    input.onkeydown = function(e) {{
+                        if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && dropdown.classList.contains('show')) {{
+                            return false;
+                        }}
+                        if (originalKeyDown) return originalKeyDown.call(this, e);
+                    }};
+                }}
+            }}
+            
+            // Restore original behavior when dropdown is hidden
+            function restoreArrowKeys() {{
+                if (originalKeyDown !== null) {{
+                    input.onkeydown = originalKeyDown;
+                    originalKeyDown = null;
+                }}
+            }}
+            
+            // Handle keyboard navigation with capture phase to ensure it runs first
             input.addEventListener('keydown', function(e) {{
-                var dropdown = document.getElementById('newFileAutocomplete');
+                // Use the outer dropdown variable, don't redeclare
                 var options = dropdown.querySelectorAll('.autocomplete-option');
                 
                 if (e.key === 'Tab') {{
@@ -2573,18 +2658,25 @@ def get_files_widget_html(
                         }}
                         dropdown.innerHTML = '';
                         dropdown.classList.remove('show');
+                        restoreArrowKeys();
                     }}
                 }} else if (e.key === 'ArrowDown') {{
-                    if (dropdown.classList.contains('show') && options.length > 0) {{
+                    if (dropdown.classList.contains('show') && autocompleteSuggestions.length > 0) {{
                         e.preventDefault();
-                        autocompleteIndex = Math.min(autocompleteIndex + 1, options.length - 1);
-                        updateAutocompleteSelection(options);
+                        var firstOption = dropdown.querySelector('.autocomplete-option');
+                        if (firstOption) {{
+                            firstOption.focus();
+                        }}
+                        return false;
                     }}
                 }} else if (e.key === 'ArrowUp') {{
-                    if (dropdown.classList.contains('show') && options.length > 0) {{
+                    if (dropdown.classList.contains('show') && autocompleteSuggestions.length > 0) {{
                         e.preventDefault();
-                        autocompleteIndex = Math.max(autocompleteIndex - 1, -1);
-                        updateAutocompleteSelection(options);
+                        var lastOption = dropdown.querySelector('.autocomplete-option:last-child');
+                        if (lastOption) {{
+                            lastOption.focus();
+                        }}
+                        return false;
                     }}
                 }} else if (e.key === 'Enter') {{
                     if (autocompleteIndex >= 0 && autocompleteIndex < autocompleteSuggestions.length) {{
@@ -2597,14 +2689,16 @@ def get_files_widget_html(
                     dropdown.innerHTML = '';
                     dropdown.classList.remove('show');
                     autocompleteIndex = -1;
+                    restoreArrowKeys();
                 }}
-            }});
+            }}, true); // Use capture phase
             
             // Hide dropdown when clicking outside
             document.addEventListener('click', function(e) {{
                 if (!input.contains(e.target) && !dropdown.contains(e.target)) {{
                     dropdown.innerHTML = '';
                     dropdown.classList.remove('show');
+                    restoreArrowKeys();
                 }}
             }});
         }}
@@ -2904,8 +2998,18 @@ def get_files_widget_html(
                 html += '</div>' +
                     '</td>' +
                     '<td>' +
-                        '<div style="display: flex; gap: 0.125rem;">' +
-                            '<button class="btn btn-gray btn-clickable" onclick="event.stopPropagation(); openFileEditor_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Open in editor">Open</button>';
+                        '<div style="display: flex; gap: 0.125rem;">';
+                
+                // Add "New" button only for directories
+                if (file.is_dir) {{
+                    html += '<button class="btn btn-green btn-clickable" onclick="event.stopPropagation(); openNewModal_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Create new file or folder">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                                    '<line x1="12" y1="5" x2="12" y2="19"></line>' +
+                                    '<line x1="5" y1="12" x2="19" y2="12"></line>' +
+                                '</svg> New</button>';
+                }}
+                
+                html += '<button class="btn btn-gray btn-clickable" onclick="event.stopPropagation(); openFileEditor_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Open in editor">Open</button>';
                 
                 if (isAdmin) {{
                     html += '<button class="btn btn-blue btn-clickable" onclick="event.stopPropagation(); openShareModal_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Share permissions">' +
@@ -3169,7 +3273,7 @@ def get_files_widget_html(
         }};
         
         // Open file editor modal
-        window.openFileEditor_{container_id} = function(filePath) {{
+        window.openFileEditor_{container_id} = function(filePath, isNewFile) {{
             // Create modal overlay
             var overlay = document.createElement('div');
             overlay.className = 'modal';
@@ -3186,7 +3290,11 @@ def get_files_widget_html(
             
             // Create iframe
             var iframe = document.createElement('iframe');
-            iframe.src = '/file-editor/' + encodeURIComponent(filePath) + '?syft_user=' + encodeURIComponent(CONFIG.currentUserEmail);
+            var url = '/file-editor/' + encodeURIComponent(filePath) + '?syft_user=' + encodeURIComponent(CONFIG.currentUserEmail);
+            if (isNewFile) {{
+                url += '&new=true';
+            }}
+            iframe.src = url;
             iframe.style.width = '100%';
             iframe.style.height = '100%';
             iframe.style.border = 'none';
@@ -3208,9 +3316,120 @@ def get_files_widget_html(
                 if (e.data && (e.data === 'closeFileEditor' || e.data.action === 'closeFileEditor')) {{
                     document.body.removeChild(overlay);
                     window.removeEventListener('message', messageHandler);
+                    
+                    // If it was a new file that was saved, refresh the file list
+                    if (isNewFile && e.data && e.data.saved) {{
+                        loadFiles();
+                    }}
                 }}
             }};
             window.addEventListener('message', messageHandler);
+        }};
+        
+        // Open new file/folder modal
+        window.openNewModal_{container_id} = function(folderPath) {{
+            // Use the main new file modal but with pre-populated path
+            openNewFileModal(folderPath);
+        }};
+
+        window.createNewItem_{container_id} = function(folderPath, modalElement) {{
+                '<div style="margin: 20px 0;">' +
+                    '<label style="display: block; margin-bottom: 10px;">' +
+                        '<input type="radio" name="newType" value="file" checked style="margin-right: 8px;">File' +
+                    '</label>' +
+                    '<label style="display: block; margin-bottom: 10px;">' +
+                        '<input type="radio" name="newType" value="folder" style="margin-right: 8px;">Folder' +
+                    '</label>' +
+                '</div>' +
+                '<div style="margin: 20px 0;">' +
+                    '<label style="display: block; margin-bottom: 5px;">Name:</label>' +
+                    '<input type="text" id="newItemName" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Enter name...">' +
+                '</div>' +
+                '<div style="text-align: right; margin-top: 20px;">' +
+                    '<button class="btn btn-gray" style="margin-right: 10px;" id="cancelNewBtn">Cancel</button>' +
+                    '<button class="btn btn-green" id="createNewBtn">Create</button>' +
+                '</div>';
+            
+            // Store folderPath in closure
+            var createBtn = modalContent.querySelector('#createNewBtn');
+            var cancelBtn = modalContent.querySelector('#cancelNewBtn');
+            
+            createBtn.addEventListener('click', function() {{
+                createNewItem_{container_id}(folderPath, overlay);
+            }});
+            
+            cancelBtn.addEventListener('click', function() {{
+                document.body.removeChild(overlay);
+            }});
+            
+            overlay.appendChild(modalContent);
+            document.body.appendChild(overlay);
+            
+            // Focus the input
+            setTimeout(function() {{
+                document.getElementById('newItemName').focus();
+            }}, 100);
+            
+            // Handle close on click outside
+            overlay.addEventListener('click', function(e) {{
+                if (e.target === overlay) {{
+                    document.body.removeChild(overlay);
+                }}
+            }});
+            
+            // Handle Enter key
+            document.getElementById('newItemName').addEventListener('keydown', function(e) {{
+                if (e.key === 'Enter') {{
+                    createNewItem_{container_id}(folderPath, overlay);
+                }}
+            }});
+        }};
+        
+        // Create new file or folder
+        window.createNewItem_{container_id} = function(folderPath, modalElement) {{
+            var itemName = document.getElementById('newItemName').value.trim();
+            if (!itemName) {{
+                alert('Please enter a name');
+                return;
+            }}
+            
+            var isFile = document.querySelector('input[name="newType"]:checked').value === 'file';
+            var fullPath = folderPath + '/' + itemName;
+            
+            if (isFile) {{
+                // Open file editor with new file path
+                document.body.removeChild(modalElement);
+                openFileEditor_{container_id}(fullPath, true);  // true = isNewFile
+            }} else {{
+                // Create folder via API
+                fetch('/api/filesystem/write', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/json',
+                    }},
+                    body: JSON.stringify({{
+                        path: fullPath + '/.gitkeep',  // Create a placeholder file to create the folder
+                        content: '',
+                        create_dirs: true,
+                        syft_user: CONFIG.currentUserEmail
+                    }})
+                }})
+                .then(response => {{
+                    if (response.ok) {{
+                        document.body.removeChild(modalElement);
+                        showStatus('Folder created successfully');
+                        // Refresh the file list
+                        loadFiles();
+                    }} else {{
+                        response.json().then(data => {{
+                            alert('Failed to create folder: ' + (data.detail || 'Unknown error'));
+                        }});
+                    }}
+                }})
+                .catch(error => {{
+                    alert('Failed to create folder: ' + error.message);
+                }});
+            }}
         }};
 
         // Sort table

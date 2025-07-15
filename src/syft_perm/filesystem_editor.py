@@ -350,23 +350,34 @@ class FileSystemManager:
             raise HTTPException(status_code=500, detail=f"Error deleting item: {str(e)}")
 
 
-def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, syft_user: Optional[str] = None) -> str:
+def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, syft_user: Optional[str] = None, is_new_file: bool = False) -> str:
     """Generate the HTML for the filesystem code editor."""
     initial_path = initial_path or str(Path.home())
     
     # Check if initial_path is a file or directory
     is_initial_file = False
     initial_file_content = ""
-    try:
-        path_obj = Path(initial_path)
-        if path_obj.exists() and path_obj.is_file():
-            is_initial_file = True
-            # For files, we'll pass the parent directory as the current path
+    
+    if is_new_file:
+        # For new files, treat as a file and set parent directory
+        is_initial_file = True
+        try:
+            path_obj = Path(initial_path)
             initial_dir = str(path_obj.parent)
-        else:
+        except Exception:
+            # If path parsing fails, use home directory as fallback
+            initial_dir = str(Path.home())
+    else:
+        try:
+            path_obj = Path(initial_path)
+            if path_obj.exists() and path_obj.is_file():
+                is_initial_file = True
+                # For files, we'll pass the parent directory as the current path
+                initial_dir = str(path_obj.parent)
+            else:
+                initial_dir = initial_path
+        except:
             initial_dir = initial_path
-    except:
-        initial_dir = initial_path
     
     # Define theme colors based on dark/light mode
     if is_dark_mode:
@@ -1211,6 +1222,9 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                 // Get syft_user from URL parameter if present
                 this.syftUser = urlParams.get('syft_user') || null;
                 
+                // Check if this is a new file
+                this.isNewFile = urlParams.get('new') === 'true';
+                
                 this.currentPath = pathParam || '{initial_dir}';
                 this.initialFilePath = {'`' + initial_path + '`' if is_initial_file else 'null'};
                 this.isInitialFile = {str(is_initial_file).lower()};
@@ -1218,17 +1232,76 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                 this.selectedFolder = null;
                 this.isModified = false;
                 this.isAdmin = false;  // Default to false until we load a file/directory
-                this.fileOnlyMode = this.isInitialFile;
+                this.fileOnlyMode = this.isInitialFile || this.isNewFile;
                 this.isDarkMode = {str(is_dark_mode).lower()};
                 this.initializeElements();
                 this.setupEventListeners();
                 
-                if (this.isInitialFile) {{
-                    // If initial path is a file, load it directly
-                    this.loadFile(this.initialFilePath);
-                    this.toggleFileOnlyMode(true);
-                    // Hide toggle button when viewing a single file
-                    this.toggleExplorerBtn.style.display = 'none';
+                if (this.isInitialFile || this.isNewFile) {{
+                    if (this.isNewFile) {{
+                        // For new files, create an empty file in memory
+                        const filePath = this.currentPath;
+                        const fileName = filePath.split('/').pop();
+                        const parentDir = filePath.substring(0, filePath.lastIndexOf('/'));
+                        
+                        console.log('Creating new file:', filePath);
+                        console.log('File name:', fileName);
+                        console.log('Parent directory:', parentDir);
+                        
+                        // Set up for a new file
+                        this.currentFile = {{
+                            path: filePath,
+                            content: '',
+                            size: 0,
+                            modified: new Date().toISOString(),
+                            extension: fileName.includes('.') ? '.' + fileName.split('.').pop() : '',
+                            encoding: 'utf-8',
+                            can_write: true,
+                            can_admin: true,
+                            write_users: [this.syftUser || 'unknown']
+                        }};
+                        
+                        this.isModified = true;  // Mark as modified since it's new
+                        this.isReadOnly = false;
+                        this.isAdmin = true;
+                        
+                        // Update UI for the new file
+                        this.editorTitle.textContent = fileName + ' (new)';
+                        
+                        // Show the editor
+                        this.toggleFileOnlyMode(true);
+                        this.toggleExplorerBtn.style.display = 'none';
+                        
+                        // Hide empty state and show editor
+                        this.emptyState.style.display = 'none';
+                        this.editorContainer.style.display = 'none';
+                        this.editor.style.display = 'block';
+                        
+                        // Set editor content
+                        this.editor.value = '';
+                        this.editorInput.value = '';
+                        
+                        // Update status
+                        this.fileInfo.innerHTML = `<strong>${{fileName}}</strong> (new file - unsaved)`;
+                        this.fileSize.textContent = '0 bytes';
+                        this.updateCursorPosition();
+                        
+                        // Focus the editor
+                        this.editor.focus();
+                        
+                        // Update the file browser to show parent directory
+                        // Only load directory if we're not in file-only mode
+                        this.currentPath = parentDir;
+                        if (parentDir && !this.fileOnlyMode) {{
+                            this.loadDirectory(parentDir);
+                        }}
+                    }} else {{
+                        // If initial path is an existing file, load it directly
+                        this.loadFile(this.initialFilePath);
+                        this.toggleFileOnlyMode(true);
+                        // Hide toggle button when viewing a single file
+                        this.toggleExplorerBtn.style.display = 'none';
+                    }}
                 }} else {{
                     // Otherwise load the directory
                     this.loadDirectory(this.currentPath);
@@ -1838,8 +1911,14 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                         content = this.editor.value;
                     }}
                     
+                    // Strip syft:// prefix if present
+                    let filePath = this.currentFile.path;
+                    if (filePath.startsWith('syft://')) {{
+                        filePath = filePath.substring(7); // Remove 'syft://' prefix
+                    }}
+                    
                     const requestBody = {{
-                        path: this.currentFile.path,
+                        path: filePath,
                         content: content
                     }};
                     
@@ -2071,8 +2150,14 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                 
                 const newPath = this.currentPath + '/' + filename;
                 
+                // Strip syft:// prefix if present
+                let filePath = newPath;
+                if (filePath.startsWith('syft://')) {{
+                    filePath = filePath.substring(7); // Remove 'syft://' prefix
+                }}
+                
                 const requestBody = {{
-                    path: newPath,
+                    path: filePath,
                     content: '',
                     create_dirs: true
                 }};
