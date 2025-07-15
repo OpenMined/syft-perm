@@ -9,18 +9,14 @@ Completely decoupled from syft-objects functionality.
 """
 
 import json
-
 import mimetypes
-
 import os
-
 from datetime import datetime
-
 from pathlib import Path
-
 from typing import Any, Dict, Optional
 
 from fastapi import HTTPException
+
 
 def get_current_user_email() -> Optional[str]:
 
@@ -5382,7 +5378,6 @@ def generate_share_modal_html(
     """Generate standalone share modal HTML."""
 
     import json
-
     from pathlib import Path
 
     path_obj = Path(path)

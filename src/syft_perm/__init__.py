@@ -1498,9 +1498,9 @@ class Files:
         }}
 
         #{container_id} .btn {{
-            padding: 0.125rem 0.375rem;
+            padding: 0.09375rem 0.1875rem;
             border-radius: 0.25rem;
-            font-size: 0.75rem;
+            font-size: 0.6875rem;
             border: none;
             cursor: not-allowed;
             display: inline-flex;
@@ -1696,7 +1696,7 @@ class Files:
                             </div>
                         </td>
                         <td>
-                            <div style="display: flex; gap: 0.125rem;">
+                            <div style="display: flex; gap: 0.03125rem;">
                                 <button class="btn btn-gray" title="Open in editor">File</button>
                                 <button class="btn btn-blue" title="View file info">Info</button>
                                 <button class="btn btn-purple" title="Copy path">Copy</button>
@@ -2247,7 +2247,7 @@ class Files:
                     html += '</div>' +
                         '</td>' +
                         '<td>' +
-                            '<div style="display: flex; gap: 0.125rem;">' +
+                            '<div style="display: flex; gap: 0.03125rem;">' +
                                 '<button class="btn btn-gray" title="Open in editor">File</button>' +
                                 '<button class="btn btn-blue" title="View file info">Info</button>' +
                                 '<button class="btn btn-purple" title="Copy path">Copy</button>' +
@@ -2680,7 +2680,7 @@ class Files:
         }})();
         
         // Background server checking - only run when server was not initially available
-        {"" if server_available else """
+        """ + ("" if server_available else """
         // Use a unique variable name to avoid redeclaration errors
         if (typeof window.syftPermServerFound_{container_id} === 'undefined') {{
             window.syftPermServerFound_{container_id} = false;
@@ -2845,7 +2845,7 @@ class Files:
             // Also check once immediately after 1 second
             setTimeout(checkDiscoveryServer_{container_id}, 1000);
         }}
-        """}
+        """) + """
         </script>
         """
 
@@ -3028,9 +3028,9 @@ class FilteredFiles(Files):
         }}
 
         #{container_id} .btn {{
-            padding: 0.125rem 0.375rem;
+            padding: 0.09375rem 0.1875rem;
             border-radius: 0.25rem;
-            font-size: 0.75rem;
+            font-size: 0.6875rem;
             border: none;
             cursor: not-allowed;
             display: inline-flex;
@@ -3178,7 +3178,7 @@ class FilteredFiles(Files):
                             </div>
                         </td>
                         <td>
-                            <div style="display: flex; gap: 0.125rem;">
+                            <div style="display: flex; gap: 0.03125rem;">
                                 <button class="btn btn-gray" title="Open in editor">File</button>
                                 <button class="btn btn-blue" title="View file info">Info</button>
                                 <button class="btn btn-purple" title="Copy path">Copy</button>

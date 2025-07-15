@@ -1747,9 +1747,9 @@ def get_files_widget_html(
     }}
 
     #{container_id} .btn {{
-        padding: 0.125rem 0.375rem;
+        padding: 0.09375rem 0.1875rem;
         border-radius: 0.25rem;
-        font-size: 0.75rem;
+        font-size: 0.6875rem;
         border: none;
         cursor: not-allowed;
         display: inline-flex;
@@ -1786,6 +1786,11 @@ def get_files_widget_html(
     #{container_id} .btn-green {{
         background: {'#1e4032' if is_dark_mode else '#d1fae5'};
         color: {'#34d399' if is_dark_mode else '#10b981'};
+    }}
+
+    #{container_id} .btn-blue {{
+        background: {'#1e3a8a' if is_dark_mode else '#dbeafe'};
+        color: {'#60a5fa' if is_dark_mode else '#3b82f6'};
     }}
 
     #{container_id} .btn-gray {{
@@ -2070,6 +2075,8 @@ def get_files_widget_html(
             </select>
             <button class="btn btn-green btn-clickable" onclick="openNewFileModal()">New</button>
             <button class="btn btn-gray btn-clickable" onclick="restartServer()">Refresh</button>
+            <button id="{container_id}-delete-selected" class="btn btn-red btn-clickable" onclick="deleteSelected_{container_id}()" style="display: none;">Delete Selected</button>
+            <button id="{container_id}-python-selected" class="btn btn-blue btn-clickable" onclick="generatePythonCode_{container_id}()" style="display: none;">Python</button>
             <button class="btn btn-purple btn-clickable" onclick="window.open(window.location.href, '_blank')">Open in Window</button>
         </div>
 
@@ -3091,7 +3098,7 @@ def get_files_widget_html(
                 html += '</div>' +
                     '</td>' +
                     '<td>' +
-                        '<div style="display: flex; gap: 0.125rem;">';
+                        '<div style="display: flex; gap: 0.03125rem;">';
 
                 // Add "New" button based on folder status and permissions
                 if (file.is_dir && canCreate) {{
@@ -3383,6 +3390,7 @@ def get_files_widget_html(
                 cb.checked = selectAllCheckbox.checked;
             }});
             showStatus(selectAllCheckbox.checked ? 'All visible files selected' : 'Selection cleared');
+            updateSelectAllState_{container_id}();
         }};
 
         // Update select all state
@@ -3399,6 +3407,17 @@ def get_files_widget_html(
 
             selectAllCheckbox.checked = allChecked;
             selectAllCheckbox.indeterminate = !allChecked && someChecked;
+            
+            // Show/hide selection buttons based on whether files are selected
+            var deleteBtn = document.getElementById('{container_id}-delete-selected');
+            var pythonBtn = document.getElementById('{container_id}-python-selected');
+            if (someChecked) {{
+                deleteBtn.style.display = 'inline-block';
+                pythonBtn.style.display = 'inline-block';
+            }} else {{
+                deleteBtn.style.display = 'none';
+                pythonBtn.style.display = 'none';
+            }}
         }};
 
         // Open share modal
@@ -3657,6 +3676,142 @@ def get_files_widget_html(
             currentPage = 1;
             renderTable();
         }};
+
+        // Delete selected files
+        window.deleteSelected_{container_id} = function() {{
+            var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]:checked');
+            var selectedFiles = [];
+            var writableFiles = [];
+            
+            checkboxes.forEach(function(cb) {{
+                var row = cb.closest('tr');
+                var pathCell = row.cells[2]; // URL column
+                var fullPath = pathCell.textContent.trim();
+                
+                // Extract the actual file path from syft:// URL
+                var filePath = fullPath;
+                if (fullPath.startsWith('syft://')) {{
+                    var parts = fullPath.substring(7).split('/');
+                    if (parts.length > 1) {{
+                        filePath = '/' + parts.slice(1).join('/');
+                    }}
+                }}
+                
+                selectedFiles.push({{path: filePath, syftPath: fullPath}});
+                
+                // Find the file in filteredFiles to check permissions
+                for (var i = 0; i < filteredFiles.length; i++) {{
+                    if (filteredFiles[i].path === filePath) {{
+                        var file = filteredFiles[i];
+                        var permissions = file.permissions || {{}};
+                        var currentUser = getCurrentUserFromURL();
+                        
+                        // Check if user has write or admin permissions
+                        var hasWrite = permissions.write && permissions.write.includes(currentUser);
+                        var hasAdmin = permissions.admin && permissions.admin.includes(currentUser);
+                        var hasPublicWrite = permissions.write && permissions.write.includes('*');
+                        var hasPublicAdmin = permissions.admin && permissions.admin.includes('*');
+                        
+                        if (hasWrite || hasAdmin || hasPublicWrite || hasPublicAdmin) {{
+                            writableFiles.push({{path: filePath, syftPath: fullPath, isDir: file.is_dir}});
+                        }}
+                        break;
+                    }}
+                }}
+            }});
+            
+            if (selectedFiles.length === 0) {{
+                showStatus('No files selected');
+                return;
+            }}
+            
+            if (writableFiles.length === 0) {{
+                showStatus('You do not have write permissions for any of the selected files');
+                return;
+            }}
+            
+            var skippedCount = selectedFiles.length - writableFiles.length;
+            var message = 'Delete ' + writableFiles.length + ' selected item(s)?';
+            if (skippedCount > 0) {{
+                message += '\\n\\n(' + skippedCount + ' item(s) will be skipped due to insufficient permissions)';
+            }}
+            
+            if (confirm(message)) {{
+                deleteMultipleFiles_{container_id}(writableFiles);
+            }}
+        }};
+        
+        // Generate Python code for selected files
+        window.generatePythonCode_{container_id} = function() {{
+            var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]:checked');
+            var pythonCode = [];
+            
+            checkboxes.forEach(function(cb) {{
+                var row = cb.closest('tr');
+                var pathCell = row.cells[2]; // URL column
+                var fullPath = pathCell.textContent.trim();
+                
+                pythonCode.push('sp.open("' + fullPath + '")');
+            }});
+            
+            if (pythonCode.length === 0) {{
+                showStatus('No files selected');
+                return;
+            }}
+            
+            var code = pythonCode.join('\\n');
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(code).then(function() {{
+                showStatus('Python code copied to clipboard (' + pythonCode.length + ' files)');
+            }}).catch(function() {{
+                // Fallback for older browsers
+                var textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showStatus('Python code copied to clipboard (' + pythonCode.length + ' files)');
+            }});
+        }};
+        
+        // Delete multiple files
+        window.deleteMultipleFiles_{container_id} = function(files) {{
+            var deletePromises = [];
+            var successCount = 0;
+            var errorCount = 0;
+            
+            files.forEach(function(file) {{
+                var promise = fetch('/api/filesystem/delete?path=' + encodeURIComponent(file.path) + '&recursive=' + file.isDir, {{
+                    method: 'DELETE'
+                }}).then(function(response) {{
+                    if (response.ok) {{
+                        successCount++;
+                    }} else {{
+                        errorCount++;
+                    }}
+                }}).catch(function() {{
+                    errorCount++;
+                }});
+                deletePromises.push(promise);
+            }});
+            
+            Promise.all(deletePromises).then(function() {{
+                if (successCount > 0) {{
+                    showStatus(successCount + ' file(s) deleted successfully' + (errorCount > 0 ? ', ' + errorCount + ' failed' : ''));
+                    restartServer(); // Refresh the file list
+                }} else {{
+                    showStatus('Failed to delete files');
+                }}
+            }});
+        }};
+        
+        // Helper function to get current user from URL
+        function getCurrentUserFromURL() {{
+            var urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('user') || 'unknown';
+        }}
 
         // Add real-time search
         document.getElementById('{container_id}-search').addEventListener('input', function() {{
