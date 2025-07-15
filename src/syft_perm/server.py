@@ -369,7 +369,7 @@ if _SERVER_AVAILABLE:
 
             # Get current permissions
             permissions = syft_obj._get_all_permissions()
-            
+
             # Add permission reasons if requested
             if include_reasons:
                 permissions_with_reasons = {}
@@ -1548,23 +1548,23 @@ def get_files_widget_html(
         padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }}
-    
+
     @keyframes float {{
         0%, 100% {{ transform: translateY(0px); }}
         50% {{ transform: translateY(-8px); }}
     }}
-    
+
     .syftbox-logo {{
         animation: float 3s ease-in-out infinite;
         filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
     }}
-    
+
     .progress-bar-gradient {{
         background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
         transition: width 0.4s ease-out;
         border-radius: 3px;
     }}
-    
+
     #{container_id} * {{
         margin: 0;
         padding: 0;
@@ -1687,7 +1687,7 @@ def get_files_widget_html(
     #{container_id} .rainbow-flash {{
         animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out;
     }}
-    
+
     /* Dynamic rainbow class will be created in JavaScript */
 
     #{container_id} .pagination {{
@@ -1767,7 +1767,7 @@ def get_files_widget_html(
         background: {'#1e3a5f' if is_dark_mode else '#dbeafe'};
         color: {'#60a5fa' if is_dark_mode else '#3b82f6'};
     }}
-    
+
     #{container_id} .btn-green {{
         background: {'#14532d' if is_dark_mode else '#d1fae5'};
         color: {'#4ade80' if is_dark_mode else '#16a34a'};
@@ -1792,12 +1792,12 @@ def get_files_widget_html(
         background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
         color: {'#9ca3af' if is_dark_mode else '#6b7280'};
     }}
-    
+
     #{container_id} .btn-clickable {{
         cursor: pointer !important;
         opacity: 1 !important;
     }}
-    
+
     #{container_id} .btn-clickable:hover {{
         opacity: 0.85 !important;
         transform: translateY(-1px);
@@ -1808,7 +1808,7 @@ def get_files_widget_html(
         width: 0.5rem;
         height: 0.5rem;
     }}
-    
+
     #{container_id} .autocomplete-dropdown {{
         position: absolute;
         background: {'#1e1e1e' if is_dark_mode else 'white'};
@@ -1820,18 +1820,18 @@ def get_files_widget_html(
         z-index: 1000;
         display: none;
     }}
-    
+
     #{container_id} .autocomplete-dropdown.show {{
         display: block;
     }}
-    
+
     #{container_id} .autocomplete-option {{
         padding: 0.5rem;
         cursor: pointer;
         font-size: 0.875rem;
         color: {text_color};
     }}
-    
+
     #{container_id} .autocomplete-option:hover,
     #{container_id} .autocomplete-option.selected {{
         background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
@@ -1869,7 +1869,7 @@ def get_files_widget_html(
         background-color: rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(4px);
     }}
-    
+
     .modal-content {{
         position: relative;
         background-color: {bg_color};
@@ -1880,13 +1880,13 @@ def get_files_widget_html(
         width: 500px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }}
-    
+
     .modal-editor {{
         width: 90%;
         height: 80vh;
         max-width: 1200px;
     }}
-    
+
     .modal-header {{
         display: flex;
         justify-content: space-between;
@@ -1895,13 +1895,13 @@ def get_files_widget_html(
         padding-bottom: 10px;
         border-bottom: 1px solid {border_color};
     }}
-    
+
     .modal-title {{
         font-size: 1.2rem;
         font-weight: 600;
         color: {text_color};
     }}
-    
+
     .modal-close {{
         cursor: pointer;
         font-size: 1.5rem;
@@ -1909,15 +1909,15 @@ def get_files_widget_html(
         opacity: 0.6;
         transition: opacity 0.2s;
     }}
-    
+
     .modal-close:hover {{
         opacity: 1;
     }}
-    
+
     .modal-body {{
         margin-bottom: 20px;
     }}
-    
+
     .modal-footer {{
         display: flex;
         justify-content: flex-end;
@@ -1925,18 +1925,18 @@ def get_files_widget_html(
         padding-top: 10px;
         border-top: 1px solid {border_color};
     }}
-    
+
     .form-group {{
         margin-bottom: 15px;
     }}
-    
+
     .form-label {{
         display: block;
         margin-bottom: 5px;
         font-weight: 500;
         color: {text_color};
     }}
-    
+
     .form-input {{
         width: 100%;
         padding: 8px 12px;
@@ -1946,13 +1946,13 @@ def get_files_widget_html(
         color: {text_color};
         font-size: 0.875rem;
     }}
-    
+
     .form-hint {{
         margin-top: 5px;
         font-size: 0.75rem;
         color: {page_info_color};
     }}
-    
+
     .btn-primary {{
         padding: 8px 16px;
         background: {'#3b82f6' if is_dark_mode else '#3b82f6'};
@@ -1963,11 +1963,11 @@ def get_files_widget_html(
         cursor: pointer;
         transition: background 0.2s;
     }}
-    
+
     .btn-primary:hover {{
         background: {'#2563eb' if is_dark_mode else '#2563eb'};
     }}
-    
+
     .btn-secondary {{
         padding: 8px 16px;
         background: {'#4b5563' if is_dark_mode else '#e5e7eb'};
@@ -1978,16 +1978,16 @@ def get_files_widget_html(
         cursor: pointer;
         transition: background 0.2s;
     }}
-    
+
     .btn-secondary:hover {{
         background: {'#374151' if is_dark_mode else '#d1d5db'};
     }}
-    
+
     .autocomplete-option:focus {{
         background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
         outline: none;
     }}
-    
+
     #{container_id} .date-text {{
         display: flex;
         align-items: center;
@@ -2034,19 +2034,19 @@ def get_files_widget_html(
                 </clipPath>
             </defs>
         </svg>
-        
+
         <div style="font-size: 20px; font-weight: 600; color: {text_color}; margin-top: 2rem; text-align: center;">
             loading <br />the private internet
         </div>
-        
+
         <div style="width: 340px; height: 6px; background-color: {'#2d2d30' if is_dark_mode else '#e5e5e5'}; border-radius: 3px; margin: 1.5rem auto; overflow: hidden;">
             <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
         </div>
-        
+
         <div id="loading-status-{container_id}" style="color: {status_color}; font-size: 0.875rem; margin-top: 0.5rem;">
             Initializing...
         </div>
-        
+
         <div style="margin-top: 3rem; padding: 0 2rem; max-width: 500px; text-align: center;">
             <div style="color: {page_info_color}; font-size: 0.875rem; font-style: italic;">
                 💡 Tip: {footer_tip}
@@ -2107,7 +2107,7 @@ def get_files_widget_html(
             </div>
         </div>
     </div>
-    
+
     <!-- New File Modal -->
     <div id="newFileModal" class="modal">
         <div class="modal-content">
@@ -2131,7 +2131,7 @@ def get_files_widget_html(
             </div>
         </div>
     </div>
-    
+
     <!-- File Editor Modal -->
     <div id="fileEditorModal" class="modal">
         <div class="modal-content modal-editor">
@@ -2149,31 +2149,31 @@ def get_files_widget_html(
             // Adjust this value to control how long the rainbow effect lasts
             // Examples: 3 = 3 seconds, 10 = 10 seconds, 0.5 = half a second
             rainbowDurationSeconds: 5,
-            
+
             // Rainbow animation speed (duration of one color cycle in seconds)
             // Lower values = faster rainbow, higher values = slower rainbow
             // Default: 0.8 seconds per color cycle
             rainbowCycleSpeed: 0.8,
-            
+
             // Current user email
             currentUserEmail: '{current_user_email}'
         }};
-        
+
         // Calculate iteration count based on config
         var rainbowIterations = CONFIG.rainbowDurationSeconds / CONFIG.rainbowCycleSpeed;
-        
+
         // Create dynamic CSS for rainbow animation
         var rainbowStyleElement = document.createElement('style');
         rainbowStyleElement.id = 'rainbow-style-{container_id}';
         document.head.appendChild(rainbowStyleElement);
-        
+
         // Function to update rainbow CSS
         function updateRainbowCSS() {{
             if (CONFIG.rainbowDurationSeconds === 0) {{
                 rainbowStyleElement.textContent = '';
                 return;
             }}
-            
+
             var rainbowIterations = CONFIG.rainbowDurationSeconds / CONFIG.rainbowCycleSpeed;
             rainbowStyleElement.textContent = `
                 #{container_id} .rainbow-flash-dynamic {{
@@ -2183,10 +2183,10 @@ def get_files_widget_html(
                 }}
             `;
         }}
-        
+
         // Initial CSS update
         updateRainbowCSS();
-        
+
         // Initialize variables
         var allFiles = [];
         var filteredFiles = [];
@@ -2196,20 +2196,20 @@ def get_files_widget_html(
         var sortDirection = 'desc';    // Default descending (newest first)
         var chronologicalIds = {{}};
         var currentUserEmail = {json.dumps(current_user_email, ensure_ascii=True, separators=(',', ':'))};
-        
+
         // WebSocket for real-time file updates
         var ws = null;
         var wsReconnectInterval = null;
         var wsUrl = window.location.protocol.replace('http', 'ws') + '//' + window.location.host + '/ws/file-updates';
-        
+
         function connectWebSocket() {{
             if (ws && ws.readyState === WebSocket.OPEN) {{
                 return;
             }}
-            
+
             try {{
                 ws = new WebSocket(wsUrl);
-                
+
                 ws.onopen = function() {{
                     console.log('[WebSocket] Connected for file updates');
                     if (wsReconnectInterval) {{
@@ -2223,12 +2223,12 @@ def get_files_widget_html(
                         }}
                     }}, 30000); // Every 30 seconds
                 }};
-                
+
                 ws.onmessage = function(event) {{
                     if (event.data === 'pong') {{
                         return; // Ignore pong responses
                     }}
-                    
+
                     try {{
                         var data = JSON.parse(event.data);
                         handleFileUpdate(data);
@@ -2236,7 +2236,7 @@ def get_files_widget_html(
                         console.error('[WebSocket] Error parsing message:', e);
                     }}
                 }};
-                
+
                 ws.onclose = function() {{
                     console.log('[WebSocket] Disconnected');
                     // Try to reconnect every 5 seconds
@@ -2244,7 +2244,7 @@ def get_files_widget_html(
                         wsReconnectInterval = setInterval(connectWebSocket, 5000);
                     }}
                 }};
-                
+
                 ws.onerror = function(error) {{
                     console.error('[WebSocket] Error:', error);
                 }};
@@ -2252,15 +2252,15 @@ def get_files_widget_html(
                 console.error('[WebSocket] Failed to connect:', e);
             }}
         }}
-        
+
         // Connect WebSocket
         connectWebSocket();
-        
+
         // Update progress
         function updateProgress(percent, status) {{
             var loadingBar = document.getElementById('loading-bar-{container_id}');
             var loadingStatus = document.getElementById('loading-status-{container_id}');
-            
+
             if (loadingBar) {{
                 loadingBar.style.width = percent + '%';
             }}
@@ -2268,33 +2268,33 @@ def get_files_widget_html(
                 loadingStatus.innerHTML = status;
             }}
         }}
-        
+
         // Load files data asynchronously
         async function loadFiles() {{
             try {{
                 // Initial progress
                 updateProgress(10, 'Finding SyftBox directory...');
-                
+
                 // Get current URL parameters
                 const urlParams = new URLSearchParams(window.location.search);
                 const apiParams = new URLSearchParams();
-                
+
                 // Pass through relevant parameters
                 if (urlParams.has('search')) apiParams.set('search', urlParams.get('search'));
                 if (urlParams.has('admin')) apiParams.set('admin', urlParams.get('admin'));
                 if (urlParams.has('folders')) apiParams.set('folders', urlParams.get('folders'));
                 if (urlParams.has('start')) apiParams.set('start', urlParams.get('start'));
                 if (urlParams.has('end')) apiParams.set('end', urlParams.get('end'));
-                
+
                 // Start fetching files data (this will trigger the scan)
                 const filesPromise = fetch('/api/files-data' + (apiParams.toString() ? '?' + apiParams.toString() : ''));
-                
+
                 // Poll for progress updates
                 let progressInterval = setInterval(async () => {{
                     try {{
                         const progressResponse = await fetch('/api/scan-progress');
                         const progress = await progressResponse.json();
-                        
+
                         if (progress.status === 'scanning' && progress.total > 0) {{
                             // Calculate percentage based on actual scan progress
                             const percent = Math.min(90, 10 + (progress.current / progress.total) * 80);
@@ -2304,60 +2304,60 @@ def get_files_widget_html(
                         console.error('Error fetching progress:', e);
                     }}
                 }}, 200); // Poll every 200ms
-                
+
                 // Wait for files data
                 const response = await filesPromise;
                 const data = await response.json();
-                
+
                 // Stop polling
                 clearInterval(progressInterval);
-                
+
                 updateProgress(90, 'Processing ' + data.total + ' files...');
-                
+
                 // Store files data
                 allFiles = data.files;
                 filteredFiles = allFiles.slice();
-                
+
                 // Create chronological IDs (oldest = 0, incrementing)
                 var sortedByDate = allFiles.slice().sort(function(a, b) {{
                     return (a.modified || 0) - (b.modified || 0);  // Ascending order (oldest first)
                 }});
-                
+
                 chronologicalIds = {{}};
                 sortedByDate.forEach(function(file, index) {{
                     var fileKey = file.name + '|' + file.path;
                     chronologicalIds[fileKey] = index;  // Start from 0
                 }});
-                
+
                 // Add chronological IDs to files
                 allFiles.forEach(function(file) {{
                     var fileKey = file.name + '|' + file.path;
                     file.chronoId = chronologicalIds[fileKey] || 0;
                 }});
-                
+
                 updateProgress(100, 'Complete!');
-                
+
                 // Sort files by modified date (newest first) before initial render
                 filteredFiles.sort(function(a, b) {{
                     var aVal = a.modified || 0;
                     var bVal = b.modified || 0;
                     return bVal - aVal;  // Descending order (newest first)
                 }});
-                
+
                 // Hide loading screen and show widget
                 document.getElementById('loading-container-{container_id}').style.display = 'none';
                 document.getElementById('{container_id}').style.display = 'flex';
-                
+
                 // Initial render
                 renderTable();
                 updateStatus();
-                
+
             }} catch (error) {{
                 console.error('Error loading files:', error);
                 updateProgress(0, 'Error loading files. Please refresh the page.');
             }}
         }}
-        
+
         var showFooterTip = {'true' if show_footer_tip else 'false'};
         var footerTip = {json.dumps(footer_tip, ensure_ascii=True, separators=(',', ':'))};
 
@@ -2386,13 +2386,13 @@ def get_files_widget_html(
                 return size + ' B';
             }}
         }}
-        
+
         // Parse search terms (helper function)
         function parseSearchTerms(search) {{
             var terms = [];
             var currentTerm = '';
             var inQuotes = false;
-            
+
             for (var i = 0; i < search.length; i++) {{
                 var char = search[i];
                 if (char === '"') {{
@@ -2406,11 +2406,11 @@ def get_files_widget_html(
                     currentTerm += char;
                 }}
             }}
-            
+
             if (currentTerm) {{
                 terms.push(currentTerm.toLowerCase());
             }}
-            
+
             return terms;
         }}
 
@@ -2418,22 +2418,22 @@ def get_files_widget_html(
             var statusEl = document.getElementById('{container_id}-status');
             if (statusEl) statusEl.textContent = message;
         }}
-        
+
         // Restart server function - expose globally
         window.restartServer = async function() {{
             try {{
                 showStatus('Restarting server...');
-                
+
                 const response = await fetch('/api/restart', {{
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json'
                     }}
                 }});
-                
+
                 if (response.ok) {{
                     showStatus('Server is restarting. Page will reload...');
-                    
+
                     // Wait a bit then reload the page
                     setTimeout(() => {{
                         window.location.reload();
@@ -2446,12 +2446,12 @@ def get_files_widget_html(
                 showStatus('Error restarting server');
             }}
         }};
-        
+
         // Modal functions - expose globally
         window.openNewFileModal = function(prefilledPath) {{
             document.getElementById('newFileModal').style.display = 'block';
             var pathInput = document.getElementById('newFilePath');
-            
+
             // If a path is provided, use it (from row "New" button)
             if (prefilledPath) {{
                 pathInput.value = 'syft://' + prefilledPath + '/';
@@ -2467,7 +2467,7 @@ def get_files_widget_html(
                             userEmails.add(file.datasite_owner);
                         }}
                     }});
-                    
+
                     // If only one user, use that
                     if (userEmails.size === 1) {{
                         var email = Array.from(userEmails)[0];
@@ -2475,11 +2475,11 @@ def get_files_widget_html(
                     }}
                 }}
             }}
-            
+
             pathInput.focus();
             // Move cursor to end
             pathInput.setSelectionRange(pathInput.value.length, pathInput.value.length);
-            
+
             // Trigger autocomplete to show suggestions
             if (pathInput.value) {{
                 // Use setTimeout to ensure the focus and DOM updates are complete
@@ -2489,7 +2489,7 @@ def get_files_widget_html(
                 }}, 10);
             }}
         }};
-        
+
         window.closeNewFileModal = function() {{
             document.getElementById('newFileModal').style.display = 'none';
             document.getElementById('newFilePath').value = '';
@@ -2498,35 +2498,35 @@ def get_files_widget_html(
             dropdown.classList.remove('show');
             // Note: restoreArrowKeys is scoped to setupNewFileAutocomplete
         }};
-        
+
         window.createNewFile = function() {{
             var filePath = document.getElementById('newFilePath').value.trim();
-            
+
             if (!filePath) {{
                 alert('Please enter a file path');
                 return;
             }}
-            
+
             // Validate syft:// format
             if (!filePath.startsWith('syft://')) {{
                 alert('File path must start with syft://');
                 return;
             }}
-            
+
             // Close the first modal
             closeNewFileModal();
-            
+
             // Open the editor modal with the new file
             var editorUrl = '/file-editor?path=' + encodeURIComponent(filePath) + '&new=true&embedded=true';
             document.getElementById('fileEditorFrame').src = editorUrl;
             document.getElementById('fileEditorModal').style.display = 'block';
         }};
-        
+
         // Close modal when clicking outside
         window.onclick = function(event) {{
             var newFileModal = document.getElementById('newFileModal');
             var editorModal = document.getElementById('fileEditorModal');
-            
+
             if (event.target === newFileModal) {{
                 closeNewFileModal();
             }} else if (event.target === editorModal) {{
@@ -2534,26 +2534,26 @@ def get_files_widget_html(
                 document.getElementById('fileEditorFrame').src = '';
             }}
         }}
-        
+
         // Autocomplete for new file path
         var autocompleteIndex = -1;
         var autocompleteSuggestions = [];
-        
+
         function setupNewFileAutocomplete() {{
             var input = document.getElementById('newFilePath');
             var dropdown = document.getElementById('newFileAutocomplete');
-            
+
             function showAutocompleteSuggestions() {{
                 var value = input.value;
                 autocompleteIndex = -1;
                 autocompleteSuggestions = [];
-                
+
                 if (!value || !value.includes('://')) {{
                     dropdown.innerHTML = '';
                     dropdown.classList.remove('show');
                     return;
                 }}
-                
+
                 // Parse the current input
                 var parts = value.split('://');
                 if (parts.length !== 2 || parts[0] !== 'syft') {{
@@ -2561,12 +2561,12 @@ def get_files_widget_html(
                     dropdown.classList.remove('show');
                     return;
                 }}
-                
+
                 var pathPart = parts[1];
                 var pathSegments = pathPart.split('/');
                 var userPart = pathSegments[0];
                 var currentPath = pathSegments.slice(1).join('/');
-                
+
                 // Get unique datasites
                 var datasites = new Set();
                 allFiles.forEach(function(file) {{
@@ -2574,9 +2574,9 @@ def get_files_widget_html(
                         datasites.add(file.datasite_owner);
                     }}
                 }});
-                
+
                 autocompleteSuggestions = [];
-                
+
                 // If still typing the user part
                 if (!userPart.includes('@') || pathSegments.length === 1) {{
                     // Suggest datasites
@@ -2601,7 +2601,7 @@ def get_files_widget_html(
                                     canCreate = true;
                                 }}
                             }}
-                            
+
                             // Also check permissions_summary
                             if (!canCreate && file.permissions_summary && currentUserEmail) {{
                                 for (var k = 0; k < file.permissions_summary.length; k++) {{
@@ -2614,20 +2614,20 @@ def get_files_widget_html(
                                     }}
                                 }}
                             }}
-                            
+
                             // Only suggest if user has create permissions
                             if (canCreate) {{
                                 var filePath = file.name.substring(userPart.length + 1);
                                 var segments = filePath.split('/');
-                                
+
                                 // Build partial paths for autocomplete
                                 var partialPath = '';
                                 for (var i = 0; i < segments.length; i++) {{
                                     if (i > 0) partialPath += '/';
                                     partialPath += segments[i];
-                                    
+
                                     // Only suggest if it matches current input
-                                    if (partialPath.toLowerCase().startsWith(currentPath.toLowerCase()) && 
+                                    if (partialPath.toLowerCase().startsWith(currentPath.toLowerCase()) &&
                                         partialPath.length > currentPath.length) {{
                                         uniquePaths.add('syft://' + userPart + '/' + partialPath);
                                     }}
@@ -2637,7 +2637,7 @@ def get_files_widget_html(
                     }});
                     autocompleteSuggestions = Array.from(uniquePaths).sort();
                 }}
-                
+
                 // Show suggestions
                 if (autocompleteSuggestions.length > 0) {{
                     dropdown.innerHTML = '';
@@ -2692,13 +2692,13 @@ def get_files_widget_html(
                     restoreArrowKeys(); // Restore arrow keys when hiding dropdown
                 }}
             }}
-            
+
             input.addEventListener('input', showAutocompleteSuggestions);
             input.addEventListener('focus', showAutocompleteSuggestions);
-            
+
             // Override the input's default arrow key behavior
             var originalKeyDown = null;
-            
+
             // When dropdown is shown, override arrow key behavior
             function overrideArrowKeys() {{
                 if (!originalKeyDown) {{
@@ -2711,7 +2711,7 @@ def get_files_widget_html(
                     }};
                 }}
             }}
-            
+
             // Restore original behavior when dropdown is hidden
             function restoreArrowKeys() {{
                 if (originalKeyDown !== null) {{
@@ -2719,12 +2719,12 @@ def get_files_widget_html(
                     originalKeyDown = null;
                 }}
             }}
-            
+
             // Handle keyboard navigation with capture phase to ensure it runs first
             input.addEventListener('keydown', function(e) {{
                 // Use the outer dropdown variable, don't redeclare
                 var options = dropdown.querySelectorAll('.autocomplete-option');
-                
+
                 if (e.key === 'Tab') {{
                     e.preventDefault();
                     if (autocompleteSuggestions.length > 0) {{
@@ -2771,7 +2771,7 @@ def get_files_widget_html(
                     restoreArrowKeys();
                 }}
             }}, true); // Use capture phase
-            
+
             // Hide dropdown when clicking outside
             document.addEventListener('click', function(e) {{
                 if (!input.contains(e.target) && !dropdown.contains(e.target)) {{
@@ -2781,7 +2781,7 @@ def get_files_widget_html(
                 }}
             }});
         }}
-        
+
         function updateAutocompleteSelection(options) {{
             options.forEach(function(option, index) {{
                 if (index === autocompleteIndex) {{
@@ -2791,19 +2791,19 @@ def get_files_widget_html(
                 }}
             }});
         }}
-        
+
         // Update rainbow duration from dropdown
         window.updateRainbowDuration_{container_id} = function() {{
             var dropdown = document.getElementById('rainbowDuration');
             var newDuration = parseInt(dropdown.value);
             CONFIG.rainbowDurationSeconds = newDuration;
-            
+
             // Update the CSS
             updateRainbowCSS();
-            
+
             // Re-render the table to apply new animation to eligible files
             renderTable();
-            
+
             // Show status message
             if (newDuration === 0) {{
                 showStatus('Rainbow animation disabled');
@@ -2814,7 +2814,7 @@ def get_files_widget_html(
                 showStatus('Rainbow animation set to ' + newDuration + ' seconds');
             }}
         }}
-        
+
         function calculateTotalSize() {{
             var totalSize = 0;
             filteredFiles.forEach(function(file) {{
@@ -2824,11 +2824,11 @@ def get_files_widget_html(
             }});
             return totalSize;
         }}
-        
+
         function updateStatus() {{
             var fileCount = 0;
             var folderCount = 0;
-            
+
             filteredFiles.forEach(function(item) {{
                 if (item.is_dir) {{
                     folderCount++;
@@ -2836,34 +2836,34 @@ def get_files_widget_html(
                     fileCount++;
                 }}
             }});
-            
+
             var totalSize = calculateTotalSize();
             var sizeStr = formatSize(totalSize);
-            
+
             var searchValue = document.getElementById('{container_id}-search').value;
             var adminFilter = document.getElementById('{container_id}-admin-filter').value;
             var isSearching = searchValue !== '' || adminFilter !== '';
-            
+
             var statusText = fileCount + ' files';
             if (folderCount > 0) {{
                 statusText += ', ' + folderCount + ' folders';
             }}
             statusText += ' • Total size: ' + sizeStr;
-            
+
             if (!isSearching && showFooterTip) {{
                 statusText += ' • 💡 ' + footerTip;
             }}
-            
+
             showStatus(statusText);
         }}
-        
+
         // Handle file updates from WebSocket
         function handleFileUpdate(data) {{
             var action = data.action;
             var file = data.file;
-            
+
             console.log('[WebSocket] File', action + ':', file.path);
-            
+
             // Find existing file index
             var existingIndex = -1;
             for (var i = 0; i < allFiles.length; i++) {{
@@ -2872,7 +2872,7 @@ def get_files_widget_html(
                     break;
                 }}
             }}
-            
+
             if (action === 'created') {{
                 // Assign next chronological ID to the new file (count existing files first)
                 var newId = allFiles.length; // This is the next ID
@@ -2880,10 +2880,10 @@ def get_files_widget_html(
                 chronologicalIds[fileKey] = newId;
                 file.chronoId = newId; // Also set it on the file object itself
                 console.log('[WebSocket] Assigned chronological ID', newId, 'to', file.name, '(total files before adding:', allFiles.length, ')');
-                
+
                 // Add new file to beginning (newest first)
                 allFiles.unshift(file);
-                
+
                 // Apply current filters by calling searchFiles
                 // This will automatically filter, sort, render table, and update status
                 searchFiles_{container_id}();
@@ -2893,18 +2893,18 @@ def get_files_widget_html(
                     var oldFile = allFiles[existingIndex];
                     var fileKey = file.name + '|' + file.path;
                     var existingChronoId = oldFile.chronoId !== undefined ? oldFile.chronoId : chronologicalIds[fileKey];
-                    
+
                     // Update file data
                     allFiles[existingIndex] = file;
-                    
+
                     // Restore the chronological ID (don't change it for modified files)
                     file.chronoId = existingChronoId;
                     if (existingChronoId !== undefined) {{
                         chronologicalIds[fileKey] = existingChronoId;
                     }}
-                    
+
                     console.log('[WebSocket] Modified file', file.name, 'keeping chronological ID', existingChronoId);
-                    
+
                     // Re-apply filters by calling searchFiles
                     // This will automatically filter, sort, render table, and update status
                     searchFiles_{container_id}();
@@ -2913,32 +2913,32 @@ def get_files_widget_html(
                 if (existingIndex !== -1) {{
                     // Remove from allFiles
                     allFiles.splice(existingIndex, 1);
-                    
+
                     // Remove chronological ID for deleted file
                     var fileKey = file.name + '|' + file.path;
                     delete chronologicalIds[fileKey];
-                    
+
                     // Re-apply filters by calling searchFiles
                     // This will automatically filter, sort, render table, and update status
                     searchFiles_{container_id}();
                 }}
             }}
         }}
-        
+
         // Check if file matches current filters
         function matchesCurrentFilters(file) {{
             var searchValue = document.getElementById('{container_id}-search').value;
             var adminFilter = document.getElementById('{container_id}-admin-filter').value;
-            
+
             // Apply admin filter
             if (adminFilter && (file.datasite_owner || '').toLowerCase().indexOf(adminFilter.toLowerCase()) === -1) {{
                 return false;
             }}
-            
+
             // Apply search filter
             if (searchValue) {{
                 var searchTerms = parseSearchTerms(searchValue);
-                
+
                 return searchTerms.every(function(term) {{
                     var searchableContent = [
                         file.name,
@@ -2949,20 +2949,20 @@ def get_files_widget_html(
                         file.is_dir ? 'folder' : 'file',
                         (file.permissions_summary || []).join(' ')
                     ].join(' ').toLowerCase();
-                    
+
                     return searchableContent.includes(term);
                 }});
             }}
-            
+
             return true;
         }}
-        
+
         // Update chronological IDs after file changes
         function updateChronologicalIds() {{
             var sortedByDate = allFiles.slice().sort(function(a, b) {{
                 return (a.modified || 0) - (b.modified || 0);  // Sort oldest first
             }});
-            
+
             chronologicalIds = {{}};
             for (var i = 0; i < sortedByDate.length; i++) {{
                 var file = sortedByDate[i];
@@ -2975,22 +2975,22 @@ def get_files_widget_html(
             var tbody = document.getElementById('{container_id}-tbody');
             var totalFiles = filteredFiles.length;
             var totalPages = Math.max(1, Math.ceil(totalFiles / itemsPerPage));
-            
+
             if (currentPage > totalPages) currentPage = totalPages;
             if (currentPage < 1) currentPage = 1;
-            
+
             document.getElementById('{container_id}-prev-btn').disabled = currentPage === 1;
             document.getElementById('{container_id}-next-btn').disabled = currentPage === totalPages;
             document.getElementById('{container_id}-page-info').textContent = 'Page ' + currentPage + ' of ' + totalPages;
-            
+
             if (totalFiles === 0) {{
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No files found</td></tr>';
                 return;
             }}
-            
+
             var start = (currentPage - 1) * itemsPerPage;
             var end = Math.min(start + itemsPerPage, totalFiles);
-            
+
             var html = '';
             for (var i = start; i < end; i++) {{
                 var file = filteredFiles[i];
@@ -3002,26 +3002,26 @@ def get_files_widget_html(
                 var fileExt = file.extension || '.txt';
                 var sizeStr = formatSize(file.size || 0);
                 var isDir = file.is_dir || false;
-                
+
                 var fileKey = file.name + '|' + file.path;
                 var chronoId = file.chronoId !== undefined ? file.chronoId : (chronologicalIds[fileKey] !== undefined ? chronologicalIds[fileKey] : i);
-                
+
                 // Prepare escaped path for onclick handlers
                 var escapedPath = (file.path || filePath || '').replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'");
-                
+
                 // Check if this file was modified within the threshold (rainbow duration + buffer)
                 var wsActionClass = '';
                 var now = Date.now() / 1000; // Convert to seconds
                 var fileModified = file.modified || 0;
                 var secondsSinceModified = now - fileModified;
-                
+
                 // Show rainbow if enabled and modified within the animation duration
                 if (CONFIG.rainbowDurationSeconds > 0 && secondsSinceModified <= CONFIG.rainbowDurationSeconds) {{
                     wsActionClass = ' class="file-row rainbow-flash-dynamic"';
                 }} else {{
                     wsActionClass = ' class="file-row"';
                 }}
-                
+
                 html += '<tr' + wsActionClass + ' onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                     '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
                     '<td>' + chronoId + '</td>' +
@@ -3041,7 +3041,7 @@ def get_files_widget_html(
                     '<td><span style="color: #6b7280;">' + sizeStr + '</span></td>' +
                     '<td>' +
                         '<div style="display: flex; flex-direction: column; gap: 0.125rem; font-size: 0.625rem; color: #6b7280;">';
-                
+
                 var perms = file.permissions_summary || [];
                 if (perms.length > 0) {{
                     for (var j = 0; j < Math.min(perms.length, 3); j++) {{
@@ -3053,11 +3053,11 @@ def get_files_widget_html(
                 }} else {{
                     html += '<span style="color: #9ca3af;">No permissions</span>';
                 }}
-                
+
                 // Check if current user is admin for this file
                 var isAdmin = false;
                 var canCreate = false;
-                
+
                 // Check permissions object first
                 if (file.permissions && CONFIG.currentUserEmail) {{
                     if (file.permissions.admin && file.permissions.admin.includes(CONFIG.currentUserEmail)) {{
@@ -3069,7 +3069,7 @@ def get_files_widget_html(
                         canCreate = true;
                     }}
                 }}
-                
+
                 // If not found in permissions object, check permissions_summary
                 if (!isAdmin && !canCreate && file.permissions_summary && CONFIG.currentUserEmail) {{
                     for (var j = 0; j < file.permissions_summary.length; j++) {{
@@ -3087,12 +3087,12 @@ def get_files_widget_html(
                         }}
                     }}
                 }}
-                
+
                 html += '</div>' +
                     '</td>' +
                     '<td>' +
                         '<div style="display: flex; gap: 0.125rem;">';
-                
+
                 // Add "New" button based on folder status and permissions
                 if (file.is_dir && canCreate) {{
                     html += '<button class="btn btn-green btn-clickable" onclick="event.stopPropagation(); openNewModal_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Create new file or folder">' +
@@ -3108,9 +3108,9 @@ def get_files_widget_html(
                                     '<line x1="5" y1="12" x2="19" y2="12"></line>' +
                                 '</svg></button>';
                 }}
-                
+
                 html += '<button class="btn btn-gray btn-clickable" onclick="event.stopPropagation(); openFileEditor_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Open in editor">Open</button>';
-                
+
                 if (isAdmin) {{
                     html += '<button class="btn btn-blue btn-clickable" onclick="event.stopPropagation(); openShareModal_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Share permissions">' +
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -3126,9 +3126,9 @@ def get_files_widget_html(
                                     '<line x1="12" y1="2" x2="12" y2="15"/>' +
                                 '</svg> Share</button>';
                 }}
-                
+
                 html += '<button class="btn btn-purple btn-clickable" onclick="event.stopPropagation(); copyPath_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Copy path">Copy</button>';
-                
+
                 // Add delete button with permission check
                 var canDelete = isAdmin || canCreate; // Users with write or admin permissions can delete
                 if (canDelete) {{
@@ -3152,12 +3152,12 @@ def get_files_widget_html(
                                 '</svg>' +
                             '</button>';
                 }}
-                
+
                 html += '</div>' +
                     '</td>' +
                 '</tr>';
             }}
-            
+
             tbody.innerHTML = html;
         }}
 
@@ -3165,16 +3165,16 @@ def get_files_widget_html(
         window.searchFiles_{container_id} = function() {{
             var searchTerm = document.getElementById('{container_id}-search').value.toLowerCase();
             var adminFilter = document.getElementById('{container_id}-admin-filter').value.toLowerCase();
-            
+
             // Parse search terms
             var searchTerms = [];
             var currentTerm = '';
             var inQuotes = false;
             var quoteChar = '';
-            
+
             for (var i = 0; i < searchTerm.length; i++) {{
                 var char = searchTerm[i];
-                
+
                 if ((char === '"' || char === "'") && !inQuotes) {{
                     inQuotes = true;
                     quoteChar = char;
@@ -3194,17 +3194,17 @@ def get_files_widget_html(
                     currentTerm += char;
                 }}
             }}
-            
+
             if (currentTerm.length > 0) {{
                 searchTerms.push(currentTerm);
             }}
-            
+
             filteredFiles = allFiles.filter(function(file) {{
                 var adminMatch = adminFilter === '' || (file.datasite_owner || '').toLowerCase().includes(adminFilter);
                 if (!adminMatch) return false;
-                
+
                 if (searchTerms.length === 0) return true;
-                
+
                 return searchTerms.every(function(term) {{
                     var searchableContent = [
                         file.name,
@@ -3215,16 +3215,16 @@ def get_files_widget_html(
                         file.is_dir ? 'folder' : 'file',
                         (file.permissions_summary || []).join(' ')
                     ].join(' ').toLowerCase();
-                    
+
                     return searchableContent.includes(term);
                 }});
             }});
-            
+
             // Sort the filtered files according to current sort settings
             // Use a copy of the sort logic without toggling direction
             filteredFiles.sort(function(a, b) {{
                 var aVal, bVal;
-                
+
                 switch(sortColumn) {{
                     case 'index':
                         aVal = a.modified || 0;
@@ -3256,20 +3256,20 @@ def get_files_widget_html(
                     default:
                         return 0;
                 }}
-                
+
                 if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
                 if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
                 return 0;
             }});
-            
+
             // Calculate total pages after filtering
             var totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
-            
+
             // Preserve current page if it's still valid, otherwise go to last valid page
             if (currentPage > totalPages) {{
                 currentPage = totalPages;
             }}
-            
+
             renderTable();
             updateStatus();
         }};
@@ -3297,10 +3297,10 @@ def get_files_widget_html(
                 }});
                 return;
             }}
-            
+
             // When called from row click, copy the sp.open command
             var command = 'sp.open("' + path + '")';
-            
+
             navigator.clipboard.writeText(command).then(function() {{
                 if (rowElement) {{
                     rowElement.classList.add('rainbow-flash');
@@ -3308,7 +3308,7 @@ def get_files_widget_html(
                         rowElement.classList.remove('rainbow-flash');
                     }}, 800);
                 }}
-                
+
                 showStatus('Copied to clipboard: ' + command);
                 setTimeout(function() {{
                     updateStatus();
@@ -3322,21 +3322,21 @@ def get_files_widget_html(
         window.confirmDelete_{container_id} = function(path) {{
             var isDir = false;
             // Check if it's a directory based on the files array
-            for (var i = 0; i < {container_id}_files.length; i++) {{
-                if ({container_id}_files[i].path === path) {{
-                    isDir = {container_id}_files[i].is_dir;
+            for (var i = 0; i < filteredFiles.length; i++) {{
+                if (filteredFiles[i].path === path) {{
+                    isDir = filteredFiles[i].is_dir;
                     break;
                 }}
             }}
-            
+
             var itemType = isDir ? 'folder' : 'file';
             var filename = path.split('/').pop() || path;
             var message = 'Are you sure you want to delete this ' + itemType + '?\\n\\n' + filename;
-            
+
             if (isDir) {{
                 message += '\\n\\nWarning: This will delete the folder and all its contents permanently.';
             }}
-            
+
             if (confirm(message)) {{
                 deleteItem_{container_id}(path, isDir);
             }}
@@ -3345,7 +3345,7 @@ def get_files_widget_html(
         // Delete item function
         window.deleteItem_{container_id} = function(path, isDir) {{
             showStatus('Deleting ' + (isDir ? 'folder' : 'file') + '...');
-            
+
             fetch('/api/filesystem/delete?path=' + encodeURIComponent(path) + '&recursive=' + isDir, {{
                 method: 'DELETE',
                 headers: {{
@@ -3379,35 +3379,35 @@ def get_files_widget_html(
         window.toggleSelectAll_{container_id} = function() {{
             var selectAllCheckbox = document.getElementById('{container_id}-select-all');
             var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
-            checkboxes.forEach(function(cb) {{ 
-                cb.checked = selectAllCheckbox.checked; 
+            checkboxes.forEach(function(cb) {{
+                cb.checked = selectAllCheckbox.checked;
             }});
             showStatus(selectAllCheckbox.checked ? 'All visible files selected' : 'Selection cleared');
         }};
-        
+
         // Update select all state
         window.updateSelectAllState_{container_id} = function() {{
             var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
             var selectAllCheckbox = document.getElementById('{container_id}-select-all');
             var allChecked = true;
             var someChecked = false;
-            
+
             checkboxes.forEach(function(cb) {{
                 if (!cb.checked) allChecked = false;
                 if (cb.checked) someChecked = true;
             }});
-            
+
             selectAllCheckbox.checked = allChecked;
             selectAllCheckbox.indeterminate = !allChecked && someChecked;
         }};
-        
+
         // Open share modal
         window.openShareModal_{container_id} = function(filePath) {{
             // Create modal overlay
             var overlay = document.createElement('div');
             overlay.className = 'modal';
             overlay.style.display = 'block';
-            
+
             // Create modal content with iframe
             var modalContent = document.createElement('div');
             modalContent.className = 'modal-content';
@@ -3415,7 +3415,7 @@ def get_files_widget_html(
             modalContent.style.maxWidth = '640px';
             modalContent.style.height = '600px';
             modalContent.style.padding = '0';
-            
+
             // Create iframe
             var iframe = document.createElement('iframe');
             iframe.src = '/share-modal?path=' + encodeURIComponent(filePath);
@@ -3423,18 +3423,18 @@ def get_files_widget_html(
             iframe.style.height = '100%';
             iframe.style.border = 'none';
             iframe.style.borderRadius = '8px';
-            
+
             modalContent.appendChild(iframe);
             overlay.appendChild(modalContent);
             document.body.appendChild(overlay);
-            
+
             // Handle close on click outside
             overlay.addEventListener('click', function(e) {{
                 if (e.target === overlay) {{
                     document.body.removeChild(overlay);
                 }}
             }});
-            
+
             // Handle close message from iframe
             var messageHandler = function(e) {{
                 if (e.data && e.data.action === 'closeShareModal') {{
@@ -3444,14 +3444,14 @@ def get_files_widget_html(
             }};
             window.addEventListener('message', messageHandler);
         }};
-        
+
         // Open file editor modal
         window.openFileEditor_{container_id} = function(filePath, isNewFile) {{
             // Create modal overlay
             var overlay = document.createElement('div');
             overlay.className = 'modal';
             overlay.style.display = 'block';
-            
+
             // Create modal content with iframe
             var modalContent = document.createElement('div');
             modalContent.className = 'modal-content';
@@ -3460,7 +3460,7 @@ def get_files_widget_html(
             modalContent.style.height = 'calc(100vh - 40px)';
             modalContent.style.padding = '0';
             modalContent.style.margin = '20px auto';
-            
+
             // Create iframe
             var iframe = document.createElement('iframe');
             var url = '/file-editor/' + encodeURIComponent(filePath) + '?syft_user=' + encodeURIComponent(CONFIG.currentUserEmail);
@@ -3472,24 +3472,24 @@ def get_files_widget_html(
             iframe.style.height = '100%';
             iframe.style.border = 'none';
             iframe.style.borderRadius = '8px';
-            
+
             modalContent.appendChild(iframe);
             overlay.appendChild(modalContent);
             document.body.appendChild(overlay);
-            
+
             // Handle close on click outside
             overlay.addEventListener('click', function(e) {{
                 if (e.target === overlay) {{
                     document.body.removeChild(overlay);
                 }}
             }});
-            
+
             // Handle close message from iframe
             var messageHandler = function(e) {{
                 if (e.data && (e.data === 'closeFileEditor' || e.data.action === 'closeFileEditor')) {{
                     document.body.removeChild(overlay);
                     window.removeEventListener('message', messageHandler);
-                    
+
                     // If it was a new file that was saved, refresh the file list
                     if (isNewFile && e.data && e.data.saved) {{
                         loadFiles();
@@ -3498,7 +3498,7 @@ def get_files_widget_html(
             }};
             window.addEventListener('message', messageHandler);
         }};
-        
+
         // Open new file/folder modal
         window.openNewModal_{container_id} = function(folderPath) {{
             // Use the main new file modal but with pre-populated path
@@ -3522,34 +3522,34 @@ def get_files_widget_html(
                     '<button class="btn btn-gray" style="margin-right: 10px;" id="cancelNewBtn">Cancel</button>' +
                     '<button class="btn btn-green" id="createNewBtn">Create</button>' +
                 '</div>';
-            
+
             // Store folderPath in closure
             var createBtn = modalContent.querySelector('#createNewBtn');
             var cancelBtn = modalContent.querySelector('#cancelNewBtn');
-            
+
             createBtn.addEventListener('click', function() {{
                 createNewItem_{container_id}(folderPath, overlay);
             }});
-            
+
             cancelBtn.addEventListener('click', function() {{
                 document.body.removeChild(overlay);
             }});
-            
+
             overlay.appendChild(modalContent);
             document.body.appendChild(overlay);
-            
+
             // Focus the input
             setTimeout(function() {{
                 document.getElementById('newItemName').focus();
             }}, 100);
-            
+
             // Handle close on click outside
             overlay.addEventListener('click', function(e) {{
                 if (e.target === overlay) {{
                     document.body.removeChild(overlay);
                 }}
             }});
-            
+
             // Handle Enter key
             document.getElementById('newItemName').addEventListener('keydown', function(e) {{
                 if (e.key === 'Enter') {{
@@ -3557,7 +3557,7 @@ def get_files_widget_html(
                 }}
             }});
         }};
-        
+
         // Create new file or folder
         window.createNewItem_{container_id} = function(folderPath, modalElement) {{
             var itemName = document.getElementById('newItemName').value.trim();
@@ -3565,10 +3565,10 @@ def get_files_widget_html(
                 alert('Please enter a name');
                 return;
             }}
-            
+
             var isFile = document.querySelector('input[name="newType"]:checked').value === 'file';
             var fullPath = folderPath + '/' + itemName;
-            
+
             if (isFile) {{
                 // Open file editor with new file path
                 document.body.removeChild(modalElement);
@@ -3613,10 +3613,10 @@ def get_files_widget_html(
                 sortColumn = column;
                 sortDirection = 'asc';
             }}
-            
+
             filteredFiles.sort(function(a, b) {{
                 var aVal, bVal;
-                
+
                 switch(column) {{
                     case 'index':
                         aVal = a.modified || 0;
@@ -3648,12 +3648,12 @@ def get_files_widget_html(
                     default:
                         return 0;
                 }}
-                
+
                 if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
                 if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
                 return 0;
             }});
-            
+
             currentPage = 1;
             renderTable();
         }};
@@ -3665,10 +3665,10 @@ def get_files_widget_html(
         document.getElementById('{container_id}-admin-filter').addEventListener('input', function() {{
             searchFiles_{container_id}();
         }});
-        
+
         // Start loading files when page loads
         loadFiles();
-        
+
         // Setup autocomplete for new file modal
         setupNewFileAutocomplete();
     }})();
