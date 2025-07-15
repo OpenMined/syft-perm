@@ -56,7 +56,9 @@ if _SERVER_AVAILABLE:
         """Model for permission response."""
 
         path: str
-        permissions: Dict[str, Any]  # Can be Dict[str, List[str]] or Dict[str, Dict] depending on include_reasons
+        permissions: Dict[
+            str, Any
+        ]  # Can be Dict[str, List[str]] or Dict[str, Dict] depending on include_reasons
         compliance: Dict[str, Any]
         datasites: List[str]
 
@@ -356,7 +358,9 @@ if _SERVER_AVAILABLE:
         return {"message": "SyftPerm Permission Editor", "docs": "/docs"}
 
     @app.get("/permissions/{path:path}", response_model=PermissionResponse)  # type: ignore[misc]
-    async def get_permissions(path: str, include_reasons: bool = Query(False)) -> PermissionResponse:
+    async def get_permissions(
+        path: str, include_reasons: bool = Query(False)
+    ) -> PermissionResponse:
         """Get permissions for a file or folder, optionally with detailed reasons."""
         try:
             # Resolve the path
@@ -377,17 +381,17 @@ if _SERVER_AVAILABLE:
                 all_users = set()
                 for perm_level, user_list in permissions.items():
                     all_users.update(user_list)
-                
+
                 # For each user, get their permissions and reasons
                 for user in all_users:
                     user_permissions = {}
                     # Get which permission levels this user has
                     for perm_level, user_list in permissions.items():
                         user_permissions[perm_level] = user_list if user in user_list else []
-                    
+
                     permissions_with_reasons[user] = {
                         "permissions": user_permissions,
-                        "reasons": {}
+                        "reasons": {},
                     }
                     # Get detailed reasons for each permission level
                     for perm in ["read", "create", "write", "admin"]:
@@ -395,13 +399,13 @@ if _SERVER_AVAILABLE:
                             has_perm, reasons = syft_obj._check_permission_with_reasons(user, perm)
                             permissions_with_reasons[user]["reasons"][perm] = {
                                 "granted": has_perm,
-                                "reasons": reasons
+                                "reasons": reasons,
                             }
                         except Exception as e:
                             # Fallback if permission checking fails
                             permissions_with_reasons[user]["reasons"][perm] = {
                                 "granted": False,
-                                "reasons": [f"Error checking permissions: {str(e)}"]
+                                "reasons": [f"Error checking permissions: {str(e)}"],
                             }
                 permissions = permissions_with_reasons
 
@@ -437,7 +441,10 @@ if _SERVER_AVAILABLE:
 
         except Exception as e:
             import traceback
-            error_details = f"Error processing permissions for {path}: {str(e)}\n{traceback.format_exc()}"
+
+            error_details = (
+                f"Error processing permissions for {path}: {str(e)}\n{traceback.format_exc()}"
+            )
             logger.error(error_details)
             raise HTTPException(status_code=500, detail=f"Permission processing failed: {str(e)}")
 

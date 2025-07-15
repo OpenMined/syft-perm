@@ -1714,7 +1714,8 @@ class Files:
                     </tr>
             """
 
-        html += f"""
+        html += (
+            f"""
                     </tbody>
                 </table>
             </div>
@@ -2680,7 +2681,11 @@ class Files:
         }})();
         
         // Background server checking - only run when server was not initially available
-        """ + ("" if server_available else """
+        """
+            + (
+                ""
+                if server_available
+                else """
         // Use a unique variable name to avoid redeclaration errors
         if (typeof window.syftPermServerFound_{container_id} === 'undefined') {{
             window.syftPermServerFound_{container_id} = false;
@@ -2845,9 +2850,12 @@ class Files:
             // Also check once immediately after 1 second
             setTimeout(checkDiscoveryServer_{container_id}, 1000);
         }}
-        """) + """
+        """
+            )
+            + """
         </script>
         """
+        )
 
         return html
 

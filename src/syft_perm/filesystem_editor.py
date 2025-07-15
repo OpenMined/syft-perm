@@ -19,7 +19,6 @@ from fastapi import HTTPException
 
 
 def get_current_user_email() -> Optional[str]:
-
     """Get current user email from environment or local datasite."""
 
     # Try environment variable first
@@ -68,172 +67,95 @@ def get_current_user_email() -> Optional[str]:
 
     return user_email
 
-class FileSystemManager:
 
+class FileSystemManager:
     """Manages filesystem operations for the code editor."""
 
     ALLOWED_EXTENSIONS = {
-
         # Text files
-
         ".py",
-
         ".js",
-
         ".ts",
-
         ".jsx",
-
         ".tsx",
-
         ".html",
-
         ".css",
-
         ".scss",
-
         ".sass",
-
         ".json",
-
         ".yaml",
-
         ".yml",
-
         ".xml",
-
         ".md",
-
         ".txt",
-
         ".csv",
-
         ".log",
-
         ".sql",
-
         ".sh",
-
         ".bash",
-
         ".zsh",
-
         ".fish",
-
         ".ps1",
-
         ".bat",
-
         ".cmd",
-
         # Config files
-
         ".ini",
-
         ".cfg",
-
         ".conf",
-
         ".toml",
-
         ".env",
-
         ".gitignore",
-
         ".dockerignore",
-
         # Code files
-
         ".c",
-
         ".cpp",
-
         ".h",
-
         ".hpp",
-
         ".java",
-
         ".php",
-
         ".rb",
-
         ".go",
-
         ".rs",
-
         ".swift",
-
         ".kt",
-
         ".scala",
-
         ".clj",
-
         ".lisp",
-
         ".hs",
-
         ".elm",
-
         ".dart",
-
         ".r",
-
         ".m",
-
         ".mm",
-
         # Web files
-
         ".vue",
-
         ".svelte",
-
         ".astro",
-
         ".htmx",
-
         ".mustache",
-
         ".handlebars",
-
         # Data files
-
         ".jsonl",
-
         ".ndjson",
-
         ".tsv",
-
         ".properties",
-
         ".lock",
-
         # Documentation
-
         ".rst",
-
         ".tex",
-
         ".latex",
-
         ".adoc",
-
         ".org",
-
     }
 
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
 
     def __init__(self, base_path: str = None):
-
         """Initialize with optional base path restriction."""
 
         self.base_path = Path(base_path).resolve() if base_path else None
 
     def _validate_path(self, path: str) -> Path:
-
         """Validate and resolve a path, ensuring it's within allowed bounds."""
 
         try:
@@ -245,9 +167,7 @@ class FileSystemManager:
             if self.base_path and not str(resolved_path).startswith(str(self.base_path)):
 
                 raise HTTPException(
-
                     status_code=403, detail="Access denied: Path outside allowed directory"
-
                 )
 
             return resolved_path
@@ -257,7 +177,6 @@ class FileSystemManager:
             raise HTTPException(status_code=400, detail=f"Invalid path: {str(e)}")
 
     def _is_text_file(self, file_path: Path) -> bool:
-
         """Check if a file is a text file that can be edited."""
 
         if file_path.suffix.lower() in self.ALLOWED_EXTENSIONS:
@@ -287,7 +206,6 @@ class FileSystemManager:
             return False
 
     def list_directory(self, path: str, user_email: Optional[str] = None) -> Dict[str, Any]:
-
         """List directory contents."""
 
         dir_path = self._validate_path(path)
@@ -305,9 +223,7 @@ class FileSystemManager:
             items = []
 
             for item_path in sorted(
-
                 dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())
-
             ):
 
                 try:
@@ -317,21 +233,13 @@ class FileSystemManager:
                     is_directory = item_path.is_dir()
 
                     item_info = {
-
                         "name": item_path.name,
-
                         "path": str(item_path),
-
                         "is_directory": is_directory,
-
                         "size": stat.st_size if not is_directory else None,
-
                         "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-
                         "is_editable": not is_directory and self._is_text_file(item_path),
-
                         "extension": item_path.suffix.lower() if not is_directory else None,
-
                     }
 
                     items.append(item_info)
@@ -379,17 +287,11 @@ class FileSystemManager:
                     can_admin = False
 
             return {
-
                 "path": str(dir_path),
-
                 "parent": parent_path,
-
                 "items": items,
-
                 "total_items": len(items),
-
                 "can_admin": can_admin,
-
             }
 
         except PermissionError:
@@ -397,7 +299,6 @@ class FileSystemManager:
             raise HTTPException(status_code=403, detail="Permission denied")
 
     def read_file(self, path: str, user_email: str = None) -> Dict[str, Any]:
-
         """Read file contents."""
 
         file_path = self._validate_path(path)
@@ -483,25 +384,15 @@ class FileSystemManager:
             stat = file_path.stat()
 
             return {
-
                 "path": str(file_path),
-
                 "content": content,
-
                 "size": stat.st_size,
-
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-
                 "extension": file_path.suffix.lower(),
-
                 "encoding": "utf-8",
-
                 "can_write": can_write,
-
                 "can_admin": can_admin,
-
                 "write_users": write_users,
-
             }
 
         except UnicodeDecodeError:
@@ -513,11 +404,8 @@ class FileSystemManager:
             raise HTTPException(status_code=403, detail="Permission denied")
 
     def write_file(
-
         self, path: str, content: str, create_dirs: bool = False, user_email: str = None
-
     ) -> Dict[str, Any]:
-
         """Write content to a file."""
 
         file_path = self._validate_path(path)
@@ -577,15 +465,10 @@ class FileSystemManager:
             stat = file_path.stat()
 
             response = {
-
                 "path": str(file_path),
-
                 "size": stat.st_size,
-
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-
                 "message": "File saved successfully",
-
             }
 
             if permission_warning:
@@ -603,7 +486,6 @@ class FileSystemManager:
             raise HTTPException(status_code=500, detail=f"Error writing file: {str(e)}")
 
     def create_directory(self, path: str, user_email: str = None) -> Dict[str, Any]:
-
         """Create a new directory."""
 
         dir_path = self._validate_path(path)
@@ -631,9 +513,7 @@ class FileSystemManager:
                 if not parent_dir.has_write_access(current_user):
 
                     raise HTTPException(
-
                         status_code=403, detail="No write permission on parent directory"
-
                     )
 
             except Exception:
@@ -657,7 +537,6 @@ class FileSystemManager:
             raise HTTPException(status_code=500, detail=f"Error creating directory: {str(e)}")
 
     def delete_item(self, path: str, recursive: bool = False) -> Dict[str, Any]:
-
         """Delete a file or directory."""
 
         item_path = self._validate_path(path)
@@ -694,18 +573,13 @@ class FileSystemManager:
 
             raise HTTPException(status_code=500, detail=f"Error deleting item: {str(e)}")
 
+
 def generate_editor_html(
-
     initial_path: str = None,
-
     is_dark_mode: bool = False,
-
     syft_user: Optional[str] = None,
-
     is_new_file: bool = False,
-
 ) -> str:
-
     """Generate the HTML for the filesystem code editor."""
 
     initial_path = initial_path or str(Path.home())
@@ -769,7 +643,6 @@ def generate_editor_html(
         panel_bg = "#252526"
 
         panel_header_bg = "#2d2d30"
-
 
         accent_bg = "#2d2d30"
 
@@ -5369,12 +5242,10 @@ def generate_editor_html(
 
     return html_content
 
+
 def generate_share_modal_html(
-
     path: str, is_dark_mode: bool = False, syft_user: Optional[str] = None
-
 ) -> str:
-
     """Generate standalone share modal HTML."""
 
     import json

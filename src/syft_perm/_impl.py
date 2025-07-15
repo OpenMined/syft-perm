@@ -618,8 +618,7 @@ class SyftFile:
                                     continue  # Skip this rule for directories
 
                                 # Check if symlinks are allowed
-                                if not limits.get("allow_symlinks",
-                                    True) and self._is_symlink:
+                                if not limits.get("allow_symlinks", True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
 
                                 # Check file size limits
@@ -655,13 +654,11 @@ class SyftFile:
                         limits = rule.get("limits", {})
                         if limits:
                             # Check if directories are allowed
-                            if not limits.get("allow_dirs",
-                                True) and self._path.is_dir():
+                            if not limits.get("allow_dirs", True) and self._path.is_dir():
                                 continue  # Skip this rule for directories
 
                             # Check if symlinks are allowed
-                            if not limits.get("allow_symlinks",
-                                True) and self._is_symlink:
+                            if not limits.get("allow_symlinks", True) and self._is_symlink:
                                 continue  # Skip this rule for symlinks
 
                             # Check file size limits
@@ -722,8 +719,7 @@ class SyftFile:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons("*", "read")
-            create_has, create_reasons = self._check_permission_with_reasons(
-                "*", "create")
+            create_has, create_reasons = self._check_permission_with_reasons("*", "create")
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
 
@@ -761,10 +757,7 @@ class SyftFile:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has,
-                create_has,
-                write_has,
-                admin_has]):
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -810,12 +803,9 @@ class SyftFile:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons(user, "read")
-            create_has, create_reasons = self._check_permission_with_reasons(
-                user, "create")
-            write_has, write_reasons = self._check_permission_with_reasons(
-                user, "write")
-            admin_has, admin_reasons = self._check_permission_with_reasons(
-                user, "admin")
+            create_has, create_reasons = self._check_permission_with_reasons(user, "create")
+            write_has, write_reasons = self._check_permission_with_reasons(user, "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
 
             # Collect reasons with permission level prefixes
             permission_reasons = []
@@ -851,10 +841,7 @@ class SyftFile:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has,
-                create_has,
-                write_has,
-                admin_has]):
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -1293,8 +1280,7 @@ class SyftFile:
                                         continue  # Skip this rule for directories
 
                                     # Check if symlinks are allowed
-                                    if not limits.get("allow_symlinks",
-                                        True) and self._is_symlink:
+                                    if not limits.get("allow_symlinks", True) and self._is_symlink:
                                         continue  # Skip this rule for symlinks
 
                                     # Check file size limits
@@ -1351,13 +1337,11 @@ class SyftFile:
                             limits = rule.get("limits", {})
                             if limits:
                                 # Check if directories are allowed
-                                if not limits.get("allow_dirs",
-                                    True) and self._path.is_dir():
+                                if not limits.get("allow_dirs", True) and self._path.is_dir():
                                     continue  # Skip this rule for directories
 
                                 # Check if symlinks are allowed
-                                if not limits.get("allow_symlinks",
-                                    True) and self._is_symlink:
+                                if not limits.get("allow_symlinks", True) and self._is_symlink:
                                     continue  # Skip this rule for symlinks
 
                                 # Check file size limits
@@ -1523,8 +1507,7 @@ class SyftFile:
         explanation = f"Permission analysis for {user} on {self._path}:\n\n"
 
         for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(
-                user, perm)  # type: ignore
+            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
             status = "✓ GRANTED" if has_perm else "✗ DENIED"
             explanation += f"{perm.upper()}: {status}\n"
             for reason in reasons:
@@ -1900,8 +1883,7 @@ class SyftFolder:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons("*", "read")
-            create_has, create_reasons = self._check_permission_with_reasons(
-                "*", "create")
+            create_has, create_reasons = self._check_permission_with_reasons("*", "create")
             write_has, write_reasons = self._check_permission_with_reasons("*", "write")
             admin_has, admin_reasons = self._check_permission_with_reasons("*", "admin")
 
@@ -1939,10 +1921,7 @@ class SyftFolder:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has,
-                create_has,
-                write_has,
-                admin_has]):
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -1988,12 +1967,9 @@ class SyftFolder:
 
             # Check each permission level and collect reasons
             read_has, read_reasons = self._check_permission_with_reasons(user, "read")
-            create_has, create_reasons = self._check_permission_with_reasons(
-                user, "create")
-            write_has, write_reasons = self._check_permission_with_reasons(
-                user, "write")
-            admin_has, admin_reasons = self._check_permission_with_reasons(
-                user, "admin")
+            create_has, create_reasons = self._check_permission_with_reasons(user, "create")
+            write_has, write_reasons = self._check_permission_with_reasons(user, "write")
+            admin_has, admin_reasons = self._check_permission_with_reasons(user, "admin")
 
             # Collect reasons with permission level prefixes
             permission_reasons = []
@@ -2029,10 +2005,7 @@ class SyftFolder:
                         permission_reasons.append(f"[Read] {reason}")
 
             # Format reasons for display
-            if not permission_reasons and not any([read_has,
-                create_has,
-                write_has,
-                admin_has]):
+            if not permission_reasons and not any([read_has, create_has, write_has, admin_has]):
                 reason_text = "No permissions found"
             else:
                 # Smart deduplication: consolidate pattern matches across permission levels
@@ -2539,8 +2512,7 @@ class SyftFolder:
         explanation = f"Permission analysis for {user} on {self._path}:\n\n"
 
         for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(
-                user, perm)  # type: ignore
+            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
             status = "✓ GRANTED" if has_perm else "✗ DENIED"
             explanation += f"{perm.upper()}: {status}\n"
             for reason in reasons:
@@ -2693,15 +2665,13 @@ class SyftFolder:
                 for permission, users in perms.items():
                     for user in users:
                         if permission in ["read", "create", "write", "admin"]:
-                            file_obj._grant_access(user,
-                                permission)  # type: ignore[arg-type]
+                            file_obj._grant_access(user, permission)  # type: ignore[arg-type]
             elif new_item_path.is_dir():
                 folder_obj = SyftFolder(new_item_path)
                 for permission, users in perms.items():
                     for user in users:
                         if permission in ["read", "create", "write", "admin"]:
-                            folder_obj._grant_access(user,
-                                permission)  # type: ignore[arg-type]
+                            folder_obj._grant_access(user, permission)  # type: ignore[arg-type]
 
         return new_folder
 
