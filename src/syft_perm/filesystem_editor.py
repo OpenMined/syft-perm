@@ -276,12 +276,27 @@ class FileSystemManager:
         except OSError as e:
             raise HTTPException(status_code=500, detail=f"Error writing file: {str(e)}")
     
-    def create_directory(self, path: str) -> Dict[str, Any]:
+    def create_directory(self, path: str, user_email: str = None) -> Dict[str, Any]:
         """Create a new directory."""
         dir_path = self._validate_path(path)
         
         if dir_path.exists():
             raise HTTPException(status_code=400, detail="Directory already exists")
+        
+        # Check write permissions on parent directory using syft-perm
+        current_user = user_email or get_current_user_email()
+        syftbox_path = os.path.expanduser("~/SyftBox")
+        
+        if str(dir_path).startswith(syftbox_path) and current_user:
+            try:
+                # Use syft-perm to check actual permissions on parent directory
+                from . import open as syft_open
+                parent_dir = syft_open(dir_path.parent)
+                if not parent_dir.has_write_access(current_user):
+                    raise HTTPException(status_code=403, detail="No write permission on parent directory")
+            except Exception as e:
+                # If permission check fails, log but proceed
+                pass
         
         try:
             dir_path.mkdir(parents=True, exist_ok=False)
@@ -2041,17 +2056,24 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                 
                 const newPath = this.currentPath + '/' + filename;
                 
+                const requestBody = {{
+                    path: newPath,
+                    content: '',
+                    create_dirs: true
+                }};
+                
+                // Add syft_user if present
+                if (this.syftUser) {{
+                    requestBody.syft_user = this.syftUser;
+                }}
+                
                 // Create empty file
                 fetch('/api/filesystem/write', {{
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',
                     }},
-                    body: JSON.stringify({{
-                        path: newPath,
-                        content: '',
-                        create_dirs: true
-                    }})
+                    body: JSON.stringify(requestBody)
                 }})
                 .then(response => response.json())
                 .then(data => {{
@@ -2071,14 +2093,21 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                 
                 const newPath = this.currentPath + '/' + foldername;
                 
+                const requestBody = {{
+                    path: newPath
+                }};
+                
+                // Add syft_user if present
+                if (this.syftUser) {{
+                    requestBody.syft_user = this.syftUser;
+                }}
+                
                 fetch('/api/filesystem/create-directory', {{
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',
                     }},
-                    body: JSON.stringify({{
-                        path: newPath
-                    }})
+                    body: JSON.stringify(requestBody)
                 }})
                 .then(response => response.json())
                 .then(data => {{

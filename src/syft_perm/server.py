@@ -786,11 +786,15 @@ if _SERVER_AVAILABLE:
     async def create_directory(request: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new directory."""
         path = request.get("path")
+        syft_user = request.get("syft_user")
         
         if not path:
             raise HTTPException(status_code=400, detail="Path is required")
         
-        return fs_manager.create_directory(path)
+        from .filesystem_editor import get_current_user_email
+        # Use syft_user if provided (from syft:// URL), otherwise detect current user
+        current_user = syft_user or get_current_user_email()
+        return fs_manager.create_directory(path, user_email=current_user)
     
     @app.delete("/api/filesystem/delete")  # type: ignore[misc]
     async def delete_item(path: str = Query(...), recursive: bool = Query(False)) -> Dict[str, Any]:
@@ -1619,10 +1623,7 @@ def get_files_widget_html(
         animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out;
     }}
     
-    #{container_id} .rainbow-flash-10s {{
-        animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out;
-        animation-iteration-count: 6.25; /* 0.8s * 6.25 = 5s total */
-    }}
+    /* Dynamic rainbow class will be created in JavaScript */
 
     #{container_id} .pagination {{
         display: flex;
@@ -1953,6 +1954,15 @@ def get_files_widget_html(
         <div class="search-controls">
             <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
             <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." style="flex: 1;">
+            <select id="rainbowDuration" onchange="updateRainbowDuration_{container_id}()" style="padding: 0.5rem; border: 1px solid {input_border}; border-radius: 0.25rem; background: {input_bg}; color: {text_color}; font-size: 0.875rem;">
+                <option value="0">No Rainbow</option>
+                <option value="5" selected>5 seconds</option>
+                <option value="10">10 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="300">5 minutes</option>
+                <option value="600">10 minutes</option>
+            </select>
             <button class="btn btn-green btn-clickable" onclick="openNewFileModal()">New</button>
             <button class="btn btn-gray btn-clickable" onclick="restartServer()">Refresh</button>
             <button class="btn btn-purple btn-clickable" onclick="window.open(window.location.href, '_blank')">Open in Window</button>
@@ -2025,6 +2035,47 @@ def get_files_widget_html(
 
     <script>
     (function() {{
+        // Configuration
+        var CONFIG = {{
+            // Rainbow animation duration in seconds when a file is created/edited
+            // Adjust this value to control how long the rainbow effect lasts
+            // Examples: 3 = 3 seconds, 10 = 10 seconds, 0.5 = half a second
+            rainbowDurationSeconds: 5,
+            
+            // Rainbow animation speed (duration of one color cycle in seconds)
+            // Lower values = faster rainbow, higher values = slower rainbow
+            // Default: 0.8 seconds per color cycle
+            rainbowCycleSpeed: 0.8
+        }};
+        
+        // Calculate iteration count based on config
+        var rainbowIterations = CONFIG.rainbowDurationSeconds / CONFIG.rainbowCycleSpeed;
+        
+        // Create dynamic CSS for rainbow animation
+        var rainbowStyleElement = document.createElement('style');
+        rainbowStyleElement.id = 'rainbow-style-{container_id}';
+        document.head.appendChild(rainbowStyleElement);
+        
+        // Function to update rainbow CSS
+        function updateRainbowCSS() {{
+            if (CONFIG.rainbowDurationSeconds === 0) {{
+                rainbowStyleElement.textContent = '';
+                return;
+            }}
+            
+            var rainbowIterations = CONFIG.rainbowDurationSeconds / CONFIG.rainbowCycleSpeed;
+            rainbowStyleElement.textContent = `
+                #{container_id} .rainbow-flash-dynamic {{
+                    animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} ${{CONFIG.rainbowCycleSpeed}}s ease-in-out;
+                    animation-iteration-count: ${{rainbowIterations}};
+                    animation-duration: ${{CONFIG.rainbowCycleSpeed}}s;
+                }}
+            `;
+        }}
+        
+        // Initial CSS update
+        updateRainbowCSS();
+        
         // Initialize variables
         var allFiles = [];
         var filteredFiles = [];
@@ -2256,8 +2307,8 @@ def get_files_widget_html(
             if (statusEl) statusEl.textContent = message;
         }}
         
-        // Restart server function
-        async function restartServer() {{
+        // Restart server function - expose globally
+        window.restartServer = async function() {{
             try {{
                 showStatus('Restarting server...');
                 
@@ -2282,20 +2333,20 @@ def get_files_widget_html(
                 console.error('Error restarting server:', error);
                 showStatus('Error restarting server');
             }}
-        }}
+        }};
         
-        // Modal functions
-        function openNewFileModal() {{
+        // Modal functions - expose globally
+        window.openNewFileModal = function() {{
             document.getElementById('newFileModal').style.display = 'block';
             document.getElementById('newFilePath').focus();
-        }}
+        }};
         
-        function closeNewFileModal() {{
+        window.closeNewFileModal = function() {{
             document.getElementById('newFileModal').style.display = 'none';
             document.getElementById('newFilePath').value = '';
-        }}
+        }};
         
-        function createNewFile() {{
+        window.createNewFile = function() {{
             var filePath = document.getElementById('newFilePath').value.trim();
             
             if (!filePath) {{
@@ -2316,7 +2367,7 @@ def get_files_widget_html(
             var editorUrl = '/file-editor?path=' + encodeURIComponent(filePath) + '&new=true&embedded=true';
             document.getElementById('fileEditorFrame').src = editorUrl;
             document.getElementById('fileEditorModal').style.display = 'block';
-        }}
+        }};
         
         // Close modal when clicking outside
         window.onclick = function(event) {{
@@ -2328,6 +2379,29 @@ def get_files_widget_html(
             }} else if (event.target === editorModal) {{
                 document.getElementById('fileEditorModal').style.display = 'none';
                 document.getElementById('fileEditorFrame').src = '';
+            }}
+        }}
+        
+        // Update rainbow duration from dropdown
+        window.updateRainbowDuration_{container_id} = function() {{
+            var dropdown = document.getElementById('rainbowDuration');
+            var newDuration = parseInt(dropdown.value);
+            CONFIG.rainbowDurationSeconds = newDuration;
+            
+            // Update the CSS
+            updateRainbowCSS();
+            
+            // Re-render the table to apply new animation to eligible files
+            renderTable();
+            
+            // Show status message
+            if (newDuration === 0) {{
+                showStatus('Rainbow animation disabled');
+            }} else if (newDuration >= 60) {{
+                var minutes = newDuration / 60;
+                showStatus('Rainbow animation set to ' + minutes + ' minute' + (minutes > 1 ? 's' : ''));
+            }} else {{
+                showStatus('Rainbow animation set to ' + newDuration + ' seconds');
             }}
         }}
         
@@ -2522,17 +2596,20 @@ def get_files_widget_html(
                 var fileKey = file.name + '|' + file.path;
                 var chronoId = file.chronoId !== undefined ? file.chronoId : (chronologicalIds[fileKey] !== undefined ? chronologicalIds[fileKey] : i);
                 
-                // Check if this file was modified within the last 10 seconds
-                var wsActionStyle = '';
+                // Check if this file was modified within the threshold (rainbow duration + buffer)
+                var wsActionClass = '';
                 var now = Date.now() / 1000; // Convert to seconds
                 var fileModified = file.modified || 0;
                 var secondsSinceModified = now - fileModified;
                 
-                if (secondsSinceModified <= 10) {{
-                    wsActionStyle = ' style="animation: {'rainbow-dark' if is_dark_mode else 'rainbow'} 0.8s ease-in-out; animation-iteration-count: 6.25;"';
+                // Show rainbow if enabled and modified within the animation duration
+                if (CONFIG.rainbowDurationSeconds > 0 && secondsSinceModified <= CONFIG.rainbowDurationSeconds) {{
+                    wsActionClass = ' class="file-row rainbow-flash-dynamic"';
+                }} else {{
+                    wsActionClass = ' class="file-row"';
                 }}
                 
-                html += '<tr' + wsActionStyle + ' class="file-row" onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
+                html += '<tr' + wsActionClass + ' onclick="copyPath_{container_id}(\\'syft://' + filePath + '\\', this)">' +
                     '<td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>' +
                     '<td>' + chronoId + '</td>' +
                     '<td><div class="truncate" style="font-weight: 500;" title="' + escapeHtml(fullSyftPath) + '">' + escapeHtml(fullSyftPath) + '</div></td>' +
@@ -2689,7 +2766,14 @@ def get_files_widget_html(
                 return 0;
             }});
             
-            currentPage = 1;
+            // Calculate total pages after filtering
+            var totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
+            
+            // Preserve current page if it's still valid, otherwise go to last valid page
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+            
             renderTable();
             updateStatus();
         }};
