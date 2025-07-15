@@ -2977,20 +2977,34 @@ def get_files_widget_html(
                 
                 // Check if current user is admin for this file
                 var isAdmin = false;
+                var canCreate = false;
                 
                 // Check permissions object first
-                if (file.permissions && file.permissions.admin && CONFIG.currentUserEmail) {{
-                    isAdmin = file.permissions.admin.includes(CONFIG.currentUserEmail);
+                if (file.permissions && CONFIG.currentUserEmail) {{
+                    if (file.permissions.admin && file.permissions.admin.includes(CONFIG.currentUserEmail)) {{
+                        isAdmin = true;
+                        canCreate = true; // Admin implies all permissions
+                    }} else if (file.permissions.write && file.permissions.write.includes(CONFIG.currentUserEmail)) {{
+                        canCreate = true; // Write implies create
+                    }} else if (file.permissions.create && file.permissions.create.includes(CONFIG.currentUserEmail)) {{
+                        canCreate = true;
+                    }}
                 }}
                 
                 // If not found in permissions object, check permissions_summary
-                if (!isAdmin && file.permissions_summary && CONFIG.currentUserEmail) {{
-                    // Look for "admin: user@email.com" pattern in permissions_summary
+                if (!isAdmin && !canCreate && file.permissions_summary && CONFIG.currentUserEmail) {{
                     for (var j = 0; j < file.permissions_summary.length; j++) {{
                         var summary = file.permissions_summary[j];
-                        if (summary.startsWith('admin: ') && summary.includes(CONFIG.currentUserEmail)) {{
-                            isAdmin = true;
-                            break;
+                        if (summary.includes(CONFIG.currentUserEmail)) {{
+                            if (summary.startsWith('admin: ')) {{
+                                isAdmin = true;
+                                canCreate = true;
+                                break;
+                            }} else if (summary.startsWith('write: ')) {{
+                                canCreate = true;
+                            }} else if (summary.startsWith('create: ')) {{
+                                canCreate = true;
+                            }}
                         }}
                     }}
                 }}
@@ -3000,9 +3014,16 @@ def get_files_widget_html(
                     '<td>' +
                         '<div style="display: flex; gap: 0.125rem;">';
                 
-                // Add "New" button only for directories
-                if (file.is_dir) {{
+                // Add "New" button based on folder status and permissions
+                if (file.is_dir && canCreate) {{
                     html += '<button class="btn btn-green btn-clickable" onclick="event.stopPropagation(); openNewModal_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Create new file or folder">' +
+                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                                    '<line x1="12" y1="5" x2="12" y2="19"></line>' +
+                                    '<line x1="5" y1="12" x2="19" y2="12"></line>' +
+                                '</svg> New</button>';
+                }} else {{
+                    var disabledReason = !file.is_dir ? "New files can only be created in folders" : "You need create, write, or admin permissions to create files";
+                    html += '<button class="btn btn-gray" style="opacity: 0.3; cursor: not-allowed;" title="' + disabledReason + '" disabled>' +
                                 '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
                                     '<line x1="12" y1="5" x2="12" y2="19"></line>' +
                                     '<line x1="5" y1="12" x2="19" y2="12"></line>' +
