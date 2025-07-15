@@ -2281,17 +2281,13 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
             async showShareModal() {{
                 // Determine the path to share - could be current file, selected folder, or current directory
                 let pathToShare;
-                let isDirectory;
                 
                 if (this.currentFile) {{
                     pathToShare = this.currentFile.path;
-                    isDirectory = false;
                 }} else if (this.selectedFolder) {{
                     pathToShare = this.selectedFolder;
-                    isDirectory = true;
                 }} else {{
                     pathToShare = this.currentPath;
-                    isDirectory = true;
                 }}
                 
                 if (!pathToShare) {{
@@ -2299,51 +2295,67 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
                     return;
                 }}
                 
-                // For directories, we need to check admin permissions first
-                if (isDirectory) {{
-                    try {{
-                        const response = await fetch(`/permissions/${{encodeURIComponent(pathToShare)}}`);
-                        const permData = await response.json();
-                        
-                        if (!response.ok) {{
-                            throw new Error(permData.detail || 'Failed to load permissions');
-                        }}
-                        
-                        // Check if current user has admin permissions
-                        const currentUser = await this.getCurrentUser();
-                        if (currentUser && permData.permissions && permData.permissions.admin) {{
-                            const hasAdmin = permData.permissions.admin.includes(currentUser) || 
-                                           permData.permissions.admin.includes('*');
-                            if (!hasAdmin) {{
-                                this.showError('You need admin permissions to share this folder');
-                                return;
-                            }}
-                        }}
-                        
-                        this.createShareModal(pathToShare, isDirectory, permData);
-                    }} catch (error) {{
-                        this.showError('Failed to load permissions: ' + error.message);
+                // Create modal overlay
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    animation: fadeIn 0.3s ease-out;
+                `;
+                
+                // Create modal container with iframe
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    background: transparent;
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 640px;
+                    height: 600px;
+                    max-height: 80vh;
+                    overflow: hidden;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+                    animation: slideIn 0.3s ease-out;
+                `;
+                
+                // Create iframe
+                const iframe = document.createElement('iframe');
+                const shareUrl = `/share-modal?path=${{encodeURIComponent(pathToShare)}}`;
+                iframe.src = shareUrl;
+                iframe.style.cssText = `
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    border-radius: 12px;
+                `;
+                
+                modal.appendChild(iframe);
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+                
+                // Handle messages from iframe
+                const messageHandler = (event) => {{
+                    if (event.data && event.data.action === 'closeShareModal') {{
+                        document.body.removeChild(overlay);
+                        window.removeEventListener('message', messageHandler);
                     }}
-                }} else {{
-                    // For files, we already checked admin permissions during load
-                    if (!this.isAdmin) {{
-                        this.showError('You need admin permissions to share this file');
-                        return;
+                }};
+                window.addEventListener('message', messageHandler);
+                
+                // Allow closing by clicking overlay
+                overlay.addEventListener('click', (e) => {{
+                    if (e.target === overlay) {{
+                        document.body.removeChild(overlay);
+                        window.removeEventListener('message', messageHandler);
                     }}
-                    
-                    try {{
-                        const response = await fetch(`/permissions/${{encodeURIComponent(pathToShare)}}`);
-                        const permData = await response.json();
-                        
-                        if (!response.ok) {{
-                            throw new Error(permData.detail || 'Failed to load permissions');
-                        }}
-                        
-                        this.createShareModal(pathToShare, isDirectory, permData);
-                    }} catch (error) {{
-                        this.showError('Failed to load permissions: ' + error.message);
-                    }}
-                }}
+                }});
             }}
             
             async getCurrentUser() {{
@@ -2871,3 +2883,575 @@ def generate_editor_html(initial_path: str = None, is_dark_mode: bool = False, s
 </html>"""
     
     return html_content
+
+
+def generate_share_modal_html(path: str, is_dark_mode: bool = False, syft_user: Optional[str] = None) -> str:
+    """Generate standalone share modal HTML."""
+    from pathlib import Path
+    import json
+    
+    path_obj = Path(path)
+    file_name = path_obj.name
+    is_directory = path_obj.is_dir() if path_obj.exists() else False
+    item_type = 'folder' if is_directory else 'file'
+    
+    # Define theme colors
+    if is_dark_mode:
+        bg_color = "#2d2d30"
+        text_color = "#d4d4d4"
+        border_color = "#3e3e42"
+        input_bg = "#1e1e1e"
+        hover_bg = "#3e3e42"
+        muted_color = "#9ca3af"
+        modal_bg = "#252526"
+    else:
+        bg_color = "white"
+        text_color = "#374151"
+        border_color = "#e5e7eb"
+        input_bg = "white"
+        hover_bg = "#f3f4f6"
+        muted_color = "#6b7280"
+        modal_bg = "#f9fafb"
+    
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Share {file_name}</title>
+    <style>
+        body {{
+            margin: 0;
+            padding: 20px;
+            background: {bg_color};
+            color: {text_color};
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }}
+        
+        .container {{
+            background: {bg_color};
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 640px;
+            overflow: hidden;
+        }}
+        
+        .header {{
+            padding: 20px 24px;
+            border-bottom: 1px solid {border_color};
+        }}
+        
+        .header h1 {{
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }}
+        
+        .header p {{
+            margin: 4px 0 0 0;
+            font-size: 14px;
+            color: {muted_color};
+        }}
+        
+        .body {{
+            padding: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }}
+        
+        .add-section {{
+            padding: 0 24px 16px;
+            border-bottom: 1px solid {border_color};
+            margin-bottom: 16px;
+        }}
+        
+        .add-form {{
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }}
+        
+        .form-group {{
+            flex: 1;
+        }}
+        
+        .form-label {{
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }}
+        
+        .form-input {{
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid {border_color};
+            border-radius: 6px;
+            background: {input_bg};
+            color: {text_color};
+            font-size: 14px;
+            box-sizing: border-box;
+        }}
+        
+        .form-select {{
+            padding: 8px 12px;
+            border: 1px solid {border_color};
+            border-radius: 6px;
+            background: {input_bg};
+            color: {text_color};
+            font-size: 14px;
+            cursor: pointer;
+        }}
+        
+        .btn {{
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }}
+        
+        .btn-primary {{
+            background: #3b82f6;
+            color: white;
+        }}
+        
+        .btn-primary:hover {{
+            background: #2563eb;
+        }}
+        
+        .btn-secondary {{
+            background: {modal_bg};
+            color: {text_color};
+            border: 1px solid {border_color};
+        }}
+        
+        .btn-secondary:hover {{
+            background: {hover_bg};
+        }}
+        
+        .user-row {{
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            border-bottom: 1px solid {border_color};
+            gap: 12px;
+        }}
+        
+        .user-row:hover {{
+            background: {hover_bg};
+        }}
+        
+        .user-info {{
+            flex: 1;
+            min-width: 0;
+        }}
+        
+        .user-email {{
+            font-weight: 500;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }}
+        
+        .user-role {{
+            font-size: 12px;
+            color: {muted_color};
+            margin-top: 2px;
+        }}
+        
+        .permission-select {{
+            padding: 6px 8px;
+            border: 1px solid {border_color};
+            border-radius: 6px;
+            background: {input_bg};
+            color: {text_color};
+            font-size: 13px;
+            cursor: pointer;
+        }}
+        
+        .remove-btn {{
+            padding: 6px;
+            border: none;
+            background: none;
+            color: {muted_color};
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }}
+        
+        .remove-btn:hover {{
+            background: {hover_bg};
+            color: #ef4444;
+        }}
+        
+        .footer {{
+            padding: 16px 24px;
+            border-top: 1px solid {border_color};
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background: {modal_bg};
+        }}
+        
+        .loading {{
+            text-align: center;
+            padding: 40px;
+            color: {muted_color};
+        }}
+        
+        .error {{
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px 24px;
+            font-size: 14px;
+        }}
+        
+        .success {{
+            background: #d1fae5;
+            color: #065f46;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px 24px;
+            font-size: 14px;
+        }}
+        
+        .empty {{
+            padding: 40px;
+            text-align: center;
+            color: {muted_color};
+            font-size: 14px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Share "{file_name}"</h1>
+            <p>Manage who can access this {item_type}</p>
+        </div>
+        
+        <div id="messageArea"></div>
+        
+        <div class="body">
+            <div class="add-section">
+                <div class="add-form">
+                    <div class="form-group">
+                        <label class="form-label">Add person</label>
+                        <input 
+                            type="email" 
+                            id="userEmailInput" 
+                            class="form-input"
+                            placeholder="Enter email address"
+                        />
+                    </div>
+                    <select id="newUserPermission" class="form-select">
+                        <option value="read">Read</option>
+                        <option value="write">Write</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="addUser()">Add</button>
+                </div>
+            </div>
+            
+            <div id="usersList" class="loading">Loading permissions...</div>
+        </div>
+        
+        <div class="footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveChanges()">Save Changes</button>
+        </div>
+    </div>
+    
+    <script>
+        const path = {json.dumps(path)};
+        const syftUser = {json.dumps(syft_user) if syft_user else 'null'};
+        let currentPermissions = {{}};
+        let pendingChanges = {{}};
+        
+        async function loadPermissions() {{
+            try {{
+                const response = await fetch(`/permissions/${{encodeURIComponent(path)}}`);
+                if (!response.ok) {{
+                    throw new Error('Failed to load permissions');
+                }}
+                
+                const data = await response.json();
+                currentPermissions = data.permissions || {{}};
+                renderUsersList();
+                
+                // Check if current user has admin permissions
+                const currentUser = await getCurrentUser();
+                if (currentUser && currentPermissions.admin) {{
+                    const hasAdmin = currentPermissions.admin.includes(currentUser) || 
+                                   currentPermissions.admin.includes('*');
+                    if (!hasAdmin) {{
+                        showError('You need admin permissions to share this {item_type}');
+                        document.querySelector('.add-section').style.display = 'none';
+                        document.querySelector('.footer').style.display = 'none';
+                    }}
+                }}
+            }} catch (error) {{
+                showError('Failed to load permissions: ' + error.message);
+            }}
+        }}
+        
+        async function getCurrentUser() {{
+            if (syftUser) return syftUser;
+            
+            try {{
+                const response = await fetch('/api/current-user');
+                if (response.ok) {{
+                    const data = await response.json();
+                    return data.email;
+                }}
+            }} catch (e) {{
+                console.error('Failed to get current user:', e);
+            }}
+            return null;
+        }}
+        
+        function renderUsersList() {{
+            const container = document.getElementById('usersList');
+            const allUsers = new Set();
+            
+            Object.values(currentPermissions).forEach(userList => {{
+                userList.forEach(user => allUsers.add(user));
+            }});
+            
+            if (allUsers.size === 0) {{
+                container.innerHTML = '<div class="empty">No users have access yet</div>';
+                return;
+            }}
+            
+            const html = Array.from(allUsers).map(user => {{
+                const userPerms = {{}};
+                ['read', 'create', 'write', 'admin'].forEach(perm => {{
+                    userPerms[perm] = currentPermissions[perm]?.includes(user) || false;
+                }});
+                
+                const role = getUserRole(userPerms);
+                
+                return `
+                    <div class="user-row">
+                        <div class="user-info">
+                            <div class="user-email">${{user}}</div>
+                            <div class="user-role">${{role}}</div>
+                        </div>
+                        <select class="permission-select" onchange="updatePermission('${{user}}', this.value)">
+                            <option value="none" ${{!userPerms.read ? 'selected' : ''}}>No access</option>
+                            <option value="read" ${{userPerms.read && !userPerms.write && !userPerms.admin ? 'selected' : ''}}>Read</option>
+                            <option value="write" ${{userPerms.write && !userPerms.admin ? 'selected' : ''}}>Write</option>
+                            <option value="admin" ${{userPerms.admin ? 'selected' : ''}}>Admin</option>
+                        </select>
+                        <button class="remove-btn" onclick="removeUser('${{user}}')" title="Remove user">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+            }}).join('');
+            
+            container.innerHTML = html;
+        }}
+        
+        function getUserRole(perms) {{
+            if (perms.admin) return 'Admin (can manage permissions)';
+            if (perms.write) return 'Write (can edit {item_type})';
+            if (perms.read) return 'Read (can view {item_type})';
+            return 'No access';
+        }}
+        
+        function updatePermission(user, level) {{
+            if (!pendingChanges[user]) {{
+                pendingChanges[user] = {{}};
+            }}
+            pendingChanges[user].level = level;
+        }}
+        
+        function removeUser(user) {{
+            if (!pendingChanges[user]) {{
+                pendingChanges[user] = {{}};
+            }}
+            pendingChanges[user].remove = true;
+            
+            // Update UI immediately
+            const newPerms = JSON.parse(JSON.stringify(currentPermissions));
+            ['read', 'create', 'write', 'admin'].forEach(perm => {{
+                if (newPerms[perm]) {{
+                    newPerms[perm] = newPerms[perm].filter(u => u !== user);
+                }}
+            }});
+            currentPermissions = newPerms;
+            renderUsersList();
+        }}
+        
+        async function addUser() {{
+            const email = document.getElementById('userEmailInput').value.trim();
+            const permission = document.getElementById('newUserPermission').value;
+            
+            if (!email) {{
+                showError('Please enter an email address');
+                return;
+            }}
+            
+            if (!email.includes('@')) {{
+                showError('Please enter a valid email address');
+                return;
+            }}
+            
+            // Add to pending changes
+            if (!pendingChanges[email]) {{
+                pendingChanges[email] = {{}};
+            }}
+            pendingChanges[email].level = permission;
+            
+            // Update UI immediately
+            const newPerms = JSON.parse(JSON.stringify(currentPermissions));
+            ['read', 'create', 'write', 'admin'].forEach(perm => {{
+                if (!newPerms[perm]) newPerms[perm] = [];
+                newPerms[perm] = newPerms[perm].filter(u => u !== email);
+            }});
+            
+            if (permission === 'read') {{
+                newPerms.read.push(email);
+            }} else if (permission === 'write') {{
+                newPerms.read.push(email);
+                newPerms.create.push(email);
+                newPerms.write.push(email);
+            }} else if (permission === 'admin') {{
+                newPerms.read.push(email);
+                newPerms.create.push(email);
+                newPerms.write.push(email);
+                newPerms.admin.push(email);
+            }}
+            
+            currentPermissions = newPerms;
+            renderUsersList();
+            
+            // Clear input
+            document.getElementById('userEmailInput').value = '';
+        }}
+        
+        async function saveChanges() {{
+            const updates = [];
+            
+            for (const [user, changes] of Object.entries(pendingChanges)) {{
+                if (changes.remove) {{
+                    // Remove all permissions
+                    ['read', 'create', 'write', 'admin'].forEach(perm => {{
+                        updates.push({{
+                            path: path,
+                            user: user,
+                            permission: perm,
+                            action: 'revoke'
+                        }});
+                    }});
+                }} else if (changes.level) {{
+                    // First remove all permissions
+                    ['read', 'create', 'write', 'admin'].forEach(perm => {{
+                        updates.push({{
+                            path: path,
+                            user: user,
+                            permission: perm,
+                            action: 'revoke'
+                        }});
+                    }});
+                    
+                    // Then grant appropriate permissions
+                    if (changes.level === 'read') {{
+                        updates.push({{
+                            path: path,
+                            user: user,
+                            permission: 'read',
+                            action: 'grant'
+                        }});
+                    }} else if (changes.level === 'write') {{
+                        ['read', 'create', 'write'].forEach(perm => {{
+                            updates.push({{
+                                path: path,
+                                user: user,
+                                permission: perm,
+                                action: 'grant'
+                            }});
+                        }});
+                    }} else if (changes.level === 'admin') {{
+                        ['read', 'create', 'write', 'admin'].forEach(perm => {{
+                            updates.push({{
+                                path: path,
+                                user: user,
+                                permission: perm,
+                                action: 'grant'
+                            }});
+                        }});
+                    }}
+                }}
+            }}
+            
+            try {{
+                for (const update of updates) {{
+                    const response = await fetch('/permissions/update', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify(update)
+                    }});
+                    
+                    if (!response.ok) {{
+                        throw new Error('Failed to update permissions');
+                    }}
+                }}
+                
+                showSuccess('Permissions updated successfully');
+                pendingChanges = {{}};
+                
+                // Close modal after success
+                setTimeout(() => {{
+                    if (window.parent !== window) {{
+                        window.parent.postMessage({{ action: 'closeShareModal' }}, '*');
+                    }} else {{
+                        window.close();
+                    }}
+                }}, 1500);
+            }} catch (error) {{
+                showError('Failed to save permissions: ' + error.message);
+            }}
+        }}
+        
+        function closeModal() {{
+            if (window.parent !== window) {{
+                window.parent.postMessage({{ action: 'closeShareModal' }}, '*');
+            }} else {{
+                window.close();
+            }}
+        }}
+        
+        function showError(message) {{
+            const area = document.getElementById('messageArea');
+            area.innerHTML = `<div class="error">${{message}}</div>`;
+            setTimeout(() => area.innerHTML = '', 5000);
+        }}
+        
+        function showSuccess(message) {{
+            const area = document.getElementById('messageArea');
+            area.innerHTML = `<div class="success">${{message}}</div>`;
+        }}
+        
+        // Load permissions on page load
+        loadPermissions();
+    </script>
+</body>
+</html>
+"""

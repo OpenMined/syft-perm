@@ -812,6 +812,13 @@ if _SERVER_AVAILABLE:
         """Serve the file editor interface with a specific path."""
         from . import is_dark
         return HTMLResponse(content=generate_editor_html(initial_path=path, is_dark_mode=is_dark(), syft_user=syft_user))
+    
+    @app.get("/share-modal", response_class=HTMLResponse)  # type: ignore[misc]
+    async def share_modal(path: str = Query(...), syft_user: Optional[str] = Query(None)) -> HTMLResponse:
+        """Serve the share modal as a standalone page."""
+        from . import is_dark
+        from .filesystem_editor import generate_share_modal_html
+        return HTMLResponse(content=generate_share_modal_html(path=path, is_dark_mode=is_dark(), syft_user=syft_user))
 
 
 def get_editor_html(path: str) -> str:
@@ -1788,7 +1795,7 @@ def get_files_widget_html(
         color: {'#d1d5db' if is_dark_mode else '#374151'};
     }}
 
-    #{container_id} .modal {{
+    .modal {{
         display: none;
         position: fixed;
         z-index: 1000;
@@ -1800,7 +1807,7 @@ def get_files_widget_html(
         backdrop-filter: blur(4px);
     }}
     
-    #{container_id} .modal-content {{
+    .modal-content {{
         position: relative;
         background-color: {bg_color};
         margin: 10% auto;
@@ -1811,13 +1818,13 @@ def get_files_widget_html(
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }}
     
-    #{container_id} .modal-editor {{
+    .modal-editor {{
         width: 90%;
         height: 80vh;
         max-width: 1200px;
     }}
     
-    #{container_id} .modal-header {{
+    .modal-header {{
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -1826,13 +1833,13 @@ def get_files_widget_html(
         border-bottom: 1px solid {border_color};
     }}
     
-    #{container_id} .modal-title {{
+    .modal-title {{
         font-size: 1.2rem;
         font-weight: 600;
         color: {text_color};
     }}
     
-    #{container_id} .modal-close {{
+    .modal-close {{
         cursor: pointer;
         font-size: 1.5rem;
         color: {text_color};
@@ -1840,15 +1847,15 @@ def get_files_widget_html(
         transition: opacity 0.2s;
     }}
     
-    #{container_id} .modal-close:hover {{
+    .modal-close:hover {{
         opacity: 1;
     }}
     
-    #{container_id} .modal-body {{
+    .modal-body {{
         margin-bottom: 20px;
     }}
     
-    #{container_id} .modal-footer {{
+    .modal-footer {{
         display: flex;
         justify-content: flex-end;
         gap: 10px;
@@ -1856,18 +1863,18 @@ def get_files_widget_html(
         border-top: 1px solid {border_color};
     }}
     
-    #{container_id} .form-group {{
+    .form-group {{
         margin-bottom: 15px;
     }}
     
-    #{container_id} .form-label {{
+    .form-label {{
         display: block;
         margin-bottom: 5px;
         font-weight: 500;
         color: {text_color};
     }}
     
-    #{container_id} .form-input {{
+    .form-input {{
         width: 100%;
         padding: 8px 12px;
         border: 1px solid {input_border};
@@ -1877,10 +1884,40 @@ def get_files_widget_html(
         font-size: 0.875rem;
     }}
     
-    #{container_id} .form-hint {{
+    .form-hint {{
         margin-top: 5px;
         font-size: 0.75rem;
         color: {page_info_color};
+    }}
+    
+    .btn-primary {{
+        padding: 8px 16px;
+        background: {'#3b82f6' if is_dark_mode else '#3b82f6'};
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }}
+    
+    .btn-primary:hover {{
+        background: {'#2563eb' if is_dark_mode else '#2563eb'};
+    }}
+    
+    .btn-secondary {{
+        padding: 8px 16px;
+        background: {'#4b5563' if is_dark_mode else '#e5e7eb'};
+        color: {text_color};
+        border: none;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }}
+    
+    .btn-secondary:hover {{
+        background: {'#374151' if is_dark_mode else '#d1d5db'};
     }}
     
     #{container_id} .date-text {{
@@ -2770,9 +2807,9 @@ def get_files_widget_html(
             var totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
             
             // Preserve current page if it's still valid, otherwise go to last valid page
-            if (currentPage > totalPages) {
+            if (currentPage > totalPages) {{
                 currentPage = totalPages;
-            }
+            }}
             
             renderTable();
             updateStatus();
