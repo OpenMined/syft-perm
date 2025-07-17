@@ -3,12 +3,12 @@
 import shutil
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
 import yaml
-from datetime import datetime
 
 from ._utils import (
     format_users,
@@ -1066,8 +1066,11 @@ class SyftFile:
             # -----------------------------
             # Offline fallback (read-only)
             # -----------------------------
-            import html as _html, json as _json, uuid as _uuid
+            import html as _html
+            import json as _json
+            import uuid as _uuid
             from pathlib import Path as _Path
+
             from .filesystem_editor import generate_editor_html as _gen_html
 
             is_dark_mode = is_dark()
@@ -1692,20 +1695,20 @@ class ShareWidget:
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter display."""
         import urllib.parse as _url
+
         from . import is_dark
 
         # Try to ensure/locate a running server first (same logic we added elsewhere)
         try:
-            from .server import (
-                get_server_url as _get_url,
-                start_server as _start_server,
-                _SERVER_AVAILABLE,
-            )
+            from .server import _SERVER_AVAILABLE
+            from .server import get_server_url as _get_url
+            from .server import start_server as _start_server
 
-            server_url: str | None = _get_url() if _SERVER_AVAILABLE else None
-            if _SERVER_AVAILABLE and not server_url:
-                # Start background server and grab its url
-                server_url = _start_server()
+            if _SERVER_AVAILABLE:
+                server_url = _get_url()
+                if _SERVER_AVAILABLE and not server_url:
+                    # Start background server and grab its url
+                    server_url = _start_server()
         except Exception:
             server_url = None  # Any import/start failure -> fallback
 
@@ -2350,8 +2353,11 @@ class SyftFolder:
             # -----------------------------
             # Offline fallback (read-only)
             # -----------------------------
-            import html as _html, json as _json, uuid as _uuid
+            import html as _html
+            import json as _json
+            import uuid as _uuid
             from pathlib import Path as _Path
+
             from .filesystem_editor import generate_editor_html as _gen_html
 
             is_dark_mode = is_dark()

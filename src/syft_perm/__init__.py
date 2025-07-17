@@ -109,51 +109,47 @@ class _Files:
 
     def _check_server(self) -> _Union[str, None]:
         """Check if syft-perm server is available. Returns server URL or None."""
+        # Use a try-except block to gracefully handle non-IPython environments
         try:
-            import json
             import urllib.request
-            from pathlib import Path
 
-            # First check config file for port
-            config_path = Path.home() / ".syftperm" / "config.json"
-            ports_to_check = []
+            # First, try to read port from config file to avoid unnecessary scanning
+            try:
+                from .server import _get_configured_port
 
-            if config_path.exists():
-                try:
-                    with open(config_path, "r") as f:
-                        config = json.load(f)
-                        port = config.get("port")
-                        if port:
-                            ports_to_check.append(port)
-                except Exception:
-                    pass
-
-            # Also check default port
-            # if 8005 not in ports_to_check:
-            # ports_to_check.append(8005)
-
-            # Try each port with 20 second timeout
-            for port in ports_to_check:
-                try:
-                    url = f"http://localhost:{port}"
-                    with urllib.request.urlopen(url, timeout=20) as response:
+                port = _get_configured_port()
+                if port:
+                    url = f"http://localhost:{port}/"
+                    with urllib.request.urlopen(url, timeout=0.1) as response:
                         if response.status == 200:
-                            content = response.read().decode("utf-8")
+                            # Only read first 100 bytes to check for "SyftPerm"
+                            content = response.read(100).decode("utf-8")
+                            if "SyftPerm" in content:
+                                return url
+            except Exception:
+                pass
+
+            # If not found, fall back to scanning common ports
+            for port in range(8000, 8101):
+                url = f"http://localhost:{port}/"
+                try:
+                    with urllib.request.urlopen(url, timeout=0.02) as response:
+                        if response.status == 200:
+                            content = response.read(100).decode("utf-8")
                             if "SyftPerm" in content:
                                 return url
                 except Exception:
                     continue
 
         except Exception:
+            # If any check fails, assume server is not running
             pass
 
         # At this point no reachable server was found – attempt to start one
         try:
-            from .server import (
-                get_server_url as _get_url,
-                start_server as _start_server,
-                _SERVER_AVAILABLE,
-            )
+            from .server import _SERVER_AVAILABLE
+            from .server import get_server_url as _get_url
+            from .server import start_server as _start_server
 
             if not _SERVER_AVAILABLE:
                 # server dependencies (fastapi, uvicorn) not installed – abort
