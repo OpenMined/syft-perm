@@ -871,9 +871,9 @@ if _SERVER_AVAILABLE:
 
     @app.post("/api/filesystem/rename")  # type: ignore[misc]
     async def rename_item(
-        old_path: str = Query(...), 
-        new_path: str = Query(...), 
-        syft_user: Optional[str] = Query(None)
+        old_path: str = Query(...),
+        new_path: str = Query(...),
+        syft_user: Optional[str] = Query(None),
     ) -> Dict[str, Any]:
         """Rename a file or directory."""
         current_user = syft_user or get_current_user_email()

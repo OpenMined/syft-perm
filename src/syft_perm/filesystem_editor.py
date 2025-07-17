@@ -578,52 +578,54 @@ class FileSystemManager:
         """Rename a file or directory."""
         # Validate old path
         old_item_path = self._validate_path(old_path)
-        
+
         if not old_item_path.exists():
             raise HTTPException(status_code=404, detail="Item not found")
-        
+
         # Validate new path
         new_item_path = self._validate_path(new_path)
-        
+
         if new_item_path.exists():
             raise HTTPException(status_code=409, detail="An item with that name already exists")
-        
+
         # Check if parent directory exists
         if not new_item_path.parent.exists():
             raise HTTPException(status_code=400, detail="Parent directory does not exist")
-        
+
         # Check write permissions on parent directory
         current_user = user_email or get_current_user_email()
-        
+
         if current_user:
             try:
                 from . import open as syft_open
+
                 parent_folder = syft_open(old_item_path.parent)
-                
+
                 # Check if user has write or admin permissions
                 if not parent_folder.has_permission(current_user, "write"):
                     # Check if it's their own datasite
                     import re
-                    datasite_match = re.search(r'/datasites/([^/]+)/', str(old_item_path))
+
+                    datasite_match = re.search(r"/datasites/([^/]+)/", str(old_item_path))
                     if not (datasite_match and datasite_match.group(1) == current_user):
                         raise HTTPException(
                             status_code=403,
-                            detail="You don't have write permissions to rename items in this directory"
+                            detail="You don't have write permissions to rename items in this directory",
                         )
             except Exception:
                 # If syft-perm check fails, continue with basic checks
                 pass
-        
+
         try:
             # Perform the rename
             old_item_path.rename(new_item_path)
-            
+
             return {
                 "old_path": str(old_item_path),
                 "new_path": str(new_item_path),
-                "message": f"{'Directory' if new_item_path.is_dir() else 'File'} renamed successfully"
+                "message": f"{'Directory' if new_item_path.is_dir() else 'File'} renamed successfully",
             }
-            
+
         except PermissionError:
             raise HTTPException(status_code=403, detail="Permission denied")
         except OSError as e:

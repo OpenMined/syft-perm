@@ -1632,7 +1632,7 @@ class SyftFile:
                     new_file._grant_access(user, permission)  # type: ignore[arg-type]
 
         return new_file
-    
+
     @property
     def share(self):
         """Get the share widget for this file."""
@@ -1641,22 +1641,22 @@ class SyftFile:
 
 class ShareWidget:
     """Widget to display share permissions in an iframe."""
-    
+
     def __init__(self, syft_object: Union["SyftFile", "SyftFolder"]):
         self._object = syft_object
         self._path = str(syft_object._path)
-        
+
         # Extract user context if available
-        self._syft_user = getattr(syft_object, '_syft_user', None)
-    
+        self._syft_user = getattr(syft_object, "_syft_user", None)
+
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter display."""
         import urllib.parse
-        
+
         # Build the share modal URL - exact same as file-editor uses
         # Using localhost:8005 where the file-editor server is running
         share_url = f"http://localhost:8005/share-modal?path={urllib.parse.quote(self._path)}"
-        
+
         # If we have a syft user context, pass it as a query parameter
         if self._syft_user:
             share_url = f"{share_url}&syft_user={urllib.parse.quote(self._syft_user)}"
@@ -1670,7 +1670,7 @@ class ShareWidget:
             </iframe>
         </div>
         """
-    
+
     def __repr__(self) -> str:
         """String representation."""
         return f"ShareWidget('{self._path}')"
@@ -2773,7 +2773,7 @@ class SyftFolder:
 
         file_obj = SyftFile(self._path)
         return file_obj._get_all_permissions_with_sources()
-    
+
     @property
     def share(self):
         """Get the share widget for this file."""
