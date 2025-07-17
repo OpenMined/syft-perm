@@ -1,5 +1,6 @@
 """SyftPerm - File permission management for SyftBox."""
 
+import json  # used in _check_server for config parsing
 from pathlib import Path as _Path
 from typing import Union as _Union
 
