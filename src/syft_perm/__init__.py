@@ -2,7 +2,6 @@
 
 from pathlib import Path as _Path
 from typing import Union as _Union
-import json  # Needed for _check_server
 
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
