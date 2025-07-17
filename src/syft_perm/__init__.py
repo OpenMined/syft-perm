@@ -136,8 +136,8 @@ class Files:
                     pass
 
             # Also check default port
-            if 8005 not in ports_to_check:
-                ports_to_check.append(8005)
+            # if 8005 not in ports_to_check:
+            # ports_to_check.append(8005)
 
             # Try each port with 20 second timeout
             for port in ports_to_check:
