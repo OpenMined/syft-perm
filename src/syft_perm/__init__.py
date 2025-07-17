@@ -3396,7 +3396,9 @@ class FilteredFiles(Files):
         output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
         if total_files > len(display_files):
             output.append(
-                "Use FilteredFiles in Jupyter for interactive view of all " + str(total_files) + " results"
+                "Use FilteredFiles in Jupyter for interactive view of all "
+                + str(total_files)
+                + " results"
             )
 
         return "\n".join(output)
