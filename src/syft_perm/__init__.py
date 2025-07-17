@@ -2,6 +2,7 @@
 
 from pathlib import Path as _Path
 from typing import Union as _Union
+import json  # Needed for _check_server
 
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
@@ -117,7 +118,6 @@ class Files:
     def _check_server(self) -> _Union[str, None]:
         """Check if syft-perm server is available. Returns server URL or None."""
         try:
-            import json
             import urllib.request
             from pathlib import Path
 
@@ -1257,8 +1257,7 @@ color: {'#60a5fa' if is_dark_mode else '#0369a1'};">💡 TIP:</span> \
                         pass  # Error cloning
 
         # Run the check in a background thread
-        import threading
-
+        # threading already imported above
         background_thread = threading.Thread(target=check_syft_perm_status, daemon=True)
         background_thread.start()
 
@@ -1717,7 +1716,9 @@ color: {'#60a5fa' if is_dark_mode else '#0369a1'};">💡 TIP:</span> \
                         f"                                <span>+{len(perms) - 3} more...</span>\n"
                     )
             else:
-                html += '                                <span style="color: {'  # 6b7280' if is_dark_mode else '#9ca3af'};">No permissions</span>\n'
+                html += (
+                    f"                                <span style=\"color: {'#6b7280' if is_dark_mode else '#9ca3af'};\">No permissions</span>\n"
+                )
 
             html += f"""
                             </div>
@@ -3402,6 +3403,10 @@ class FilteredFiles(Files):
             )
 
         return "\n".join(output)
+
+    def _repr_simple(self) -> str:  # renamed to avoid duplicate definition
+        """Simple string representation for FilteredFiles."""
+        return f"<FilteredFiles: {len(self._filtered_files)} files>"
 
 
 class FastAPIFiles(Files):
