@@ -132,7 +132,7 @@ class Files:
                         port = config.get("port")
                         if port:
                             ports_to_check.append(port)
-                except:
+                except Exception:
                     pass
 
             # Also check default port
@@ -877,7 +877,8 @@ class Files:
 
         # Build output
         output = [
-            f"Files (Page {current_page} of {total_pages}, showing {start+1}-{end} of {total_files} items)",
+            (f"Files (Page {current_page} of {total_pages}, "
+             f"showing {start+1}-{end} of {total_files} items)"),
             separator,
             header,
             separator,
@@ -921,7 +922,7 @@ class Files:
                             # Only read first 100 bytes to check for "SyftPerm"
                             content = response.read(100).decode("utf-8")
                             return "SyftPerm" in content
-                except:
+                except Exception:
                     pass
                 return False
 
@@ -960,11 +961,12 @@ class Files:
 
                 # Return iframe pointing to the server's files-widget endpoint
                 iframe_html = f"""
-                <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 8px; overflow: hidden;">
-                    <iframe 
-                        src="http://localhost:{server_port}/files-widget" 
-                        width="100%" 
-                        height="100%" 
+                <div style="width: 100%; height: 600px; border: 1px solid {border_color}; \
+border-radius: 8px; overflow: hidden;">
+                    <iframe
+                        src="http://localhost:{server_port}/files-widget"
+                        width="100%"
+                        height="100%"
                         frameborder="0"
                         style="border: none;"
                         allow="clipboard-read; clipboard-write">
@@ -1031,30 +1033,41 @@ class Files:
             border-radius: 3px;
         }}
         </style>
-        <div id="loading-container-{container_id}" style="height: 600px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: {'#1e1e1e' if is_dark_mode else '#ffffff'}; border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'}; border-radius: 8px;">
+        <div id="loading-container-{container_id}" style="height: 600px; display: flex; \
+flex-direction: column; justify-content: center; align-items: center; text-align: center; \
+font-family: -apple-system, BlinkMacSystemFont, sans-serif; \
+background: {'#1e1e1e' if is_dark_mode else '#ffffff'}; \
+border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'}; border-radius: 8px;">
             <div style="margin-bottom: 28px;">
-                <svg class="syftbox-logo" xmlns="http://www.w3.org/2000/svg" width="62" height="72" viewBox="0 0 311 360" fill="none"&gt;
+                <svg class="syftbox-logo" xmlns="http://www.w3.org/2000/svg" width="62" \
+height="72" viewBox="0 0 311 360" fill="none"&gt;
                     <g clip-path="url(#clip0_7523_4240)">
-                        <path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 -0.422485L311.414 89.7878Z" fill="url(#paint0_linear_7523_4240)"></path>
-                        <path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 89.7878Z" fill="url(#paint1_linear_7523_4240)"></path>
-                        <path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 179.998Z" fill="url(#paint2_linear_7523_4240)"></path>
+                        <path d="M311.414 89.7878L155.518 179.998L-0.378906 89.7878L155.518 \
+-0.422485L311.414 89.7878Z" fill="url(#paint0_linear_7523_4240)"></path>
+                        <path d="M311.414 89.7878V270.208L155.518 360.423V179.998L311.414 \
+89.7878Z" fill="url(#paint1_linear_7523_4240)"></path>
+                        <path d="M155.518 179.998V360.423L-0.378906 270.208V89.7878L155.518 \
+179.998Z" fill="url(#paint2_linear_7523_4240)"></path>
                     </g>
                     <defs>
-                        <linearGradient id="paint0_linear_7523_4240" x1="-0.378904" y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse">
+                        <linearGradient id="paint0_linear_7523_4240" x1="-0.378904" \
+y1="89.7878" x2="311.414" y2="89.7878" gradientUnits="userSpaceOnUse">
                             <stop stop-color="#DC7A6E"></stop>
                             <stop offset="0.251496" stop-color="#F6A464"></stop>
                             <stop offset="0.501247" stop-color="#FDC577"></stop>
                             <stop offset="0.753655" stop-color="#EFC381"></stop>
                             <stop offset="1" stop-color="#B9D599"></stop>
                         </linearGradient>
-                        <linearGradient id="paint1_linear_7523_4240" x1="309.51" y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse">
+                        <linearGradient id="paint1_linear_7523_4240" x1="309.51" \
+y1="89.7878" x2="155.275" y2="360.285" gradientUnits="userSpaceOnUse">
                             <stop stop-color="#BFCD94"></stop>
                             <stop offset="0.245025" stop-color="#B2D69E"></stop>
                             <stop offset="0.504453" stop-color="#8DCCA6"></stop>
                             <stop offset="0.745734" stop-color="#5CB8B7"></stop>
                             <stop offset="1" stop-color="#4CA5B8"></stop>
                         </linearGradient>
-                        <linearGradient id="paint2_linear_7523_4240" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse">
+                        <linearGradient id="paint2_linear_7523_4240" x1="-0.378906" \
+y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse">
                             <stop stop-color="#D7686D"></stop>
                             <stop offset="0.225" stop-color="#C64B77"></stop>
                             <stop offset="0.485" stop-color="#A2638E"></stop>
@@ -1067,14 +1080,27 @@ class Files:
                     </defs>
                 </svg>
             </div>
-            <div style="font-size: 20px; font-weight: 600; color: {'#cccccc' if is_dark_mode else '#666666'}; margin-bottom: 12px;">the internet of private data</div>
-            <div style="width: 340px; height: 6px; background-color: {'#3e3e42' if is_dark_mode else '#e5e7eb'}; border-radius: 3px; margin: 0 auto; overflow: hidden;">
-                <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
+            <div style="font-size: 20px; font-weight: 600; \
+color: {'#cccccc' if is_dark_mode else '#666666'}; margin-bottom: 12px;">\
+the internet of private data</div>
+            <div style="width: 340px; height: 6px; \
+background-color: {'#3e3e42' if is_dark_mode else '#e5e7eb'}; \
+border-radius: 3px; margin: 0 auto; overflow: hidden;">
+                <div id="loading-bar-{container_id}" class="progress-bar-gradient" \
+style="width: 0%; height: 100%;"></div>
             </div>
-            <div id="loading-status-{container_id}" style="margin-top: 12px; color: {'#9ca3af' if is_dark_mode else '#6b7280'}; opacity: 0.7; font-size: 12px;">Initializing...</div>
-            <div style="margin-top: 20px; padding: 12px 24px; background: {'#1e3a5f' if is_dark_mode else '#f0f9ff'}; border-radius: 6px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                <div style="font-size: 12px; color: {'#93c5fd' if is_dark_mode else '#0c4a6e'}; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    <span style="font-weight: 600; color: {'#60a5fa' if is_dark_mode else '#0369a1'};">💡 TIP:</span> {html_module.escape(loading_tip)}
+            <div id="loading-status-{container_id}" style="margin-top: 12px; \
+color: {'#9ca3af' if is_dark_mode else '#6b7280'}; opacity: 0.7; \
+font-size: 12px;">Initializing...</div>
+            <div style="margin-top: 20px; padding: 12px 24px; \
+background: {'#1e3a5f' if is_dark_mode else '#f0f9ff'}; border-radius: 6px; \
+max-width: 600px; margin-left: auto; margin-right: auto;">
+                <div style="font-size: 12px; \
+color: {'#93c5fd' if is_dark_mode else '#0c4a6e'}; line-height: 1.4; \
+white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <span style="font-weight: 600; \
+color: {'#60a5fa' if is_dark_mode else '#0369a1'};">💡 TIP:</span> \
+{html_module.escape(loading_tip)}
                 </div>
             </div>
         </div>
@@ -2877,6 +2903,10 @@ class FilteredFiles(Files):
     ) -> list:
         """Return the pre-filtered files instead of scanning."""
         return self._filtered_files
+
+    def __repr__(self) -> str:
+        """Simple string representation for FilteredFiles."""
+        return f"<FilteredFiles: {len(self._filtered_files)} files>"
 
     def _repr_html_(self) -> str:
         """Generate HTML widget with filtered files."""

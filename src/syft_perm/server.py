@@ -3177,8 +3177,12 @@ def get_files_widget_html(
                 // Add delete button with permission check
                 var canDelete = isAdmin || canCreate; // Users with write or admin permissions can delete
                 if (canDelete) {{
-                    html += '<button class="btn btn-red btn-clickable" onclick="event.stopPropagation(); confirmDelete_' + '{container_id}' + '(\\'' + escapedPath + '\\')" title="Delete ' + (isDir ? 'folder' : 'file') + '">' +
-                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                    html += '<button class="btn btn-red btn-clickable" ' +
+                            'onclick="event.stopPropagation(); confirmDelete_' + '{container_id}' + 
+                            '(\\'' + escapedPath + '\\')" ' +
+                            'title="Delete ' + (isDir ? 'folder' : 'file') + '">' +
+                                '<svg class="icon" viewBox="0 0 24 24" ' +
+                                'fill="none" stroke="currentColor" stroke-width="2">' +
                                     '<path d="M3 6h18"></path>' +
                                     '<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>' +
                                     '<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>' +
@@ -3187,8 +3191,12 @@ def get_files_widget_html(
                                 '</svg>' +
                             '</button>';
                 }} else {{
-                    html += '<button class="btn btn-gray" disabled title="You need write or admin permissions to delete" style="opacity: 0.3; cursor: not-allowed;">' +
-                                '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5;">' +
+                    html += '<button class="btn btn-gray" disabled ' +
+                            'title="You need write or admin permissions to delete" ' +
+                            'style="opacity: 0.3; cursor: not-allowed;">' +
+                                '<svg class="icon" viewBox="0 0 24 24" ' +
+                                'fill="none" stroke="currentColor" stroke-width="2" ' +
+                                'style="opacity: 0.5;">' +
                                     '<path d="M3 6h18"></path>' +
                                     '<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>' +
                                     '<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>' +
@@ -3209,7 +3217,8 @@ def get_files_widget_html(
         // Search files
         window.searchFiles_{container_id} = function() {{
             var searchTerm = document.getElementById('{container_id}-search').value.toLowerCase();
-            var adminFilter = document.getElementById('{container_id}-admin-filter').value.toLowerCase();
+            var adminFilter = document.getElementById('{container_id}-admin-filter')
+                .value.toLowerCase();
 
             // Parse search terms
             var searchTerms = [];
@@ -3245,7 +3254,8 @@ def get_files_widget_html(
             }}
 
             filteredFiles = allFiles.filter(function(file) {{
-                var adminMatch = adminFilter === '' || (file.datasite_owner || '').toLowerCase().includes(adminFilter);
+                var adminMatch = adminFilter === '' || 
+                    (file.datasite_owner || '').toLowerCase().includes(adminFilter);
                 if (!adminMatch) return false;
 
                 if (searchTerms.length === 0) return true;
@@ -3379,7 +3389,8 @@ def get_files_widget_html(
             var message = 'Are you sure you want to delete this ' + itemType + '?\\n\\n' + filename;
 
             if (isDir) {{
-                message += '\\n\\nWarning: This will delete the folder and all its contents permanently.';
+                message += '\\n\\nWarning: This will delete the folder and ' +
+                    'all its contents permanently.';
             }}
 
             if (confirm(message)) {{
@@ -3391,7 +3402,8 @@ def get_files_widget_html(
         window.deleteItem_{container_id} = function(path, isDir) {{
             showStatus('Deleting ' + (isDir ? 'folder' : 'file') + '...');
 
-            fetch('/api/filesystem/delete?path=' + encodeURIComponent(path) + '&recursive=' + isDir, {{
+            fetch('/api/filesystem/delete?path=' + encodeURIComponent(path) + 
+                  '&recursive=' + isDir, {{
                 method: 'DELETE',
                 headers: {{
                     'Content-Type': 'application/json'
@@ -3423,17 +3435,20 @@ def get_files_widget_html(
         // Toggle select all
         window.toggleSelectAll_{container_id} = function() {{
             var selectAllCheckbox = document.getElementById('{container_id}-select-all');
-            var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
+            var checkboxes = document.querySelectorAll(
+                '#{container_id} tbody input[type="checkbox"]');
             checkboxes.forEach(function(cb) {{
                 cb.checked = selectAllCheckbox.checked;
             }});
-            showStatus(selectAllCheckbox.checked ? 'All visible files selected' : 'Selection cleared');
+            showStatus(selectAllCheckbox.checked ? 
+                'All visible files selected' : 'Selection cleared');
             updateSelectAllState_{container_id}();
         }};
 
         // Update select all state
         window.updateSelectAllState_{container_id} = function() {{
-            var checkboxes = document.querySelectorAll('#{container_id} tbody input[type="checkbox"]');
+            var checkboxes = document.querySelectorAll(
+                '#{container_id} tbody input[type="checkbox"]');
             var selectAllCheckbox = document.getElementById('{container_id}-select-all');
             var allChecked = true;
             var someChecked = false;
