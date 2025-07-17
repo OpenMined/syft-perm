@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
 import yaml
+from datetime import datetime
 
 from ._utils import (
     format_users,
@@ -1034,44 +1035,148 @@ class SyftFile:
         """
 
     def _repr_html_(self) -> str:
-        """Generate iframe that opens this folder in the file-editor."""
-        from . import get_file_editor_url
+        """Return an interactive iframe when the server is available or a static, read-only widget otherwise."""
+        from . import get_file_editor_url, is_dark
+
+        # Helper to quickly decide if a returned URL is actually usable
+        def _looks_like_valid_url(url: str) -> bool:
+            return url.startswith("http://") or url.startswith("https://")
 
         try:
-            # Get the file-editor URL for this specific folder
             editor_url = get_file_editor_url(str(self._path))
+            if not _looks_like_valid_url(editor_url):
+                raise RuntimeError("permission-editor server unavailable")
 
-            # If we have a syft user context, pass it as a query parameter
+            # Preserve syft_user context if present
             if self._syft_user:
-                import urllib.parse
+                import urllib.parse as _urllib_parse
+                sep = "&" if "?" in editor_url else "?"
+                editor_url = f"{editor_url}{sep}syft_user={_urllib_parse.quote(self._syft_user)}"
 
-                separator = "&" if "?" in editor_url else "?"
-                editor_url = (
-                    f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
-                )
+            border_colour = "#3e3e42" if is_dark() else "#ddd"
+            bg_colour = "#1e1e1e" if is_dark() else "#ffffff"
+            return (
+                f"<div style=\"width:100%;height:600px;border:1px solid {border_colour};"
+                f"border-radius:8px;overflow:hidden;background:{bg_colour};\">"
+                f"<iframe src=\"{editor_url}\" style=\"width:100%;height:100%;border:none;"
+                f"background:transparent;\" frameborder=\"0\" allow=\"clipboard-read; clipboard-write\"></iframe></div>"
+            )
+        except Exception:
+            # -----------------------------
+            # Offline fallback (read-only)
+            # -----------------------------
+            import html as _html, json as _json, uuid as _uuid
+            from pathlib import Path as _Path
+            from .filesystem_editor import generate_editor_html as _gen_html
 
-            # Create iframe to display the file-editor
-            return f"""
-            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42;
-                         border-radius: 8px; overflow: hidden; background: #1e1e1e;">
-                <iframe src="{editor_url}"
-                        style="width: 100%; height: 100%; border: none;
-                               background: transparent;"
-                        frameborder="0"
-                        allow="clipboard-read; clipboard-write">
-                </iframe>
-            </div>
-            """
-        except Exception as e:
-            # Fallback to basic file info if editor is not available
-            return f"""
-            <div style='padding: 20px; color: #666; border: 1px solid #ddd; border-radius: 8px;'>
-                <h3>📄 SyftFile: {self._path.name}</h3>
-                <p><strong>Path:</strong> {self._path}</p>
-                <p><strong>Size:</strong> {self._size} bytes</p>
-                <p><em>File editor not available: {str(e)}</em></p>
-            </div>
-            """
+            is_dark_mode = is_dark()
+            # (no external import needed)
+
+            # Build static data for the in-browser stubbed API
+            root_dir = _Path(self._path).parent
+            
+            def _build_local_data(start_path: _Path):
+                directories: dict = {}
+                files: dict = {}
+
+                def _recurse(dir_path: _Path):
+                    try:
+                        items = []
+                        for child in sorted(dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+                            try:
+                                stat = child.stat()
+                                # Format modified date as ISO string like the server-backed API
+                                modified_iso = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                                item_info = {
+                                    "name": child.name,
+                                    "path": str(child),
+                                    "is_directory": child.is_dir(),
+                                    "size": None if child.is_dir() else stat.st_size,
+                                    "modified": modified_iso,
+                                    "is_editable": False,  # read-only fallback
+                                    "extension": child.suffix.lower() if not child.is_dir() else None,
+                                }
+                            except Exception:
+                                continue
+                            items.append(item_info)
+
+                            if child.is_dir():
+                                _recurse(child)
+                            else:
+                                try:
+                                    with open(child, "r", encoding="utf-8", errors="replace") as f:
+                                        content = f.read()
+                                except Exception:
+                                    content = ""
+                                if len(content) > 20000:
+                                    content = content[:20000] + "\n\n… (truncated)"
+                                files[str(child)] = {
+                                    "path": str(child),
+                                    "content": content,
+                                    "size": stat.st_size,
+                                    "modified": modified_iso,
+                                    "extension": child.suffix.lower(),
+                                    "encoding": "utf-8",
+                                    "can_write": False,
+                                    "can_admin": False,
+                                    "write_users": [],
+                                }
+                        directories[str(dir_path)] = {
+                            "path": str(dir_path),
+                            "parent": str(dir_path.parent) if dir_path.parent != dir_path else None,
+                            "items": items,
+                            "total_items": len(items),
+                            "can_admin": False,
+                        }
+                    except Exception:
+                        pass
+
+                _recurse(start_path)
+                return {"directories": directories, "files": files}
+
+            local_data = _build_local_data(root_dir)
+            data_json = _json.dumps(local_data)
+
+            # Base HTML from the editor (we'll stub out its network calls)
+            base_html = _gen_html(
+                initial_path=str(self._path),
+                is_dark_mode=is_dark_mode,
+                syft_user=getattr(self, "_syft_user", None),
+            )
+
+            # JavaScript stub to override fetch with local data
+            stub_script = f"""
+<script>
+(function() {{
+  const LOCAL_DATA = {data_json};
+  function makeResp(obj) {{
+    return Promise.resolve(new Response(JSON.stringify(obj), {{status: 200, headers: {{'Content-Type': 'application/json'}}}}));
+  }}
+  window.fetch = function(url, opts) {{
+    try {{
+      const u = new URL(url, window.location.origin);
+      if (u.pathname.startsWith('/api/filesystem/list')) {{
+        const p = decodeURIComponent(u.searchParams.get('path') || '');
+        if (LOCAL_DATA.directories[p]) return makeResp(LOCAL_DATA.directories[p]);
+      }}
+      if (u.pathname.startsWith('/api/filesystem/read')) {{
+        const p = decodeURIComponent(u.searchParams.get('path') || '');
+        if (LOCAL_DATA.files[p]) return makeResp(LOCAL_DATA.files[p]);
+      }}
+    }} catch (e) {{}}
+    return Promise.reject(new Error('Offline read-only viewer'));
+  }};
+}})();
+</script>
+"""
+
+            insert_at = base_html.find("<script")
+            if insert_at == -1:
+                final_html = stub_script + base_html
+            else:
+                final_html = base_html[:insert_at] + stub_script + base_html[insert_at:]
+
+            return final_html
 
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""
@@ -1651,25 +1756,54 @@ class ShareWidget:
 
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter display."""
-        import urllib.parse
+        import urllib.parse as _url
+        from . import is_dark
 
-        # Build the share modal URL - exact same as file-editor uses
-        # Using localhost:8005 where the file-editor server is running
-        share_url = f"http://localhost:8005/share-modal?path={urllib.parse.quote(self._path)}"
+        # Try to ensure/locate a running server first (same logic we added elsewhere)
+        try:
+            from .server import get_server_url as _get_url, start_server as _start_server, _SERVER_AVAILABLE
 
-        # If we have a syft user context, pass it as a query parameter
-        if self._syft_user:
-            share_url = f"{share_url}&syft_user={urllib.parse.quote(self._syft_user)}"
+            server_url: str | None = _get_url() if _SERVER_AVAILABLE else None
+            if _SERVER_AVAILABLE and not server_url:
+                # Start background server and grab its url
+                server_url = _start_server()
+        except Exception:
+            server_url = None  # Any import/start failure -> fallback
 
-        # Return iframe - exact same style as file-editor modal
-        # Height increased to 600px to ensure Save button is visible
-        return f"""
-        <div style="width: 100%; height: 600px; border-radius: 12px; overflow: hidden;">
-            <iframe src="{share_url}"
-                    style="width: 100%; height: 100%; border: none; border-radius: 12px;">
-            </iframe>
-        </div>
-        """
+        if server_url:
+            share_url = f"{server_url}/share-modal?path={_url.quote(self._path)}"
+            if self._syft_user:
+                share_url += f"&syft_user={_url.quote(self._syft_user)}"
+
+            border = "#3e3e42" if is_dark() else "#ddd"
+            return (
+                f"<div style=\"width:100%;height:600px;border:1px solid {border};border-radius:12px;overflow:hidden;\">"
+                f"<iframe src=\"{share_url}\" style=\"width:100%;height:100%;border:none;border-radius:12px;\"></iframe></div>"
+            )
+
+        # ---------------- Offline fallback ----------------
+        # Display a simple, read-only permission table similar to __repr__ output
+        rows = self._object._get_permission_table() if hasattr(self._object, "_get_permission_table") else []
+        if not rows:
+            return f"<pre>Permissions unknown for {self._path}</pre>"
+
+        # Build HTML table manually
+        header = "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th></tr>"
+        body_rows = []
+        for user, r, c, w, a, *_ in rows:
+            body_rows.append(
+                f"<tr><td>{_url.unquote(user)}</td><td>{r}</td><td>{c}</td><td>{w}</td><td>{a}</td></tr>"
+            )
+        table_html = "<table style='border-collapse:collapse;'>" + header + "".join(body_rows) + "</table>"
+
+        return (
+            f"<div style='font-family: sans-serif; border:1px solid #ccc; padding:15px; border-radius:8px;'>"
+            f"<h3 style='margin-top:0;'>Share Permissions (read-only)</h3>"
+            f"<p style='margin:4px 0;'><strong>Path:</strong> {self._path}</p>"
+            f"{table_html}"  # noqa: E501
+            f"<p style='margin-top:10px;color:#888;font-size:0.9em;'>Permission editor unavailable (server dependencies not installed).</p>"
+            f"</div>"
+        )
 
     def __repr__(self) -> str:
         """String representation."""
@@ -2240,43 +2374,148 @@ class SyftFolder:
         """
 
     def _repr_html_(self) -> str:
-        """Generate iframe that opens this folder in the file-editor."""
-        from . import get_file_editor_url
+        """Return an interactive iframe when the server is available or a static, read-only widget otherwise."""
+        from . import get_file_editor_url, is_dark
+
+        # Helper to quickly decide if a returned URL is actually usable
+        def _looks_like_valid_url(url: str) -> bool:
+            return url.startswith("http://") or url.startswith("https://")
 
         try:
-            # Get the file-editor URL for this specific folder
             editor_url = get_file_editor_url(str(self._path))
+            if not _looks_like_valid_url(editor_url):
+                raise RuntimeError("permission-editor server unavailable")
 
-            # If we have a syft user context, pass it as a query parameter
+            # Preserve syft_user context if present
             if self._syft_user:
-                import urllib.parse
+                import urllib.parse as _urllib_parse
+                sep = "&" if "?" in editor_url else "?"
+                editor_url = f"{editor_url}{sep}syft_user={_urllib_parse.quote(self._syft_user)}"
 
-                separator = "&" if "?" in editor_url else "?"
-                editor_url = (
-                    f"{editor_url}{separator}syft_user={urllib.parse.quote(self._syft_user)}"
-                )
+            border_colour = "#3e3e42" if is_dark() else "#ddd"
+            bg_colour = "#1e1e1e" if is_dark() else "#ffffff"
+            return (
+                f"<div style=\"width:100%;height:600px;border:1px solid {border_colour};"
+                f"border-radius:8px;overflow:hidden;background:{bg_colour};\">"
+                f"<iframe src=\"{editor_url}\" style=\"width:100%;height:100%;border:none;"
+                f"background:transparent;\" frameborder=\"0\" allow=\"clipboard-read; clipboard-write\"></iframe></div>"
+            )
+        except Exception:
+            # -----------------------------
+            # Offline fallback (read-only)
+            # -----------------------------
+            import html as _html, json as _json, uuid as _uuid
+            from pathlib import Path as _Path
+            from .filesystem_editor import generate_editor_html as _gen_html
 
-            # Create iframe to display the file-editor
-            return f"""
-            <div style="width: 100%; height: 600px; border: 1px solid #3e3e42;
-                         border-radius: 8px; overflow: hidden; background: #1e1e1e;">
-                <iframe src="{editor_url}"
-                        style="width: 100%; height: 100%; border: none;
-                               background: transparent;"
-                        frameborder="0"
-                        allow="clipboard-read; clipboard-write">
-                </iframe>
-            </div>
-            """
-        except Exception as e:
-            # Fallback to basic file info if editor is not available
-            return f"""
-            <div style='padding: 20px; color: #666; border: 1px solid #ddd; border-radius: 8px;'>
-                <h3>📁 SyftFolder: {self._path.name}</h3>
-                <p><strong>Path:</strong> {self._path}</p>
-                <p><em>File editor not available: {str(e)}</em></p>
-            </div>
-            """
+            is_dark_mode = is_dark()
+            # (no external import needed)
+
+            # Build static data for the in-browser stubbed API
+            root_dir = _Path(self._path).parent
+            
+            def _build_local_data(start_path: _Path):
+                directories: dict = {}
+                files: dict = {}
+
+                def _recurse(dir_path: _Path):
+                    try:
+                        items = []
+                        for child in sorted(dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+                            try:
+                                stat = child.stat()
+                                # Format modified date as ISO string like the server-backed API
+                                modified_iso = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                                item_info = {
+                                    "name": child.name,
+                                    "path": str(child),
+                                    "is_directory": child.is_dir(),
+                                    "size": None if child.is_dir() else stat.st_size,
+                                    "modified": modified_iso,
+                                    "is_editable": False,  # read-only fallback
+                                    "extension": child.suffix.lower() if not child.is_dir() else None,
+                                }
+                            except Exception:
+                                continue
+                            items.append(item_info)
+
+                            if child.is_dir():
+                                _recurse(child)
+                            else:
+                                try:
+                                    with open(child, "r", encoding="utf-8", errors="replace") as f:
+                                        content = f.read()
+                                except Exception:
+                                    content = ""
+                                if len(content) > 20000:
+                                    content = content[:20000] + "\n\n… (truncated)"
+                                files[str(child)] = {
+                                    "path": str(child),
+                                    "content": content,
+                                    "size": stat.st_size,
+                                    "modified": modified_iso,
+                                    "extension": child.suffix.lower(),
+                                    "encoding": "utf-8",
+                                    "can_write": False,
+                                    "can_admin": False,
+                                    "write_users": [],
+                                }
+                        directories[str(dir_path)] = {
+                            "path": str(dir_path),
+                            "parent": str(dir_path.parent) if dir_path.parent != dir_path else None,
+                            "items": items,
+                            "total_items": len(items),
+                            "can_admin": False,
+                        }
+                    except Exception:
+                        pass
+
+                _recurse(start_path)
+                return {"directories": directories, "files": files}
+
+            local_data = _build_local_data(root_dir)
+            data_json = _json.dumps(local_data)
+
+            # Base HTML from the editor (we'll stub out its network calls)
+            base_html = _gen_html(
+                initial_path=str(self._path),
+                is_dark_mode=is_dark_mode,
+                syft_user=getattr(self, "_syft_user", None),
+            )
+
+            # JavaScript stub to override fetch with local data
+            stub_script = f"""
+<script>
+(function() {{
+  const LOCAL_DATA = {data_json};
+  function makeResp(obj) {{
+    return Promise.resolve(new Response(JSON.stringify(obj), {{status: 200, headers: {{'Content-Type': 'application/json'}}}}));
+  }}
+  window.fetch = function(url, opts) {{
+    try {{
+      const u = new URL(url, window.location.origin);
+      if (u.pathname.startsWith('/api/filesystem/list')) {{
+        const p = decodeURIComponent(u.searchParams.get('path') || '');
+        if (LOCAL_DATA.directories[p]) return makeResp(LOCAL_DATA.directories[p]);
+      }}
+      if (u.pathname.startsWith('/api/filesystem/read')) {{
+        const p = decodeURIComponent(u.searchParams.get('path') || '');
+        if (LOCAL_DATA.files[p]) return makeResp(LOCAL_DATA.files[p]);
+      }}
+    }} catch (e) {{}}
+    return Promise.reject(new Error('Offline read-only viewer'));
+  }};
+}})();
+</script>
+"""
+
+            insert_at = base_html.find("<script")
+            if insert_at == -1:
+                final_html = stub_script + base_html
+            else:
+                final_html = base_html[:insert_at] + stub_script + base_html[insert_at:]
+
+            return final_html
 
     def grant_read_access(self, user: str, *, force: bool = False) -> None:
         """Grant read permission to a user."""

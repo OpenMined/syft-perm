@@ -154,7 +154,28 @@ class Files:
         except Exception:
             pass
 
-        return None
+        # At this point no reachable server was found – attempt to start one
+        try:
+            from .server import get_server_url as _get_url, start_server as _start_server, _SERVER_AVAILABLE
+
+            if not _SERVER_AVAILABLE:
+                # server dependencies (fastapi, uvicorn) not installed – abort
+                return None
+
+            # If another thread already spawned one, just return its url
+            running = _get_url()
+            if running:
+                return running
+
+            # Otherwise spin up a new background server (same helper used by SyftFile/SyftFolder)
+            server_url = _start_server()
+            return server_url
+        except ImportError:
+            # FastAPI stack not installed – ignore
+            return None
+        except Exception:
+            # Any other failure – silently fall back to None so that Files can render static widget
+            return None
 
     def _scan_files(
         self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False
