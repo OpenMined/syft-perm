@@ -162,7 +162,6 @@ class Files:
         """Scan SyftBox directory for files with permissions."""
         import os
         import sys
-        import time
         from pathlib import Path
 
         # Try to find SyftBox directory
@@ -877,8 +876,10 @@ class Files:
 
         # Build output
         output = [
-            (f"Files (Page {current_page} of {total_pages}, "
-             f"showing {start+1}-{end} of {total_files} items)"),
+            (
+                f"Files (Page {current_page} of {total_pages}, "
+                f"showing {start+1}-{end} of {total_files} items)"
+            ),
             separator,
             header,
             separator,
