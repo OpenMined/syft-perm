@@ -1050,16 +1050,17 @@ class SyftFile:
             # Preserve syft_user context if present
             if self._syft_user:
                 import urllib.parse as _urllib_parse
+
                 sep = "&" if "?" in editor_url else "?"
                 editor_url = f"{editor_url}{sep}syft_user={_urllib_parse.quote(self._syft_user)}"
 
             border_colour = "#3e3e42" if is_dark() else "#ddd"
             bg_colour = "#1e1e1e" if is_dark() else "#ffffff"
             return (
-                f"<div style=\"width:100%;height:600px;border:1px solid {border_colour};"
-                f"border-radius:8px;overflow:hidden;background:{bg_colour};\">"
-                f"<iframe src=\"{editor_url}\" style=\"width:100%;height:100%;border:none;"
-                f"background:transparent;\" frameborder=\"0\" allow=\"clipboard-read; clipboard-write\"></iframe></div>"
+                f'<div style="width:100%;height:600px;border:1px solid {border_colour};'
+                f'border-radius:8px;overflow:hidden;background:{bg_colour};">'
+                f'<iframe src="{editor_url}" style="width:100%;height:100%;border:none;'
+                f'background:transparent;" frameborder="0" allow="clipboard-read; clipboard-write"></iframe></div>'
             )
         except Exception:
             # -----------------------------
@@ -1074,7 +1075,7 @@ class SyftFile:
 
             # Build static data for the in-browser stubbed API
             root_dir = _Path(self._path).parent
-            
+
             def _build_local_data(start_path: _Path):
                 directories: dict = {}
                 files: dict = {}
@@ -1082,7 +1083,9 @@ class SyftFile:
                 def _recurse(dir_path: _Path):
                     try:
                         items = []
-                        for child in sorted(dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+                        for child in sorted(
+                            dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())
+                        ):
                             try:
                                 stat = child.stat()
                                 # Format modified date as ISO string like the server-backed API
@@ -1094,7 +1097,9 @@ class SyftFile:
                                     "size": None if child.is_dir() else stat.st_size,
                                     "modified": modified_iso,
                                     "is_editable": False,  # read-only fallback
-                                    "extension": child.suffix.lower() if not child.is_dir() else None,
+                                    "extension": (
+                                        child.suffix.lower() if not child.is_dir() else None
+                                    ),
                                 }
                             except Exception:
                                 continue
@@ -1761,7 +1766,11 @@ class ShareWidget:
 
         # Try to ensure/locate a running server first (same logic we added elsewhere)
         try:
-            from .server import get_server_url as _get_url, start_server as _start_server, _SERVER_AVAILABLE
+            from .server import (
+                get_server_url as _get_url,
+                start_server as _start_server,
+                _SERVER_AVAILABLE,
+            )
 
             server_url: str | None = _get_url() if _SERVER_AVAILABLE else None
             if _SERVER_AVAILABLE and not server_url:
@@ -1777,13 +1786,17 @@ class ShareWidget:
 
             border = "#3e3e42" if is_dark() else "#ddd"
             return (
-                f"<div style=\"width:100%;height:600px;border:1px solid {border};border-radius:12px;overflow:hidden;\">"
-                f"<iframe src=\"{share_url}\" style=\"width:100%;height:100%;border:none;border-radius:12px;\"></iframe></div>"
+                f'<div style="width:100%;height:600px;border:1px solid {border};border-radius:12px;overflow:hidden;">'
+                f'<iframe src="{share_url}" style="width:100%;height:100%;border:none;border-radius:12px;"></iframe></div>'
             )
 
         # ---------------- Offline fallback ----------------
         # Display a simple, read-only permission table similar to __repr__ output
-        rows = self._object._get_permission_table() if hasattr(self._object, "_get_permission_table") else []
+        rows = (
+            self._object._get_permission_table()
+            if hasattr(self._object, "_get_permission_table")
+            else []
+        )
         if not rows:
             return f"<pre>Permissions unknown for {self._path}</pre>"
 
@@ -1794,7 +1807,9 @@ class ShareWidget:
             body_rows.append(
                 f"<tr><td>{_url.unquote(user)}</td><td>{r}</td><td>{c}</td><td>{w}</td><td>{a}</td></tr>"
             )
-        table_html = "<table style='border-collapse:collapse;'>" + header + "".join(body_rows) + "</table>"
+        table_html = (
+            "<table style='border-collapse:collapse;'>" + header + "".join(body_rows) + "</table>"
+        )
 
         return (
             f"<div style='font-family: sans-serif; border:1px solid #ccc; padding:15px; border-radius:8px;'>"
@@ -2389,16 +2404,17 @@ class SyftFolder:
             # Preserve syft_user context if present
             if self._syft_user:
                 import urllib.parse as _urllib_parse
+
                 sep = "&" if "?" in editor_url else "?"
                 editor_url = f"{editor_url}{sep}syft_user={_urllib_parse.quote(self._syft_user)}"
 
             border_colour = "#3e3e42" if is_dark() else "#ddd"
             bg_colour = "#1e1e1e" if is_dark() else "#ffffff"
             return (
-                f"<div style=\"width:100%;height:600px;border:1px solid {border_colour};"
-                f"border-radius:8px;overflow:hidden;background:{bg_colour};\">"
-                f"<iframe src=\"{editor_url}\" style=\"width:100%;height:100%;border:none;"
-                f"background:transparent;\" frameborder=\"0\" allow=\"clipboard-read; clipboard-write\"></iframe></div>"
+                f'<div style="width:100%;height:600px;border:1px solid {border_colour};'
+                f'border-radius:8px;overflow:hidden;background:{bg_colour};">'
+                f'<iframe src="{editor_url}" style="width:100%;height:100%;border:none;'
+                f'background:transparent;" frameborder="0" allow="clipboard-read; clipboard-write"></iframe></div>'
             )
         except Exception:
             # -----------------------------
@@ -2413,7 +2429,7 @@ class SyftFolder:
 
             # Build static data for the in-browser stubbed API
             root_dir = _Path(self._path).parent
-            
+
             def _build_local_data(start_path: _Path):
                 directories: dict = {}
                 files: dict = {}
@@ -2421,7 +2437,9 @@ class SyftFolder:
                 def _recurse(dir_path: _Path):
                     try:
                         items = []
-                        for child in sorted(dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+                        for child in sorted(
+                            dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())
+                        ):
                             try:
                                 stat = child.stat()
                                 # Format modified date as ISO string like the server-backed API
@@ -2433,7 +2451,9 @@ class SyftFolder:
                                     "size": None if child.is_dir() else stat.st_size,
                                     "modified": modified_iso,
                                     "is_editable": False,  # read-only fallback
-                                    "extension": child.suffix.lower() if not child.is_dir() else None,
+                                    "extension": (
+                                        child.suffix.lower() if not child.is_dir() else None
+                                    ),
                                 }
                             except Exception:
                                 continue

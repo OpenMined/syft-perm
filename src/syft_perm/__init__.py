@@ -156,7 +156,11 @@ class Files:
 
         # At this point no reachable server was found – attempt to start one
         try:
-            from .server import get_server_url as _get_url, start_server as _start_server, _SERVER_AVAILABLE
+            from .server import (
+                get_server_url as _get_url,
+                start_server as _start_server,
+                _SERVER_AVAILABLE,
+            )
 
             if not _SERVER_AVAILABLE:
                 # server dependencies (fastapi, uvicorn) not installed – abort
