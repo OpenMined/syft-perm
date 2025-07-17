@@ -482,7 +482,7 @@ class Files:
                 # Don't test the API endpoint as it may be slow
                 api_files = FastAPIFiles(server_url)
                 return api_files.search(files=files, admin=admin, limit=limit, offset=offset)
-            except:
+            except Exception:
                 # If server fails, fall back to local
                 pass
 
@@ -517,7 +517,7 @@ class Files:
                 # Server is available, return FastAPIFiles for iframe display
                 api_files = FastAPIFiles(server_url)
                 return api_files.filter(folders=folders)
-            except:
+            except Exception:
                 # If server fails, fall back to local
                 pass
 
@@ -688,7 +688,7 @@ class Files:
                     result = FastAPIFiles(server_url)
                     result._url = url
                     return result
-                except:
+                except Exception:
                     # If server fails, fall back to local
                     pass
 
@@ -732,7 +732,7 @@ class Files:
                 # Server is available, return FastAPIFiles for iframe display
                 api_files = FastAPIFiles(server_url)
                 return api_files.page(page_number=page_number, items_per_page=items_per_page)
-            except:
+            except Exception:
                 # If server fails, fall back to local
                 pass
 
