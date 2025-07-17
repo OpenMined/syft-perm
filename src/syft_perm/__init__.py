@@ -1,23 +1,15 @@
 """SyftPerm - File permission management for SyftBox."""
 
-import json  # used in _check_server for config parsing
 from pathlib import Path as _Path
 from typing import Union as _Union
 
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
+from ._public import files
 
 __version__ = "0.3.92"
 
-__all__ = [
-    "open",
-    "get_editor_url",
-    "get_files_widget_url",
-    "get_file_editor_url",
-    "files",
-    "is_dark",
-    "FastAPIFiles",
-]
+__all__ = ["open", "files"]
 
 
 def open(path: _Union[str, _Path]) -> _Union[_SyftFile, _SyftFolder]:
@@ -48,7 +40,7 @@ def open(path: _Union[str, _Path]) -> _Union[_SyftFile, _SyftFolder]:
     return _SyftFile(resolved_path)
 
 
-def get_editor_url(path: _Union[str, _Path]) -> str:
+def _get_editor_url(path: _Union[str, _Path]) -> str:
     """
     Get the URL for the Google Drive-style permission editor for a file/folder.
 
@@ -58,24 +50,24 @@ def get_editor_url(path: _Union[str, _Path]) -> str:
     Returns:
         URL to the permission editor
     """
-    from .server import get_editor_url as _get_editor_url
+    from .server import get_editor_url as _get_editor_url_from_server
 
-    return _get_editor_url(str(path))
+    return _get_editor_url_from_server(str(path))
 
 
-def get_files_widget_url() -> str:
+def _get_files_widget_url() -> str:
     """
     Get the URL for the files widget interface (identical to sp.files in Jupyter).
 
     Returns:
         URL to the files widget
     """
-    from .server import get_files_widget_url as _get_files_widget_url
+    from .server import get_files_widget_url as _get_files_widget_url_from_server
 
-    return _get_files_widget_url()
+    return _get_files_widget_url_from_server()
 
 
-def get_file_editor_url(path: _Union[str, _Path] = None) -> str:
+def _get_file_editor_url(path: _Union[str, _Path] = None) -> str:
     """
     Get the URL for the file editor interface.
 
@@ -85,14 +77,14 @@ def get_file_editor_url(path: _Union[str, _Path] = None) -> str:
     Returns:
         URL to the file editor
     """
-    from .server import get_file_editor_url as _get_file_editor_url
+    from .server import get_file_editor_url as _get_file_editor_url_from_server
 
     if path:
-        return _get_file_editor_url(str(path))
-    return _get_file_editor_url()
+        return _get_file_editor_url_from_server(str(path))
+    return _get_file_editor_url_from_server()
 
 
-class Files:
+class _Files:
     """
     Access to permissioned files in SyftBox directory.
 
@@ -118,6 +110,7 @@ class Files:
     def _check_server(self) -> _Union[str, None]:
         """Check if syft-perm server is available. Returns server URL or None."""
         try:
+            import json
             import urllib.request
             from pathlib import Path
 
@@ -485,7 +478,7 @@ class Files:
         admin: _Union[str, None] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> "Files":
+    ) -> "_Files":
         """
         Search and filter files by query and admin.
 
@@ -505,7 +498,7 @@ class Files:
             try:
                 # Server is available, return FastAPIFiles for iframe display
                 # Don't test the API endpoint as it may be slow
-                api_files = FastAPIFiles(server_url)
+                api_files = _FastAPIFiles(server_url)
                 return api_files.search(files=files, admin=admin, limit=limit, offset=offset)
             except Exception:
                 # If server fails, fall back to local
@@ -521,10 +514,10 @@ class Files:
         filtered_files.sort(key=lambda x: x.get("modified", 0), reverse=True)
 
         # Create new Files instance with filtered data
-        result = FilteredFiles(filtered_files, limit=limit, offset=offset)
+        result = _FilteredFiles(filtered_files, limit=limit, offset=offset)
         return result
 
-    def filter(self, folders: _Union[list, str, None] = None) -> "Files":
+    def filter(self, folders: _Union[list, str, None] = None) -> "_Files":
         """
         Filter files by folder paths.
 
@@ -540,7 +533,7 @@ class Files:
             # Server is available, return FastAPIFiles instance that will show iframe
             try:
                 # Server is available, return FastAPIFiles for iframe display
-                api_files = FastAPIFiles(server_url)
+                api_files = _FastAPIFiles(server_url)
                 return api_files.filter(folders=folders)
             except Exception:
                 # If server fails, fall back to local
@@ -557,7 +550,7 @@ class Files:
         filtered_files = self._apply_folder_filter(all_files, folders=folders)
 
         # Create new Files instance with filtered data
-        result = FilteredFiles(filtered_files)
+        result = _FilteredFiles(filtered_files)
         return result
 
     def _apply_filters(
@@ -681,7 +674,7 @@ class Files:
 
         return True
 
-    def __getitem__(self, key) -> "Files":
+    def __getitem__(self, key) -> "_Files":
         """Support slice notation sp.files[x:y] for range selection by chronological #."""
         if isinstance(key, slice):
             # Check if server is available
@@ -694,7 +687,7 @@ class Files:
                     end = key.stop
 
                     # Create FastAPIFiles and use server for slicing
-                    _ = FastAPIFiles(server_url)  # noqa: F841
+                    _ = _FastAPIFiles(server_url)  # noqa: F841
 
                     # Build URL with start/end parameters
                     import urllib.parse
@@ -710,7 +703,7 @@ class Files:
                         url += "?" + urllib.parse.urlencode(params)
 
                     # Return FastAPIFiles instance for iframe display
-                    result = FastAPIFiles(server_url)
+                    result = _FastAPIFiles(server_url)
                     result._url = url
                     return result
                 except Exception:
@@ -730,12 +723,12 @@ class Files:
             sliced_files = sorted_files[slice(start, stop, key.step)]
 
             # Create new Files instance with sliced data
-            result = FilteredFiles(sliced_files)
+            result = _FilteredFiles(sliced_files)
             return result
         else:
             raise TypeError("Files indexing only supports slice notation, e.g., files[1:10]")
 
-    def page(self, page_number: int = 2, items_per_page: int = 50) -> "Files":
+    def page(self, page_number: int = 2, items_per_page: int = 50) -> "_Files":
         """
         Return a Files instance that will display starting at a specific page.
 
@@ -755,14 +748,14 @@ class Files:
             # Server is available, return FastAPIFiles instance that will show iframe
             try:
                 # Server is available, return FastAPIFiles for iframe display
-                api_files = FastAPIFiles(server_url)
+                api_files = _FastAPIFiles(server_url)
                 return api_files.page(page_number=page_number, items_per_page=items_per_page)
             except Exception:
                 # If server fails, fall back to local
                 pass
 
         # Fall back to local - create a new Files instance with the initial page set
-        new_files = Files()
+        new_files = _Files()
         new_files._initial_page = page_number
         new_files._items_per_page = items_per_page
         return new_files
@@ -982,12 +975,12 @@ class Files:
 
             if server_available:
                 # Detect dark mode for iframe styling
-                is_dark_mode = is_dark()
+                is_dark_mode = _is_dark()
                 border_color = "#3e3e42" if is_dark_mode else "#ddd"
 
                 # Return iframe pointing to the server's files-widget endpoint
                 iframe_html = f"""
-                <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 8px; overflow: hidden;">
+                <div style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden;">
                     <iframe 
                         src="http://localhost:{server_port}/files-widget" 
                         width="100%" 
@@ -1005,7 +998,7 @@ class Files:
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
 
         # Detect dark mode early for loading animation
-        is_dark_mode = is_dark()
+        is_dark_mode = _is_dark()
 
         # Non-obvious tips for users
         tips = [
@@ -2549,7 +2542,7 @@ class Files:
         return html
 
 
-class FilteredFiles(Files):
+class _FilteredFiles(_Files):
     """
     Filtered version of Files that works with a predefined set of files.
     Used for search(), filter(), and slice operations.
@@ -2581,7 +2574,7 @@ class FilteredFiles(Files):
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
 
         # Check if Jupyter is in dark mode
-        is_dark_mode = is_dark()
+        is_dark_mode = _is_dark()
 
         # Use the filtered files directly
         all_files = self._filtered_files
@@ -2925,529 +2918,16 @@ class FilteredFiles(Files):
 
         return html
 
-
-class FilteredFiles(Files):
-    """
-    Filtered version of Files that works with a predefined set of files.
-    Used for search(), filter(), and slice operations.
-    """
-
-    def __init__(self, filtered_files: list, limit: int = None, offset: int = 0):
-        super().__init__()
-        self._filtered_files = filtered_files
-        self._limit = limit
-        self._offset = offset
-
-    def _scan_files(
-        self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False
-    ) -> list:
-        """Return the pre-filtered files instead of scanning."""
-        return self._filtered_files
-
     def __repr__(self) -> str:
         """Simple string representation for FilteredFiles."""
         return f"<FilteredFiles: {len(self._filtered_files)} files>"
-
-    def _repr_html_(self) -> str:
-        """Generate HTML widget with filtered files."""
-        import html as html_module
-        import json
-        import time
-        import uuid
-        from datetime import datetime
-        from pathlib import Path
-
-        from IPython.display import HTML, clear_output, display
-
-        container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-
-        # Check if Jupyter is in dark mode
-        is_dark_mode = is_dark()
-
-        # Use the filtered files directly
-        all_files = self._filtered_files
-
-        # Create chronological index based on modified date (oldest first)
-        sorted_by_date = sorted(all_files, key=lambda x: x.get("modified", 0))  # Ascending order
-        chronological_ids = {}
-        for i, file in enumerate(sorted_by_date):
-            file_key = f"{file['name']}|{file['path']}"
-            chronological_ids[file_key] = i  # Start from 0
-
-        # Sort files by modified date (newest first) for display
-        sorted_files = sorted(all_files, key=lambda x: x.get("modified", 0), reverse=True)
-
-        # Apply pagination if specified
-        if self._limit:
-            files = sorted_files[self._offset : self._offset + self._limit]
-        else:
-            files = sorted_files[:100]  # Default limit for display
-
-        total = len(all_files)
-
-        if not files:
-            return (
-                "<div style='padding: 40px; text-align: center; color: #666; "
-                "font-family: -apple-system, BlinkMacSystemFont, sans-serif;'>"
-                f"No files found (filtered from {total} total files)</div>"
-            )
-
-        # Build HTML template (same as original but without loading animation)
-        html = f"""
-        <style>
-        #{container_id} * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
-
-        #{container_id} {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 12px;
-            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            margin: 0;
-            border: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
-            border-radius: 8px;
-            color: {'#cccccc' if is_dark_mode else '#000000'};
-        }}
-
-        #{container_id} .search-controls {{
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            padding: 0.75rem;
-            background: {'#252526' if is_dark_mode else '#f8f9fa'};
-            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
-            flex-shrink: 0;
-        }}
-
-        #{container_id} .search-controls input {{
-            flex: 1;
-            min-width: 200px;
-            padding: 0.5rem;
-            border: 1px solid {'#3e3e42' if is_dark_mode else '#d1d5db'};
-            border-radius: 0.25rem;
-            font-size: 0.875rem;
-        }}
-
-        #{container_id} .table-container {{
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: auto;
-            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
-            min-height: 0;
-            max-height: 600px;
-        }}
-
-        #{container_id} table {{
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-            table-layout: fixed;
-        }}
-
-        #{container_id} thead {{
-            background: {'#252526' if is_dark_mode else '#f8f9fa'};
-            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
-        }}
-
-        #{container_id} th {{
-            text-align: left;
-            padding: 0.375rem 0.25rem;
-            font-weight: 500;
-            font-size: 0.75rem;
-            border-bottom: 1px solid {'#3e3e42' if is_dark_mode else '#e5e7eb'};
-            position: sticky;
-            top: 0;
-            background: {'#252526' if is_dark_mode else '#f8f9fa'};
-            z-index: 10;
-            color: {'#cccccc' if is_dark_mode else '#000000'};
-        }}
-
-        #{container_id} td {{
-            padding: 0.375rem 0.25rem;
-            border-bottom: 1px solid {'#2d2d30' if is_dark_mode else '#f3f4f6'};
-            vertical-align: top;
-            font-size: 0.75rem;
-            text-align: left;
-        }}
-
-        #{container_id} tbody tr {{
-            transition: background-color 0.15s;
-            cursor: pointer;
-        }}
-
-        #{container_id} tbody tr:hover {{
-            background: {'rgba(255, 255, 255, 0.04)' if is_dark_mode else 'rgba(0, 0, 0, 0.03)'};
-        }}
-
-        @keyframes rainbow {{
-            0% {{ background-color: #fee2e2; }}
-            16% {{ background-color: #fef3c7; }}
-            33% {{ background-color: #d1fae5; }}
-            50% {{ background-color: #bfdbfe; }}
-            66% {{ background-color: #e0e7ff; }}
-            83% {{ background-color: #ede9fe; }}
-            100% {{ background-color: #ffe9ec; }}
-        }}
-
-        #{container_id} .rainbow-flash {{
-            animation: rainbow 0.8s ease-in-out;
-        }}
-
-        #{container_id} .truncate {{
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }}
-
-        #{container_id} .btn {{
-            padding: 0.09375rem 0.1875rem;
-            border-radius: 0.25rem;
-            font-size: 0.6875rem;
-            border: none;
-            cursor: not-allowed;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.125rem;
-            transition: all 0.15s;
-            opacity: 0.5;
-        }}
-
-        #{container_id} .btn:hover {{
-            opacity: 0.5;
-        }}
-
-        #{container_id} .btn-blue {{
-            background: {'#1e3a5f' if is_dark_mode else '#dbeafe'};
-            color: {'#60a5fa' if is_dark_mode else '#3b82f6'};
-        }}
-
-        #{container_id} .btn-purple {{
-            background: {'#3b2e4d' if is_dark_mode else '#e9d5ff'};
-            color: {'#c084fc' if is_dark_mode else '#a855f7'};
-        }}
-
-        #{container_id} .btn-red {{
-            background: {'#4d2828' if is_dark_mode else '#fee2e2'};
-            color: {'#f87171' if is_dark_mode else '#ef4444'};
-        }}
-
-        #{container_id} .btn-green {{
-            background: {'#1e4032' if is_dark_mode else '#d1fae5'};
-            color: {'#34d399' if is_dark_mode else '#10b981'};
-        }}
-
-        #{container_id} .btn-gray {{
-            background: {'#2d2d30' if is_dark_mode else '#f3f4f6'};
-            color: {'#9ca3af' if is_dark_mode else '#6b7280'};
-        }}
-
-        #{container_id} .icon {{
-            width: 0.5rem;
-            height: 0.5rem;
-        }}
-
-        #{container_id} .type-badge {{
-            display: inline-block;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-            background: {'#1e1e1e' if is_dark_mode else '#ffffff'};
-            color: {'#d1d5db' if is_dark_mode else '#374151'};
-            text-align: center;
-            white-space: nowrap;
-        }}
-
-        #{container_id} .admin-email {{
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-family: monospace;
-            font-size: 0.75rem;
-            color: {'#d1d5db' if is_dark_mode else '#374151'};
-        }}
-
-        #{container_id} .date-text {{
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-size: 0.75rem;
-        }}
-        </style>
-
-        <div id="{container_id}">
-            <div class="search-controls">
-                <div style="font-size: 0.875rem; color: {'#9ca3af' if is_dark_mode else '#6b7280'}; align-self: center;">
-                    Showing {len(files)} of {total} filtered files
-                </div>
-            </div>
-
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 1.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
-                            <th style="width: 2rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
-                            <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
-                            <th style="width: 7rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
-                            <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
-                            <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
-                            <th style="width: 10rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
-                            <th style="width: 15rem;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="{container_id}-tbody">
-        """
-
-        # Initial table rows - show files
-        for i, file in enumerate(files[:50]):
-            # Format file info
-            file_path = file["name"]
-            full_syft_path = f"syft://{file_path}"  # Full syft:// path
-            datasite_owner = file.get("datasite_owner", "unknown")
-            modified = datetime.fromtimestamp(file.get("modified", 0)).strftime("%m/%d/%Y %H:%M")
-            file_ext = file.get("extension", ".txt")
-            size = file.get("size", 0)
-            is_dir = file.get("is_dir", False)
-
-            # Get chronological ID based on modified date
-            file_key = f"{file['name']}|{file['path']}"
-            chrono_id = chronological_ids.get(file_key, i)
-
-            # Format size
-            if size > 1024 * 1024:
-                size_str = f"{size / (1024 * 1024):.1f} MB"
-            elif size > 1024:
-                size_str = f"{size / 1024:.1f} KB"
-            else:
-                size_str = f"{size} B"
-
-            html += f"""
-                    <tr onclick="copyPath_{container_id}('syft://{html_module.escape(file_path)}', this)">
-                        <td><input type="checkbox" onclick="event.stopPropagation(); updateSelectAllState_{container_id}()"></td>
-                        <td>{chrono_id}</td>
-                        <td><div class="truncate" style="font-weight: 500;" title="{html_module.escape(full_syft_path)}">{html_module.escape(full_syft_path)}</div></td>
-                        <td>
-                            <div class="date-text">
-                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
-                                    <line x1="16" x2="16" y1="2" y2="6"></line>
-                                    <line x1="8" x2="8" y1="2" y2="6"></line>
-                                    <line x1="3" x2="21" y1="10" y2="10"></line>
-                                </svg>
-                                <span>{modified}</span>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="type-badge">
-                                {"DIR" if is_dir else file_ext.upper().replace(".", "")}
-                            </div>
-                        </td>
-                        <td>{size_str}</td>
-                        <td>
-                            <div style="font-size: 0.75rem; color: {'#9ca3af' if is_dark_mode else '#6b7280'};">
-                                {"; ".join(file.get("permissions_summary", [])[:2])}
-                            </div>
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 0.03125rem;">
-                                <button class="btn btn-gray" title="Open in editor">File</button>
-                                <button class="btn btn-blue" title="View file info">Info</button>
-                                <button class="btn btn-purple" title="Copy path">Copy</button>
-                                <button class="btn btn-red" title="Delete file">
-                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M3 6h18"></path>
-                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                        <line x1="10" x2="10" y1="11" y2="17"></line>
-                                        <line x1="14" x2="14" y1="11" y2="17"></line>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-            """
-
-        html += f"""
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <script>
-        // Copy path with rainbow animation
-        window.copyPath_{container_id} = function(path, rowElement) {{
-            var command = 'sp.open("' + path + '")';
-            
-            // Copy to clipboard
-            navigator.clipboard.writeText(command).then(function() {{
-                // Add rainbow animation
-                if (rowElement) {{
-                    rowElement.classList.add('rainbow-flash');
-                    setTimeout(function() {{
-                        rowElement.classList.remove('rainbow-flash');
-                    }}, 800);
-                }}
-            }}).catch(function() {{
-                console.error('Failed to copy to clipboard');
-            }});
-        }};
-        
-        // Stub functions for other actions (not implemented in FilteredFiles)
-        window.updateSelectAllState_{container_id} = function() {{}};
-        </script>
-        """
-
-        return html
-
-    def __repr__(self) -> str:
-        """Generate ASCII table representation of filtered files."""
-        from datetime import datetime
-
-        if not self._filtered_files:
-            return "FilteredFiles: No files match the filter criteria"
-
-        # Sort by modified date (newest first) to match main Files display
-        sorted_files = sorted(
-            self._filtered_files, key=lambda x: x.get("modified", 0), reverse=True
-        )
-
-        # Calculate display range
-        total_files = len(sorted_files)
-        items_per_page = self._limit if self._limit else 50
-
-        # Get files to display
-        if self._limit:
-            # If limit is set, show from offset to offset+limit
-            start = self._offset
-            end = min(start + self._limit, total_files)
-            display_files = sorted_files[start:end]
-            page_info = f"FilteredFiles (showing {start+1}-{end} of {total_files} filtered files)"
-        else:
-            # Otherwise show first page
-            end = min(items_per_page, total_files)
-            display_files = sorted_files[:end]
-            page_info = f"FilteredFiles (showing 1-{end} of {total_files} filtered files)"
-
-        # Create chronological index for all filtered files
-        chronological_ids = {}
-        for i, file in enumerate(sorted_files):
-            file_key = f"{file['name']}|{file['path']}"
-            chronological_ids[file_key] = i + 1
-
-        # Define column widths (same as main Files class)
-        col_widths = {"num": 5, "url": 60, "modified": 16, "type": 8, "size": 10, "perms": 12}
-
-        # Build header
-        header = (
-            f"{'#':<{col_widths['num']}} "
-            f"{'URL':<{col_widths['url']}} "
-            f"{'Modified':<{col_widths['modified']}} "
-            f"{'Type':<{col_widths['type']}} "
-            f"{'Size':<{col_widths['size']}} "
-            f"{'Permissions':<{col_widths['perms']}}"
-        )
-
-        separator = "-" * len(header)
-
-        # Build rows
-        rows = []
-        for file in display_files:
-            # Get chronological number
-            file_key = f"{file['name']}|{file['path']}"
-            num = chronological_ids.get(file_key, 0)
-
-            # Format URL (truncate if needed)
-            url = file["name"]
-            if len(url) > col_widths["url"]:
-                url = url[: col_widths["url"] - 3] + "..."
-
-            # Format modified date
-            modified_ts = file.get("modified", 0)
-            if modified_ts:
-                modified = datetime.fromtimestamp(modified_ts).strftime("%Y-%m-%d %H:%M")
-            else:
-                modified = "Unknown"
-
-            # Format file type
-            file_type = file.get("extension", "").lstrip(".") or "file"
-            if len(file_type) > col_widths["type"]:
-                file_type = file_type[: col_widths["type"] - 3] + "..."
-
-            # Format size
-            size_bytes = file.get("size", 0)
-            if size_bytes < 1024:
-                size = f"{size_bytes} B"
-            elif size_bytes < 1024 * 1024:
-                size = f"{size_bytes / 1024:.1f} KB"
-            elif size_bytes < 1024 * 1024 * 1024:
-                size = f"{size_bytes / (1024 * 1024):.1f} MB"
-            else:
-                size = f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-
-            # Format permissions count
-            perms = file.get("permissions_summary", [])
-            perm_str = f"{len(perms)} users"
-
-            # Build row
-            row = (
-                f"{num:<{col_widths['num']}} "
-                f"{url:<{col_widths['url']}} "
-                f"{modified:<{col_widths['modified']}} "
-                f"{file_type:<{col_widths['type']}} "
-                f"{size:>{col_widths['size']}} "
-                f"{perm_str:<{col_widths['perms']}}"
-            )
-            rows.append(row)
-
-        # Calculate totals for footer
-        file_count = 0
-        folder_count = 0
-        total_size = 0
-
-        for file in sorted_files:
-            if file.get("is_dir", False):
-                folder_count += 1
-            else:
-                file_count += 1
-                total_size += file.get("size", 0)
-
-        # Format total size
-        if total_size < 1024:
-            size_str = f"{total_size} B"
-        elif total_size < 1024 * 1024:
-            size_str = f"{total_size / 1024:.1f} KB"
-        elif total_size < 1024 * 1024 * 1024:
-            size_str = f"{total_size / (1024 * 1024):.1f} MB"
-        else:
-            size_str = f"{total_size / (1024 * 1024 * 1024):.1f} GB"
-
-        # Build output
-        output = [page_info, separator, header, separator]
-        output.extend(rows)
-        output.append(separator)
-        output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
-        if total_files > len(display_files):
-            output.append(
-                "Use FilteredFiles in Jupyter for interactive view of all "
-                + str(total_files)
-                + " results"
-            )
-
-        return "\n".join(output)
 
     def _repr_simple(self) -> str:  # renamed to avoid duplicate definition
         """Simple string representation for FilteredFiles."""
         return f"<FilteredFiles: {len(self._filtered_files)} files>"
 
 
-class FastAPIFiles(Files):
+class _FastAPIFiles(_Files):
     """FastAPI version of Files that generates URLs with query parameters"""
 
     def __init__(self, server_url: str = "http://localhost:8005"):
@@ -3460,7 +2940,7 @@ class FastAPIFiles(Files):
         admin: _Union[str, None] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> "FastAPIFiles":
+    ) -> "_FastAPIFiles":
         """
         Generate URL for search filters.
 
@@ -3484,11 +2964,11 @@ class FastAPIFiles(Files):
             url += "?" + "&".join(params)
 
         # Return a new instance that will display as URL
-        result = FastAPIFiles(self.server_url)
+        result = _FastAPIFiles(self.server_url)
         result._url = url
         return result
 
-    def filter(self, folders: _Union[list, str, None] = None) -> "FastAPIFiles":
+    def filter(self, folders: _Union[list, str, None] = None) -> "_FastAPIFiles":
         """
         Generate URL for folder filter.
 
@@ -3509,11 +2989,11 @@ class FastAPIFiles(Files):
         folders_str = ",".join(str(f) for f in folders)
         url = f"{self.server_url}/files-widget?folders={folders_str}"
 
-        result = FastAPIFiles(self.server_url)
+        result = _FastAPIFiles(self.server_url)
         result._url = url
         return result
 
-    def page(self, page_number: int, items_per_page: int = 50) -> "FastAPIFiles":
+    def page(self, page_number: int, items_per_page: int = 50) -> "_FastAPIFiles":
         """
         Generate URL for pagination.
 
@@ -3526,14 +3006,14 @@ class FastAPIFiles(Files):
         """
         url = f"{self.server_url}/files-widget?page={page_number}&items_per_page={items_per_page}"
 
-        result = FastAPIFiles(self.server_url)
+        result = _FastAPIFiles(self.server_url)
         result._url = url
         return result
 
-    def all(self) -> "FastAPIFiles":
+    def all(self) -> "_FastAPIFiles":
         """Return URL for all files."""
         url = f"{self.server_url}/files-widget"
-        result = FastAPIFiles(self.server_url)
+        result = _FastAPIFiles(self.server_url)
         result._url = url
         return result
 
@@ -3546,7 +3026,7 @@ class FastAPIFiles(Files):
     def _repr_html_(self) -> str:
         """Display as iframe in Jupyter."""
         url = getattr(self, "_url", f"{self.server_url}/files-widget")
-        is_dark_mode = is_dark()
+        is_dark_mode = _is_dark()
         border_color = "#3e3e42" if is_dark_mode else "#ddd"
 
         return f"""
@@ -3563,128 +3043,30 @@ class FastAPIFiles(Files):
         """
 
 
-# Create singleton instance
-files = Files()
-
-
-def is_dark():
-    """
-    Check if Jupyter Notebook/Lab is running in dark mode.
-
-    Returns:
-        bool: True if dark mode is detected, False otherwise
-    """
+def _is_dark():
+    """Checks if the current environment (e.g., Jupyter) is in dark mode."""
+    # Use a try-except block to gracefully handle non-IPython environments
     try:
-        import builtins
-        import json
-        import os
-        import re
-        from pathlib import Path
+        from IPython import get_ipython
 
-        # First, try to read JupyterLab theme settings file
-        jupyter_config_paths = [
-            Path.home()
-            / ".jupyter"
-            / "lab"
-            / "user-settings"
-            / "@jupyterlab"
-            / "apputils-extension"
-            / "themes.jupyterlab-settings",
-            Path.home()
-            / ".jupyter"
-            / "lab"
-            / "user-settings"
-            / "@jupyterlab"
-            / "apputils-extension"
-            / "themes.jupyterlab-settings.json",
-        ]
-
-        for config_path in jupyter_config_paths:
-            if config_path.exists():
-                try:
-                    with builtins.open(config_path, "r") as f:
-                        content = f.read()
-                        # Remove comments from the JSON (JupyterLab allows comments)
-                        # Remove single-line comments
-                        content = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
-                        # Remove multi-line comments
-                        content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
-
-                        settings = json.loads(content)
-                        theme = settings.get("theme", "").lower()
-                        # Check if it's a dark theme
-                        if "dark" in theme:
-                            return True
-                        # If theme is explicitly set to light, return False
-                        if "light" in theme:
-                            return False
-                except Exception:
-                    pass
-
-        # Check VS Code settings
-        if "VSCODE_PID" in os.environ:
-            # VS Code Jupyter might have its own theme
-            # Check workspace settings
-            vscode_settings_paths = [
-                Path.cwd() / ".vscode" / "settings.json",
-                Path.home() / ".config" / "Code" / "User" / "settings.json",
-                Path.home()
-                / "Library"
-                / "Application Support"
-                / "Code"
-                / "User"
-                / "settings.json",  # macOS
-            ]
-
-            for settings_path in vscode_settings_paths:
-                if settings_path.exists():
-                    try:
-                        with builtins.open(settings_path, "r") as f:
-                            settings = json.load(f)
-                            # Check workbench color theme
-                            theme = settings.get("workbench.colorTheme", "").lower()
-                            if "dark" in theme:
-                                return True
-                    except Exception:
-                        pass
-
-        # Try JavaScript detection as fallback
-        try:
-            from IPython import get_ipython
-
-            ipython = get_ipython()
-
-            if ipython is not None:
-                # Execute JavaScript to check theme
-                result = ipython.run_cell_magic(
-                    "javascript",
-                    "",
-                    """
-                if (typeof IPython !== 'undefined' && IPython.notebook) {
-                    IPython.notebook.kernel.execute("_is_dark_mode = " + 
-                        (document.body.classList.contains('theme-dark') || 
-                         (document.body.getAttribute('data-jp-theme-name') && 
-                          document.body.getAttribute('data-jp-theme-name').includes('dark'))));
-                }
-                """,
-                )
-
-                # Check if we got a result
-                import sys
-
-                if hasattr(sys.modules["__main__"], "_is_dark_mode"):
-                    is_dark = sys.modules["__main__"]._is_dark_mode
-                    delattr(sys.modules["__main__"], "_is_dark_mode")
-                    return is_dark
-        except Exception:
-            pass
-
-        # Default to False (light mode) if we can't detect
-        return False
-
+        ipython = get_ipython()
+        if ipython and hasattr(ipython, "kernel"):
+            # Check for common dark theme indicators in JupyterLab/Notebook
+            if "config" in ipython.kernel.session.session:
+                config = ipython.kernel.session.session["config"]
+                if "iopub_data_rate_limit" in config:
+                    # This is a heuristic, often present in dark themes
+                    return True
+            # Fallback for some environments
+            if hasattr(ipython, "config") and "ZMQInteractiveShell" in ipython.config:
+                if "colors" in ipython.config.ZMQInteractiveShell:
+                    if ipython.config.ZMQInteractiveShell.colors.lower() == "linux":
+                        return True
     except Exception:
-        # If any error occurs, assume light mode
-        return False
+        # If any check fails, assume light mode
+        pass
+    return False
 
 
-# Server will auto-start when _repr_html_ is called in Jupyter notebooks
+# Create singleton instance
+files = _Files()
