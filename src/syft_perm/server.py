@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from . import open as syft_open
 from ._syftbox import client as syftbox_client
 from ._utils import get_syftbox_datasites
+from .filesystem_editor import get_current_user_email  # noqa: F401
 
 _SERVER_AVAILABLE = False
 try:
@@ -297,7 +298,7 @@ if _SERVER_AVAILABLE:
             def start_watcher():
                 try:
                     observer.start()
-                    logger.info(f"[FILE WATCHER] File watcher started successfully")
+                    logger.info("[FILE WATCHER] File watcher started successfully")
                     # Keep the watcher running
                     observer.join()
                 except Exception as e:
@@ -346,7 +347,6 @@ if _SERVER_AVAILABLE:
     @app.on_event("shutdown")
     async def shutdown_event():
         """Clean up file watcher on shutdown."""
-        global file_watcher_observer
         if file_watcher_observer:
             logger.info("[FILE WATCHER] Stopping file watcher...")
             file_watcher_observer.stop()
@@ -636,8 +636,6 @@ if _SERVER_AVAILABLE:
     ) -> str:
         """Serve the files widget interface with filtering support."""
         # Get current user email
-        from .filesystem_editor import get_current_user_email
-
         current_user_email = get_current_user_email() or ""
 
         # Parse folders if provided
