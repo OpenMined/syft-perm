@@ -35,6 +35,18 @@ uv sync
 DISCOVERY_PORT=62050
 echo "Using discovery port: $DISCOVERY_PORT"
 
+# Find and kill any process running on the discovery port to prevent conflicts
+echo "Checking for and terminating any existing process on port $DISCOVERY_PORT..."
+PID_TO_KILL=$(lsof -t -i:$DISCOVERY_PORT || true)
+if [ -n "$PID_TO_KILL" ]; then
+    echo "Found existing process(es) with PID(s): $PID_TO_KILL. Terminating..."
+    kill -9 $PID_TO_KILL
+    sleep 1 # Give it a moment to release the port
+    echo "Process(es) terminated."
+else
+    echo "No existing process found on port $DISCOVERY_PORT."
+fi
+
 # Start discovery server in background
 echo "Starting discovery server on port $DISCOVERY_PORT..."
 uv run python -c "
