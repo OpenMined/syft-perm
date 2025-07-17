@@ -669,7 +669,7 @@ class Files:
                     end = key.stop
 
                     # Create FastAPIFiles and use server for slicing
-                    api_files = FastAPIFiles(server_url)
+                    _ = FastAPIFiles(server_url)  # noqa: F841
 
                     # Build URL with start/end parameters
                     import urllib.parse
@@ -888,7 +888,7 @@ class Files:
         output.append(separator)
         output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
         output.append(
-            f"Use sp.files.page(n) to view other pages or sp.files in Jupyter for interactive view"
+            "Use sp.files.page(n) to view other pages or sp.files in Jupyter for interactive view"
         )
 
         return "\n".join(output)
@@ -3396,7 +3396,7 @@ class FilteredFiles(Files):
         output.append(f"{file_count} files, {folder_count} folders • Total size: {size_str}")
         if total_files > len(display_files):
             output.append(
-                f"Use FilteredFiles in Jupyter for interactive view of all {total_files} results"
+                "Use FilteredFiles in Jupyter for interactive view of all " + str(total_files) + " results"
             )
 
         return "\n".join(output)
