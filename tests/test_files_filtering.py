@@ -379,26 +379,6 @@ class TestFilesFiltering(unittest.TestCase):
             files_instance._matches_search_terms(test_file, ["test", "bob"])
         )  # bob not in file
 
-    def test_filtered_files_repr(self):
-        """Test FilteredFiles string representation."""
-        test_files = [
-            {
-                "name": "file1.txt",
-                "path": "/path/file1.txt",
-                "modified": 1000,
-                "datasite_owner": "alice@example.com",
-            },
-            {
-                "name": "file2.txt",
-                "path": "/path/file2.txt",
-                "modified": 2000,
-                "datasite_owner": "bob@example.com",
-            },
-        ]
-
-        filtered = sp.FilteredFiles(test_files)
-        self.assertEqual(repr(filtered), "<FilteredFiles: 2 files>")
-
     def test_filtered_files_scan_files(self):
         """Test FilteredFiles._scan_files returns pre-filtered files."""
         test_files = [

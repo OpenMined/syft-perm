@@ -148,10 +148,10 @@ class Files:
                             content = response.read().decode("utf-8")
                             if "SyftPerm" in content:
                                 return url
-                except:
+                except Exception:
                     continue
 
-        except:
+        except Exception:
             pass
 
         return None
