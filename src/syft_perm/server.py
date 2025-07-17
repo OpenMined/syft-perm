@@ -2065,7 +2065,8 @@ def get_files_widget_html(
                     <stop offset="0.745734" stop-color="#5CB8B7"></stop>
                     <stop offset="1" stop-color="#4CA5B8"></stop>
                 </linearGradient>
-                <linearGradient id="paint2_linear_7523_4240" x1="-0.378906" y1="89.7878" x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse">
+                <linearGradient id="paint2_linear_7523_4240" x1="-0.378906" y1="89.7878" 
+                               x2="155.761" y2="360.282" gradientUnits="userSpaceOnUse">
                     <stop stop-color="#D7686D"></stop>
                     <stop offset="0.225" stop-color="#C64B77"></stop>
                     <stop offset="0.485" stop-color="#A2638E"></stop>
@@ -2078,15 +2079,20 @@ def get_files_widget_html(
             </defs>
         </svg>
 
-        <div style="font-size: 20px; font-weight: 600; color: {text_color}; margin-top: 2rem; text-align: center;">
+        <div style="font-size: 20px; font-weight: 600; color: {text_color}; 
+                    margin-top: 2rem; text-align: center;">
             loading <br />the private internet
         </div>
 
-        <div style="width: 340px; height: 6px; background-color: {'#2d2d30' if is_dark_mode else '#e5e5e5'}; border-radius: 3px; margin: 1.5rem auto; overflow: hidden;">
-            <div id="loading-bar-{container_id}" class="progress-bar-gradient" style="width: 0%; height: 100%;"></div>
+        <div style="width: 340px; height: 6px; 
+                    background-color: {'#2d2d30' if is_dark_mode else '#e5e5e5'}; 
+                    border-radius: 3px; margin: 1.5rem auto; overflow: hidden;">
+            <div id="loading-bar-{container_id}" class="progress-bar-gradient" 
+                 style="width: 0%; height: 100%;"></div>
         </div>
 
-        <div id="loading-status-{container_id}" style="color: {status_color}; font-size: 0.875rem; margin-top: 0.5rem;">
+        <div id="loading-status-{container_id}" 
+             style="color: {status_color}; font-size: 0.875rem; margin-top: 0.5rem;">
             Initializing...
         </div>
 
@@ -2101,8 +2107,12 @@ def get_files_widget_html(
     <div id="{container_id}" style="display: none;">
         <div class="search-controls">
             <input id="{container_id}-search" placeholder="🔍 Search files..." style="flex: 1;">
-            <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." style="flex: 1;">
-            <select id="rainbowDuration" onchange="updateRainbowDuration_{container_id}()" style="padding: 0.5rem; border: 1px solid {input_border}; border-radius: 0.25rem; background: {input_bg}; color: {text_color}; font-size: 0.875rem;">
+            <input id="{container_id}-admin-filter" placeholder="Filter by Admin..." 
+                   style="flex: 1;">
+            <select id="rainbowDuration" onchange="updateRainbowDuration_{container_id}()" 
+                    style="padding: 0.5rem; border: 1px solid {input_border}; 
+                           border-radius: 0.25rem; background: {input_bg}; 
+                           color: {text_color}; font-size: 0.875rem;">
                 <option value="0">No Rainbow</option>
                 <option value="5" selected>5 seconds</option>
                 <option value="10">10 seconds</option>
@@ -2113,19 +2123,27 @@ def get_files_widget_html(
             </select>
             <button class="btn btn-green btn-clickable" onclick="openNewFileModal()">New</button>
             <button class="btn btn-gray btn-clickable" onclick="restartServer()">Refresh</button>
-            <button id="{container_id}-delete-selected" class="btn btn-red btn-clickable" onclick="deleteSelected_{container_id}()" style="display: none;">Delete Selected</button>
-            <button id="{container_id}-python-selected" class="btn btn-blue btn-clickable" onclick="generatePythonCode_{container_id}()" style="display: none;">Python</button>
-            <button class="btn btn-purple btn-clickable" onclick="window.open(window.location.href, '_blank')">Open in Window</button>
+            <button id="{container_id}-delete-selected" class="btn btn-red btn-clickable" 
+                    onclick="deleteSelected_{container_id}()" style="display: none;">Delete Selected</button>
+            <button id="{container_id}-python-selected" class="btn btn-blue btn-clickable" 
+                    onclick="generatePythonCode_{container_id}()" style="display: none;">Python</button>
+            <button class="btn btn-purple btn-clickable" 
+                    onclick="window.open(window.location.href, '_blank')">Open in Window</button>
         </div>
 
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 2rem; padding-left: 0.5rem;"><input type="checkbox" id="{container_id}-select-all" onclick="toggleSelectAll_{container_id}()"></th>
-                        <th style="width: 2.5rem; cursor: pointer;" onclick="sortTable_{container_id}('index')"># ↕</th>
-                        <th style="width: 25rem; cursor: pointer;" onclick="sortTable_{container_id}('name')">URL ↕</th>
-                        <th style="width: 8rem; cursor: pointer;" onclick="sortTable_{container_id}('modified')">Modified ↕</th>
+                        <th style="width: 2rem; padding-left: 0.5rem;">
+                            <input type="checkbox" id="{container_id}-select-all" 
+                                   onclick="toggleSelectAll_{container_id}()"></th>
+                        <th style="width: 2.5rem; cursor: pointer;" 
+                            onclick="sortTable_{container_id}('index')"># ↕</th>
+                        <th style="width: 25rem; cursor: pointer;" 
+                            onclick="sortTable_{container_id}('name')">URL ↕</th>
+                        <th style="width: 8rem; cursor: pointer;" 
+                            onclick="sortTable_{container_id}('modified')">Modified ↕</th>
                         <th style="width: 5rem; cursor: pointer;" onclick="sortTable_{container_id}('type')">Type ↕</th>
                         <th style="width: 4rem; cursor: pointer;" onclick="sortTable_{container_id}('size')">Size ↕</th>
                         <th style="width: 12rem; cursor: pointer;" onclick="sortTable_{container_id}('permissions')">Permissions ↕</th>
