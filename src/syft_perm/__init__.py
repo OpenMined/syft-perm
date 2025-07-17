@@ -1716,9 +1716,7 @@ color: {'#60a5fa' if is_dark_mode else '#0369a1'};">💡 TIP:</span> \
                         f"                                <span>+{len(perms) - 3} more...</span>\n"
                     )
             else:
-                html += (
-                    f"                                <span style=\"color: {'#6b7280' if is_dark_mode else '#9ca3af'};\">No permissions</span>\n"
-                )
+                html += f"                                <span style=\"color: {'#6b7280' if is_dark_mode else '#9ca3af'};\">No permissions</span>\n"
 
             html += f"""
                             </div>
