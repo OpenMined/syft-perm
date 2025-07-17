@@ -11,6 +11,7 @@ Completely decoupled from syft-objects functionality.
 import json
 import mimetypes
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -572,6 +573,61 @@ class FileSystemManager:
         except OSError as e:
 
             raise HTTPException(status_code=500, detail=f"Error deleting item: {str(e)}")
+
+    def rename_item(self, old_path: str, new_path: str, user_email: str = None) -> Dict[str, Any]:
+        """Rename a file or directory."""
+        # Validate old path
+        old_item_path = self._validate_path(old_path)
+        
+        if not old_item_path.exists():
+            raise HTTPException(status_code=404, detail="Item not found")
+        
+        # Validate new path
+        new_item_path = self._validate_path(new_path)
+        
+        if new_item_path.exists():
+            raise HTTPException(status_code=409, detail="An item with that name already exists")
+        
+        # Check if parent directory exists
+        if not new_item_path.parent.exists():
+            raise HTTPException(status_code=400, detail="Parent directory does not exist")
+        
+        # Check write permissions on parent directory
+        current_user = user_email or get_current_user_email()
+        
+        if current_user:
+            try:
+                from . import open as syft_open
+                parent_folder = syft_open(old_item_path.parent)
+                
+                # Check if user has write or admin permissions
+                if not parent_folder.has_permission(current_user, "write"):
+                    # Check if it's their own datasite
+                    import re
+                    datasite_match = re.search(r'/datasites/([^/]+)/', str(old_item_path))
+                    if not (datasite_match and datasite_match.group(1) == current_user):
+                        raise HTTPException(
+                            status_code=403,
+                            detail="You don't have write permissions to rename items in this directory"
+                        )
+            except Exception:
+                # If syft-perm check fails, continue with basic checks
+                pass
+        
+        try:
+            # Perform the rename
+            old_item_path.rename(new_item_path)
+            
+            return {
+                "old_path": str(old_item_path),
+                "new_path": str(new_item_path),
+                "message": f"{'Directory' if new_item_path.is_dir() else 'File'} renamed successfully"
+            }
+            
+        except PermissionError:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=f"Error renaming item: {str(e)}")
 
 
 def generate_editor_html(
@@ -1808,6 +1864,53 @@ def generate_editor_html(
 
         }}
 
+        /* Modal styles */
+        .modal {{
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease-out;
+        }}
+
+        .modal-content {{
+            background-color: {panel_bg};
+            margin: 15% auto;
+            padding: 24px;
+            border: 1px solid {border_color};
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.2s ease-out;
+        }}
+
+        @keyframes fadeIn {{
+            from {{
+                opacity: 0;
+            }}
+            to {{
+                opacity: 1;
+            }}
+        }}
+
+        @keyframes slideIn {{
+            from {{
+                transform: translateY(-20px);
+                opacity: 0;
+            }}
+            to {{
+                transform: translateY(0);
+                opacity: 1;
+            }}
+        }}
+
     </style>
 
 </head>
@@ -1907,6 +2010,20 @@ def generate_editor_html(
                                 </svg>
 
                                 Share
+
+                            </button>
+
+                            <button class="btn btn-secondary" id="renameBtn" title="Rename file/folder" style="display: none;">
+
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+                                    <path d="M12 20h9"/>
+
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+
+                                </svg>
+
+                                Rename
 
                             </button>
 
@@ -2289,6 +2406,8 @@ def generate_editor_html(
                 this.saveBtn = document.getElementById('saveBtn');
 
                 this.shareBtn = document.getElementById('shareBtn');
+                
+                this.renameBtn = document.getElementById('renameBtn');
 
                 this.closeFileBtn = document.getElementById('closeFileBtn');
 
@@ -2449,6 +2568,8 @@ def generate_editor_html(
                 this.saveBtn.addEventListener('click', () => this.saveFile());
 
                 this.shareBtn.addEventListener('click', () => this.showShareModal());
+                
+                this.renameBtn.addEventListener('click', () => this.showRenameModal());
 
                 this.closeFileBtn.addEventListener('click', () => this.closeFile());
 
@@ -3455,6 +3576,27 @@ def generate_editor_html(
                 // Show/hide close button based on whether a file is open
 
                 this.closeFileBtn.style.display = this.currentFile ? 'inline-flex' : 'none';
+                
+                // Show/hide rename button based on whether a file/folder is selected
+                
+                const hasSelection = this.currentFile || this.selectedFolder;
+                this.renameBtn.style.display = hasSelection ? 'inline-flex' : 'none';
+                
+                // Enable rename button only if user has write permissions
+                if (this.renameBtn) {{
+                    const canRename = hasSelection && (this.isAdmin || !this.isReadOnly);
+                    this.renameBtn.disabled = !canRename;
+                    
+                    if (!canRename) {{
+                        this.renameBtn.style.opacity = '0.5';
+                        this.renameBtn.style.cursor = 'not-allowed';
+                        this.renameBtn.title = this.isReadOnly ? 'Read-only - cannot rename' : 'Select a file or folder first';
+                    }} else {{
+                        this.renameBtn.style.opacity = '';
+                        this.renameBtn.style.cursor = '';
+                        this.renameBtn.title = 'Rename file/folder';
+                    }}
+                }}
 
                 // Update share button - only enabled if user has admin permissions
 
@@ -4284,6 +4426,130 @@ def generate_editor_html(
 
                 }});
 
+            }}
+            
+            async showRenameModal() {{
+                // Determine what to rename
+                let pathToRename;
+                let itemName;
+                let isDirectory = false;
+                
+                if (this.currentFile) {{
+                    pathToRename = this.currentFile.path;
+                    itemName = pathToRename.split('/').pop() || 'file';
+                    isDirectory = false;
+                }} else if (this.selectedFolder) {{
+                    pathToRename = this.selectedFolder;
+                    itemName = pathToRename.split('/').pop() || pathToRename;
+                    isDirectory = true;
+                }} else {{
+                    this.showError('No file or folder selected to rename');
+                    return;
+                }}
+                
+                // Create modal dialog
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'block';
+                
+                const modalContent = document.createElement('div');
+                modalContent.className = 'modal-content';
+                
+                modalContent.innerHTML = `
+                    <h2 style="margin: 0 0 16px 0;">Rename ${{isDirectory ? 'Folder' : 'File'}}</h2>
+                    <p style="margin: 0 0 16px 0; opacity: 0.8;">Current name: <strong>${{itemName}}</strong></p>
+                    <input type="text" id="newNameInput" value="${{itemName}}" 
+                        style="width: 100%; padding: 12px 80px 12px 16px; margin-bottom: 16px; 
+                               border: 1px solid var(--border-color); border-radius: 4px;
+                               background: var(--input-bg); color: var(--text-color);
+                               font-size: 14px; box-sizing: border-box;">
+                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                        <button class="btn btn-secondary" id="cancelRename">Cancel</button>
+                        <button class="btn btn-primary" id="confirmRename">Rename</button>
+                    </div>
+                `;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // Focus input and select text
+                const input = modalContent.querySelector('#newNameInput');
+                input.focus();
+                input.select();
+                
+                // Handle rename
+                const doRename = async () => {{
+                    const newName = input.value.trim();
+                    if (!newName) {{
+                        this.showError('Name cannot be empty');
+                        return;
+                    }}
+                    
+                    if (newName === itemName) {{
+                        document.body.removeChild(modal);
+                        return;
+                    }}
+                    
+                    try {{
+                        // Calculate new path
+                        const pathParts = pathToRename.split('/');
+                        pathParts[pathParts.length - 1] = newName;
+                        const newPath = pathParts.join('/');
+                        
+                        // Call rename API
+                        let url = `/api/filesystem/rename?old_path=${{encodeURIComponent(pathToRename)}}&new_path=${{encodeURIComponent(newPath)}}`;
+                        if (this.syftUser) {{
+                            url += `&syft_user=${{encodeURIComponent(this.syftUser)}}`;
+                        }}
+                        
+                        const response = await fetch(url, {{ method: 'POST' }});
+                        const result = await response.json();
+                        
+                        if (response.ok) {{
+                            this.showSuccess(`${{isDirectory ? 'Folder' : 'File'}} renamed successfully`);
+                            document.body.removeChild(modal);
+                            
+                            // Update UI
+                            if (this.currentFile && !isDirectory) {{
+                                // If we renamed the current file, load the new file
+                                this.loadFile(newPath);
+                            }} else {{
+                                // Refresh the directory listing
+                                this.loadDirectory(this.currentPath);
+                                
+                                // If we renamed a folder and it was selected, update the selection
+                                if (this.selectedFolder === pathToRename) {{
+                                    this.selectedFolder = newPath;
+                                }}
+                            }}
+                        }} else {{
+                            this.showError(result.detail || 'Failed to rename');
+                        }}
+                    }} catch (error) {{
+                        this.showError('Error renaming: ' + error.message);
+                    }}
+                }};
+                
+                // Event listeners
+                modalContent.querySelector('#confirmRename').addEventListener('click', doRename);
+                modalContent.querySelector('#cancelRename').addEventListener('click', () => {{
+                    document.body.removeChild(modal);
+                }});
+                
+                input.addEventListener('keydown', (e) => {{
+                    if (e.key === 'Enter') {{
+                        doRename();
+                    }} else if (e.key === 'Escape') {{
+                        document.body.removeChild(modal);
+                    }}
+                }});
+                
+                // Close on outside click
+                modal.addEventListener('click', (e) => {{
+                    if (e.target === modal) {{
+                        document.body.removeChild(modal);
+                    }}
+                }});
             }}
 
             async getCurrentUser() {{
@@ -5427,7 +5693,7 @@ def generate_share_modal_html(
 
             width: 100%;
 
-            padding: 8px 12px;
+            padding: 8px 40px 8px 12px;
 
             border: 1px solid {border_color};
 
