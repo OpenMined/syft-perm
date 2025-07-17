@@ -1617,7 +1617,7 @@ def get_files_widget_html(
         width: 100%;
         height: 100vh;
         margin: 0;
-        border: 1px solid {border_color};
+        border: none;
         border-radius: 8px;
         overflow: hidden;
     }}

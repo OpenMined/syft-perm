@@ -39,6 +39,7 @@ dependencies = [
     "uvicorn[standard]>=0.24.0",
     "watchdog>=6.0.0",
     "websockets>=15.0.1",
+    "syft-core",
 ]
 
 [project.optional-dependencies]
