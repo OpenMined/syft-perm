@@ -1501,7 +1501,7 @@ def get_files_widget_html(
     import uuid
 
     # Import needed functions
-    from . import is_dark
+    from . import _is_dark as is_dark
 
     container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
 
