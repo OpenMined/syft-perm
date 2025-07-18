@@ -653,18 +653,123 @@ class FastAPIFiles(Files):
 
 
 def is_dark():
-    """Checks if the current environment (e.g., Jupyter) is in dark mode."""
-    try:
-        from IPython import get_ipython
+    """
+    Check if Jupyter Notebook/Lab is running in dark mode.
 
-        ipython = get_ipython()
-        if "config" in ipython.kernel.session.session:
-            config = ipython.kernel.session.session["config"]
-            if "iopub_data_rate_limit" in config:
-                return True  # A heuristic for detecting dark mode
+    Returns:
+        bool: True if dark mode is detected, False otherwise
+    """
+    try:
+        import builtins
+        import json
+        import os
+        import re
+        from pathlib import Path
+
+        # First, try to read JupyterLab theme settings file
+        jupyter_config_paths = [
+            Path.home()
+            / ".jupyter"
+            / "lab"
+            / "user-settings"
+            / "@jupyterlab"
+            / "apputils-extension"
+            / "themes.jupyterlab-settings",
+            Path.home()
+            / ".jupyter"
+            / "lab"
+            / "user-settings"
+            / "@jupyterlab"
+            / "apputils-extension"
+            / "themes.jupyterlab-settings.json",
+        ]
+
+        for config_path in jupyter_config_paths:
+            if config_path.exists():
+                try:
+                    with builtins.open(config_path, "r") as f:
+                        content = f.read()
+                        # Remove comments from the JSON (JupyterLab allows comments)
+                        # Remove single-line comments
+                        content = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
+                        # Remove multi-line comments
+                        content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+
+                        settings = json.loads(content)
+                        theme = settings.get("theme", "").lower()
+                        # Check if it's a dark theme
+                        if "dark" in theme:
+                            return True
+                        # If theme is explicitly set to light, return False
+                        if "light" in theme:
+                            return False
+                except Exception:
+                    pass
+
+        # Check VS Code settings
+        if "VSCODE_PID" in os.environ:
+            # VS Code Jupyter might have its own theme
+            # Check workspace settings
+            vscode_settings_paths = [
+                Path.cwd() / ".vscode" / "settings.json",
+                Path.home() / ".config" / "Code" / "User" / "settings.json",
+                Path.home()
+                / "Library"
+                / "Application Support"
+                / "Code"
+                / "User"
+                / "settings.json",  # macOS
+            ]
+
+            for settings_path in vscode_settings_paths:
+                if settings_path.exists():
+                    try:
+                        with builtins.open(settings_path, "r") as f:
+                            settings = json.load(f)
+                            # Check workbench color theme
+                            theme = settings.get("workbench.colorTheme", "").lower()
+                            if "dark" in theme:
+                                return True
+                    except Exception:
+                        pass
+
+        # Try JavaScript detection as fallback
+        try:
+            from IPython import get_ipython
+
+            ipython = get_ipython()
+
+            if ipython is not None:
+                # Execute JavaScript to check theme
+                result = ipython.run_cell_magic(
+                    "javascript",
+                    "",
+                    """
+                if (typeof IPython !== 'undefined' && IPython.notebook) {
+                    IPython.notebook.kernel.execute("_is_dark_mode = " + 
+                        (document.body.classList.contains('theme-dark') || 
+                         (document.body.getAttribute('data-jp-theme-name') && 
+                          document.body.getAttribute('data-jp-theme-name').includes('dark'))));
+                }
+                """,
+                )
+
+                # Check if we got a result
+                import sys
+
+                if hasattr(sys.modules["__main__"], "_is_dark_mode"):
+                    is_dark = sys.modules["__main__"]._is_dark_mode
+                    delattr(sys.modules["__main__"], "_is_dark_mode")
+                    return is_dark
+        except Exception:
+            pass
+
+        # Default to False (light mode) if we can't detect
+        return False
+
     except Exception:
-        pass
-    return False
+        # If any error occurs, assume light mode
+        return False
 
 
 # Create a single instance of Files for easy access
