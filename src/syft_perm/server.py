@@ -880,10 +880,10 @@ if _SERVER_AVAILABLE:
     @app.get("/file-editor", response_class=HTMLResponse)  # type: ignore[misc]
     async def file_editor_interface(syft_user: Optional[str] = Query(None)) -> HTMLResponse:
         """Serve the file editor interface."""
-        from . import is_dark
+        from . import _is_dark
 
         return HTMLResponse(
-            content=generate_editor_html(is_dark_mode=is_dark(), syft_user=syft_user)
+            content=generate_editor_html(is_dark_mode=_is_dark(), syft_user=syft_user)
         )
 
     @app.get("/file-editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
@@ -891,13 +891,13 @@ if _SERVER_AVAILABLE:
         path: str, syft_user: Optional[str] = Query(None), new: Optional[str] = Query(None)
     ) -> HTMLResponse:
         """Serve the file editor interface with a specific path."""
-        from . import is_dark
+        from . import _is_dark
 
         is_new_file = new == "true"
         return HTMLResponse(
             content=generate_editor_html(
                 initial_path=path,
-                is_dark_mode=is_dark(),
+                is_dark_mode=_is_dark(),
                 syft_user=syft_user,
                 is_new_file=is_new_file,
             )
@@ -908,12 +908,12 @@ if _SERVER_AVAILABLE:
         path: str = Query(...), syft_user: Optional[str] = Query(None)
     ) -> HTMLResponse:
         """Serve the share modal as a standalone page."""
-        from . import is_dark
+        from . import _is_dark
         from .filesystem_editor import generate_share_modal_html
 
         return HTMLResponse(
             content=generate_share_modal_html(
-                path=path, is_dark_mode=is_dark(), syft_user=syft_user
+                path=path, is_dark_mode=_is_dark(), syft_user=syft_user
             )
         )
 
