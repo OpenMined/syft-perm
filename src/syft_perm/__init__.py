@@ -2363,7 +2363,11 @@ class _Files:
         }})();
         
         // Background server checking - only run when server was not initially available
-        {"" if server_available else f"""
+        """
+
+        # Add the background server checking JavaScript only if server is not available
+        if not server_available:
+            html += f"""
         // Use a unique variable name to avoid redeclaration errors
         if (typeof window.syftPermServerFound_{container_id} === 'undefined') {{
             window.syftPermServerFound_{container_id} = false;
@@ -2387,12 +2391,14 @@ class _Files:
                 }});
                 
                 if (response.ok) {{
+                    // fmt: off
                     console.log('Port 62050 responded with status ' + response.status);
                     const data = await response.json();
                     console.log('Port 62050 response data:', data);
                     
                     if (data.main_server_port) {{
                         console.log('FOUND DISCOVERY SERVER on port 62050, main server on port ' + data.main_server_port + '!');
+                        // fmt: on
                         window.syftPermServerFound_{container_id} = true;
                         
                         // Clear the interval to stop checking immediately
@@ -2419,6 +2425,7 @@ class _Files:
                             
                             // Create iframe container with initial opacity 0
                             const iframeContainer = document.createElement('div');
+                            // fmt: off
                             iframeContainer.style.cssText = 
                                 'width: 100%;' +
                                 'height: 600px;' +
@@ -2427,6 +2434,7 @@ class _Files:
                                 'overflow: hidden;' +
                                 'opacity: 0;' +
                                 'transition: opacity 0.8s ease-in-out;';
+                            // fmt: on
                             
                             const iframe = document.createElement('iframe');
                             iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
@@ -2453,6 +2461,7 @@ class _Files:
                             
                             // Create overlay with current content to show during loading
                             const overlay = document.createElement('div');
+                            // fmt: off
                             overlay.style.cssText = 
                                 'position: absolute;' +
                                 'top: 0;' +
@@ -2462,6 +2471,7 @@ class _Files:
                                 'background: ' + (isDark ? '#1e1e1e' : '#ffffff') + ';' +
                                 'z-index: 1000;' +
                                 'transition: opacity 0.5s ease-out;';
+                            // fmt: on
                             overlay.innerHTML = currentContent;
                             wrapper.appendChild(overlay);
                             
@@ -2478,7 +2488,9 @@ class _Files:
                             // Wait for iframe to load
                             iframe.onload = function() {{
                                 loadCount++;
+                                // fmt: off
                                 console.log('Iframe load event #' + loadCount);
+                                // fmt: on
                                 
                                 // Wait a bit longer to ensure any secondary loads complete
                                 setTimeout(() => {{
@@ -2517,7 +2529,9 @@ class _Files:
                     }}
                 }}
             }} catch (e) {{
+                // fmt: off
                 console.log('Port 62050 failed: ' + e.message);
+                // fmt: on
             }}
             
             console.log('❌ Discovery server not found on port 62050');
@@ -2529,7 +2543,10 @@ class _Files:
             // Also check once immediately after 1 second
             setTimeout(checkDiscoveryServer_{container_id}, 1000);
         }}
-        """}
+        """
+
+        # Close the JavaScript block
+        html += """
         </script>
         """
 
