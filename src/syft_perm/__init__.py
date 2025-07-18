@@ -6,6 +6,7 @@ from typing import Union as _Union
 from ._public import is_dark as _is_dark
 from ._public import Files as _Files
 from ._public import FilteredFiles as _FilteredFiles
+from ._public import files
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 

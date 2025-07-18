@@ -1036,7 +1036,8 @@ class SyftFile:
 
     def _repr_html_(self) -> str:
         """Return an interactive iframe when the server is available or a static, read-only widget otherwise."""
-        from . import get_file_editor_url, is_dark
+        from . import _get_file_editor_url as get_file_editor_url
+        from . import _is_dark as is_dark
 
         # Helper to quickly decide if a returned URL is actually usable
         def _looks_like_valid_url(url: str) -> bool:
@@ -1696,7 +1697,7 @@ class ShareWidget:
         """Return HTML representation for Jupyter display."""
         import urllib.parse as _url
 
-        from . import is_dark
+        from . import _is_dark as is_dark
 
         # Try to ensure/locate a running server first (same logic we added elsewhere)
         try:
@@ -2317,12 +2318,13 @@ class SyftFolder:
                     setTimeout(checkServerAndReload, 1000);
                 }})();
             </script>
-        </div>
+        </div> 
         """
 
     def _repr_html_(self) -> str:
         """Return an interactive iframe when the server is available or a static, read-only widget otherwise."""
-        from . import get_file_editor_url, is_dark
+        from . import _get_file_editor_url as get_file_editor_url
+        from . import _is_dark as is_dark
 
         # Helper to quickly decide if a returned URL is actually usable
         def _looks_like_valid_url(url: str) -> bool:
