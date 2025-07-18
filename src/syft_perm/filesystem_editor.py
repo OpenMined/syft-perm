@@ -6330,7 +6330,7 @@ def generate_share_modal_html(
                 // Clean up the reason text - remove path prefix if it's too long
                 let reasonText = highestPerm.data.reasons[0];
                 if (reasonText.includes('/Users/') && reasonText.length > 50) {{
-                    reasonText = reasonText.replace(/\/Users\/[^\/]+\/SyftBox\/datasites\/[^\/]+\//, '.../');
+                    reasonText = reasonText.replace(/\\/Users\\/[^\\/]+\\/SyftBox\\/datasites\\/[^\\/]+\\//, '...');
                 }}
                 
                 reasonsHtml += `<div class="reason-item">
