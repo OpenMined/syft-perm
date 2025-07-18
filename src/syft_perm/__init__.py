@@ -513,7 +513,7 @@ class _Files:
         filtered_files.sort(key=lambda x: x.get("modified", 0), reverse=True)
 
         # Create new Files instance with filtered data
-        result = FilteredFiles(filtered_files, limit=limit, offset=offset)
+        result = _FilteredFiles(filtered_files, limit=limit, offset=offset)
         return result
 
     def filter(self, folders: _Union[list, str, None] = None) -> "_Files":
@@ -549,7 +549,7 @@ class _Files:
         filtered_files = self._apply_folder_filter(all_files, folders=folders)
 
         # Create new Files instance with filtered data
-        result = FilteredFiles(filtered_files)
+        result = _FilteredFiles(filtered_files)
         return result
 
     def _apply_filters(
