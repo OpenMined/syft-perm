@@ -937,7 +937,7 @@ class _Files:
                             # Only read first 100 bytes to check for "SyftPerm"
                             content = response.read(100).decode("utf-8")
                             return "SyftPerm" in content
-                except:
+                except Exception:
                     pass
                 return False
 
