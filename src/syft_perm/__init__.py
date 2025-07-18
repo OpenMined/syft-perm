@@ -5,7 +5,7 @@ from typing import Union as _Union
 
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
-from ._public import Files, FilteredFiles, files
+from ._public import Files, FilteredFiles, files, is_dark
 
 __version__ = "0.3.92"
 
