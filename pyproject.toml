@@ -103,9 +103,12 @@ python_functions = ["test_*"]
 dev-dependencies = [
     "autopep8>=2.3.2",
     "black>=25.1.0",
+    "jupyter-client>=8.6.3",
     "mypy>=1.16.1",
+    "nbconvert>=7.16.0",
     "nbformat>=5.10.4",
     "pytest>=8.4.1",
+    "pytest-cov>=5.0.0",
     "types-pyyaml>=6.0.12.20250516",
     "types-tabulate>=0.9.0.20241207",
 ]

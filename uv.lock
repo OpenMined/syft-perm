@@ -1766,9 +1766,12 @@ syftbox = [
 dev = [
     { name = "autopep8" },
     { name = "black" },
+    { name = "jupyter-client" },
     { name = "mypy" },
+    { name = "nbconvert" },
     { name = "nbformat" },
     { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "types-pyyaml" },
     { name = "types-tabulate" },
 ]
@@ -1805,9 +1808,12 @@ requires-dist = [
 dev = [
     { name = "autopep8", specifier = ">=2.3.2" },
     { name = "black", specifier = ">=25.1.0" },
+    { name = "jupyter-client", specifier = ">=8.6.3" },
     { name = "mypy", specifier = ">=1.16.1" },
+    { name = "nbconvert", specifier = ">=7.16.0" },
     { name = "nbformat", specifier = ">=5.10.4" },
     { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250516" },
     { name = "types-tabulate", specifier = ">=0.9.0.20241207" },
 ]

@@ -162,14 +162,15 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Search for files by admin
-            result = sp.files.search(admin="alice@example.com")
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Search for files by admin
+                result = sp.files.search(admin="alice@example.com")
 
-            # Should contain 2 files owned by alice
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 2)
-            for file in filtered_files:
-                self.assertEqual(file["datasite_owner"], "alice@example.com")
+                # Should contain 2 files owned by alice
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 2)
+                for file in filtered_files:
+                    self.assertEqual(file["datasite_owner"], "alice@example.com")
 
     def test_search_method_combined_parameters(self):
         """Test sp.files.search() with both files and admin parameters."""
@@ -195,14 +196,15 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Search for files containing "test" by alice
-            result = sp.files.search(files="test", admin="alice@example.com")
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Search for files containing "test" by alice
+                result = sp.files.search(files="test", admin="alice@example.com")
 
-            # Should contain only 1 file (test_file.txt by alice)
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 1)
-            self.assertEqual(filtered_files[0]["name"], "test_file.txt")
-            self.assertEqual(filtered_files[0]["datasite_owner"], "alice@example.com")
+                # Should contain only 1 file (test_file.txt by alice)
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 1)
+                self.assertEqual(filtered_files[0]["name"], "test_file.txt")
+                self.assertEqual(filtered_files[0]["datasite_owner"], "alice@example.com")
 
     def test_search_quoted_phrases(self):
         """Test search with quoted phrases."""
@@ -228,16 +230,17 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Search with quoted phrase
-            result = sp.files.search(files='"test file"')
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Search with quoted phrase
+                result = sp.files.search(files='"test file"')
 
-            # Should match files with exact phrase "test file"
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 2)
-            file_names = [f["name"] for f in filtered_files]
-            self.assertIn("my test file.txt", file_names)
-            self.assertIn("test file other.txt", file_names)
-            self.assertNotIn("my_test_file.txt", file_names)  # Doesn't contain exact phrase
+                # Should match files with exact phrase "test file"
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 2)
+                file_names = [f["name"] for f in filtered_files]
+                self.assertIn("my test file.txt", file_names)
+                self.assertIn("test file other.txt", file_names)
+                self.assertNotIn("my_test_file.txt", file_names)  # Doesn't contain exact phrase
 
     def test_filter_method_folders(self):
         """Test sp.files.filter() with folders parameter."""
@@ -269,13 +272,14 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Filter by folder path
-            result = sp.files.filter(folders=["alice@example.com/data"])
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Filter by folder path
+                result = sp.files.filter(folders=["alice@example.com/data"])
 
-            # Should contain only files in alice's data folder
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 1)
-            self.assertEqual(filtered_files[0]["name"], "alice@example.com/data/file2.txt")
+                # Should contain only files in alice's data folder
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 1)
+                self.assertEqual(filtered_files[0]["name"], "alice@example.com/data/file2.txt")
 
     def test_filter_method_multiple_folders(self):
         """Test sp.files.filter() with multiple folder paths."""
@@ -307,15 +311,16 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Filter by multiple folder paths
-            result = sp.files.filter(folders=["alice@example.com/data", "charlie@example.com"])
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Filter by multiple folder paths
+                result = sp.files.filter(folders=["alice@example.com/data", "charlie@example.com"])
 
-            # Should contain files from both specified folders
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 2)
-            file_names = [f["name"] for f in filtered_files]
-            self.assertIn("alice@example.com/data/file2.txt", file_names)
-            self.assertIn("charlie@example.com/docs/file4.txt", file_names)
+                # Should contain files from both specified folders
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 2)
+                file_names = [f["name"] for f in filtered_files]
+                self.assertIn("alice@example.com/data/file2.txt", file_names)
+                self.assertIn("charlie@example.com/docs/file4.txt", file_names)
 
     def test_filter_method_syft_prefix(self):
         """Test sp.files.filter() handles syft:// prefix."""
@@ -335,52 +340,49 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Filter with syft:// prefix
-            result = sp.files.filter(folders=["syft://alice@example.com"])
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Filter with syft:// prefix
+                result = sp.files.filter(folders=["syft://alice@example.com"])
 
-            # Should strip prefix and match correctly
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 1)
-            self.assertEqual(filtered_files[0]["name"], "alice@example.com/file1.txt")
+                # Should strip prefix and match correctly
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 1)
+                self.assertEqual(filtered_files[0]["name"], "alice@example.com/file1.txt")
 
     def test_parse_search_terms(self):
         """Test _parse_search_terms method."""
-        files_instance = sp.Files()
-
         # Test simple terms
-        terms = files_instance._parse_search_terms("hello world")
+        terms = sp.files._parse_search_terms("hello world")
         self.assertEqual(terms, ["hello", "world"])
 
         # Test quoted phrase with double quotes
-        terms = files_instance._parse_search_terms('hello "quoted phrase" world')
+        terms = sp.files._parse_search_terms('hello "quoted phrase" world')
         self.assertEqual(terms, ["hello", "quoted phrase", "world"])
 
         # Test quoted phrase with single quotes
-        terms = files_instance._parse_search_terms("hello 'quoted phrase' world")
+        terms = sp.files._parse_search_terms("hello 'quoted phrase' world")
         self.assertEqual(terms, ["hello", "quoted phrase", "world"])
 
         # Test mixed quotes
-        terms = files_instance._parse_search_terms("\"double quote\" 'single quote' normal")
+        terms = sp.files._parse_search_terms("\"double quote\" 'single quote' normal")
         self.assertEqual(terms, ["double quote", "single quote", "normal"])
 
     def test_matches_search_terms(self):
         """Test _matches_search_terms method."""
-        files_instance = sp.Files()
-
         test_file = {
             "name": "alice@example.com/test_document.pdf",
             "datasite_owner": "alice@example.com",
         }
 
         # Test matching terms
-        self.assertTrue(files_instance._matches_search_terms(test_file, ["test"]))
-        self.assertTrue(files_instance._matches_search_terms(test_file, ["alice"]))
-        self.assertTrue(files_instance._matches_search_terms(test_file, ["test", "alice"]))
+        self.assertTrue(sp.files._matches_search_terms(test_file, ["test"]))
+        self.assertTrue(sp.files._matches_search_terms(test_file, ["alice"]))
+        self.assertTrue(sp.files._matches_search_terms(test_file, ["test", "alice"]))
 
         # Test non-matching terms
-        self.assertFalse(files_instance._matches_search_terms(test_file, ["nonexistent"]))
+        self.assertFalse(sp.files._matches_search_terms(test_file, ["nonexistent"]))
         self.assertFalse(
-            files_instance._matches_search_terms(test_file, ["test", "bob"])
+            sp.files._matches_search_terms(test_file, ["test", "bob"])
         )  # bob not in file
 
     def test_filtered_files_scan_files(self):
@@ -400,7 +402,7 @@ class TestFilesFiltering(unittest.TestCase):
             },
         ]
 
-        filtered = sp.FilteredFiles(test_files)
+        filtered = FilteredFiles(test_files)
         scanned_files = filtered._scan_files()
 
         # Should return the exact same files that were passed in

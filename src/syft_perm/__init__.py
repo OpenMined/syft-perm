@@ -5,7 +5,7 @@ from typing import Union as _Union
 
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
-from ._public import files
+from ._public import files, FilteredFiles, Files
 
 __version__ = "0.3.92"
 
@@ -510,7 +510,7 @@ class _Files:
         filtered_files.sort(key=lambda x: x.get("modified", 0), reverse=True)
 
         # Create new Files instance with filtered data
-        result = _FilteredFiles(filtered_files, limit=limit, offset=offset)
+        result = FilteredFiles(filtered_files, limit=limit, offset=offset)
         return result
 
     def filter(self, folders: _Union[list, str, None] = None) -> "_Files":
@@ -546,7 +546,7 @@ class _Files:
         filtered_files = self._apply_folder_filter(all_files, folders=folders)
 
         # Create new Files instance with filtered data
-        result = _FilteredFiles(filtered_files)
+        result = FilteredFiles(filtered_files)
         return result
 
     def _apply_filters(
@@ -719,7 +719,7 @@ class _Files:
             sliced_files = sorted_files[slice(start, stop, key.step)]
 
             # Create new Files instance with sliced data
-            result = _FilteredFiles(sliced_files)
+            result = FilteredFiles(sliced_files)
             return result
         else:
             raise TypeError("Files indexing only supports slice notation, e.g., files[1:10]")
