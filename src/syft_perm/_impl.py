@@ -1709,9 +1709,8 @@ class ShareWidget:
 
         if server_url:
             share_url = f"{server_url}/share-modal?path={_url.quote(self._path)}"
-        if self._syft_user:
+            if self._syft_user:
                 share_url += f"&syft_user={_url.quote(self._syft_user)}"
-
             border = "#3e3e42" if is_dark() else "#ddd"
             return (
                 f"<div style=\"width:100%;height:600px;border:1px solid {border};border-radius:12px;overflow:hidden;\">"

@@ -10,6 +10,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import syft_perm as sp  # noqa: E402
+from syft_perm._public import Files, FilteredFiles  # noqa: E402
 
 
 class TestFilesFiltering(unittest.TestCase):
@@ -55,17 +56,18 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Test slice notation
-            result = sp.files[1:3]
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Test slice notation
+                result = sp.files[1:3]
 
-            # Should be FilteredFiles instance
-            self.assertIsInstance(result, sp.FilteredFiles)
+                # Should be FilteredFiles instance
+                self.assertIsInstance(result, FilteredFiles)
 
-            # Should contain 2 files (newest first, so file4 and file3)
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 2)
-            self.assertEqual(filtered_files[0]["name"], "file4.txt")  # Newest
-            self.assertEqual(filtered_files[1]["name"], "file3.txt")  # Second newest
+                # Should contain 2 files (newest first, so file4 and file3)
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 2)
+                self.assertEqual(filtered_files[0]["name"], "file4.txt")  # Newest
+                self.assertEqual(filtered_files[1]["name"], "file3.txt")  # Second newest
 
     def test_slice_notation_edge_cases(self):
         """Test slice notation edge cases."""
@@ -85,17 +87,18 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Test slice with None values
-            result = sp.files[1:]
-            self.assertEqual(len(result._filtered_files), 2)
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Test slice with None values
+                result = sp.files[1:]
+                self.assertEqual(len(result._filtered_files), 2)
 
-            # Test slice beyond range
-            result = sp.files[1:10]
-            self.assertEqual(len(result._filtered_files), 2)
+                # Test slice beyond range
+                result = sp.files[1:10]
+                self.assertEqual(len(result._filtered_files), 2)
 
-            # Test invalid indexing
-            with self.assertRaises(TypeError):
-                _ = sp.files[1]  # Not slice notation
+                # Test invalid indexing
+                with self.assertRaises(TypeError):
+                    _ = sp.files[1]  # Not slice notation
 
     def test_search_method_files_parameter(self):
         """Test sp.files.search() with files parameter."""
@@ -121,18 +124,19 @@ class TestFilesFiltering(unittest.TestCase):
         ]
 
         with patch.object(sp.files, "_scan_files", return_value=test_files):
-            # Search for files containing "test"
-            result = sp.files.search(files="test")
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Search for files containing "test"
+                result = sp.files.search(files="test")
 
-            # Should be FilteredFiles instance
-            self.assertIsInstance(result, sp.FilteredFiles)
+                # Should be FilteredFiles instance
+                self.assertIsInstance(result, FilteredFiles)
 
-            # Should contain 2 files with "test" in name
-            filtered_files = result._filtered_files
-            self.assertEqual(len(filtered_files), 2)
-            file_names = [f["name"] for f in filtered_files]
-            self.assertIn("test_file.txt", file_names)
-            self.assertIn("test_document.pdf", file_names)
+                # Should contain 2 files with "test" in name
+                filtered_files = result._filtered_files
+                self.assertEqual(len(filtered_files), 2)
+                file_names = [f["name"] for f in filtered_files]
+                self.assertIn("test_file.txt", file_names)
+                self.assertIn("test_document.pdf", file_names)
 
     def test_search_method_admin_parameter(self):
         """Test sp.files.search() with admin parameter."""

@@ -249,7 +249,7 @@ class Files:
         if self._cache is None:
             self._cache = self._scan_files()
 
-        filtered = self._apply_filters(files_query=files, admin=admin)
+        filtered = self._apply_filters(self._cache, files_query=files, admin=admin)
 
         return FilteredFiles(filtered, limit=limit, offset=offset)
 
@@ -260,7 +260,7 @@ class Files:
         if isinstance(folders, str):
             folders = [folders]
 
-        filtered = self._apply_folder_filter(folders=folders)
+        filtered = self._apply_folder_filter(self._cache, folders=folders)
 
         return FilteredFiles(filtered)
 
@@ -607,16 +607,19 @@ class FastAPIFiles(Files):
         admin: _Union[str, None] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> "FastAPIFiles":
+    ) -> "Files":
         """Set search parameters for FastAPI query."""
-        new_instance = FastAPIFiles(self.server_url)
-        new_instance._search_params = {
+        # Fetch files from server with search parameters
+        self._search_params = {
             "files_query": files,
             "admin_query": admin,
             "limit": limit,
             "offset": offset,
         }
-        return new_instance
+        # Get filtered files from the server
+        filtered = self._scan_files()
+        # Return a FilteredFiles instance to match the base class behavior
+        return FilteredFiles(filtered, limit=limit, offset=offset)
 
     def _scan_files(
         self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False
