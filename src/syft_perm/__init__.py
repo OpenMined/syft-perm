@@ -2556,8 +2556,6 @@ class _Files:
         return html
 
 
-
-
 class _FastAPIFiles(_Files):
     """FastAPI version of Files that generates URLs with query parameters"""
 
@@ -2672,9 +2670,6 @@ class _FastAPIFiles(_Files):
             </iframe>
         </div>
         """
-
-
-
 
 
 # Create singleton instance
