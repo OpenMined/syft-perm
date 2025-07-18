@@ -2387,12 +2387,12 @@ class _Files:
                 }});
                 
                 if (response.ok) {{
-                    console.log(`Port 62050 responded with status ${{response.status}}`);
+                    console.log('Port 62050 responded with status ' + response.status);
                     const data = await response.json();
                     console.log('Port 62050 response data:', data);
                     
                     if (data.main_server_port) {{
-                        console.log(`FOUND DISCOVERY SERVER on port 62050, main server on port ${{data.main_server_port}}!`);
+                        console.log('FOUND DISCOVERY SERVER on port 62050, main server on port ' + data.main_server_port + '!');
                         window.syftPermServerFound_{container_id} = true;
                         
                         // Clear the interval to stop checking immediately
@@ -2419,15 +2419,14 @@ class _Files:
                             
                             // Create iframe container with initial opacity 0
                             const iframeContainer = document.createElement('div');
-                            iframeContainer.style.cssText = `
-                                width: 100%;
-                                height: 600px;
-                                border: 1px solid ${{borderColor}};
-                                border-radius: 8px;
-                                overflow: hidden;
-                                opacity: 0;
-                                transition: opacity 0.8s ease-in-out;
-                            `;
+                            iframeContainer.style.cssText = 
+                                'width: 100%;' +
+                                'height: 600px;' +
+                                'border: 1px solid ' + borderColor + ';' +
+                                'border-radius: 8px;' +
+                                'overflow: hidden;' +
+                                'opacity: 0;' +
+                                'transition: opacity 0.8s ease-in-out;';
                             
                             const iframe = document.createElement('iframe');
                             iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
@@ -2454,16 +2453,15 @@ class _Files:
                             
                             // Create overlay with current content to show during loading
                             const overlay = document.createElement('div');
-                            overlay.style.cssText = `
-                                position: absolute;
-                                top: 0;
-                                left: 0;
-                                width: 100%;
-                                height: 100%;
-                                background: ${{isDark ? '#1e1e1e' : '#ffffff'}};
-                                z-index: 1000;
-                                transition: opacity 0.5s ease-out;
-                            `;
+                            overlay.style.cssText = 
+                                'position: absolute;' +
+                                'top: 0;' +
+                                'left: 0;' +
+                                'width: 100%;' +
+                                'height: 100%;' +
+                                'background: ' + (isDark ? '#1e1e1e' : '#ffffff') + ';' +
+                                'z-index: 1000;' +
+                                'transition: opacity 0.5s ease-out;';
                             overlay.innerHTML = currentContent;
                             wrapper.appendChild(overlay);
                             
@@ -2472,7 +2470,7 @@ class _Files:
                             container.appendChild(wrapper);
                             
                             // Now set the src - any reloads will happen while invisible
-                            iframe.src = `http://localhost:${{data.main_server_port}}/files-widget`;
+                            iframe.src = 'http://localhost:' + data.main_server_port + '/files-widget';
                             
                             // Track load state
                             let loadCount = 0;
@@ -2480,7 +2478,7 @@ class _Files:
                             // Wait for iframe to load
                             iframe.onload = function() {{
                                 loadCount++;
-                                console.log(`Iframe load event #${{loadCount}}`);
+                                console.log('Iframe load event #' + loadCount);
                                 
                                 // Wait a bit longer to ensure any secondary loads complete
                                 setTimeout(() => {{
@@ -2519,7 +2517,7 @@ class _Files:
                     }}
                 }}
             }} catch (e) {{
-                console.log(`Port 62050 failed: ${{e.message}}`);
+                console.log('Port 62050 failed: ' + e.message);
             }}
             
             console.log('❌ Discovery server not found on port 62050');
