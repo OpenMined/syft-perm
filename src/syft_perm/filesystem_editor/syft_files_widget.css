@@ -1,0 +1,370 @@
+/* SyftPerm Files Widget CSS */
+/* Extracted from _Files._repr_html_() method */
+
+/* Loading animation styles */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+.syftbox-logo {
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.progress-bar-gradient {
+    background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+    transition: width 0.4s ease-out;
+    border-radius: 3px;
+}
+
+/* Main container styles */
+/* Note: These styles use a dynamic container ID in the actual implementation */
+/* Replace #{container_id} with your actual container ID or class */
+
+.syft-files-widget * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.syft-files-widget {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    background: var(--bg-color);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+}
+
+/* Search controls */
+.syft-files-widget .search-controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.75rem;
+    background: var(--search-bg);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.syft-files-widget .search-controls input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.5rem;
+    border: 1px solid var(--input-border);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    background: var(--input-bg);
+}
+
+/* Table container */
+.syft-files-widget .table-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    background: var(--bg-color);
+    min-height: 0;
+    max-height: 600px;
+}
+
+.syft-files-widget table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    table-layout: fixed;
+}
+
+.syft-files-widget thead {
+    background: var(--thead-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.syft-files-widget th {
+    text-align: left;
+    padding: 0.375rem 0.25rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: var(--thead-bg);
+    z-index: 10;
+    color: var(--text-color);
+}
+
+.syft-files-widget td {
+    padding: 0.375rem 0.25rem;
+    border-bottom: 1px solid var(--td-border);
+    vertical-align: top;
+    font-size: 0.75rem;
+    text-align: left;
+}
+
+.syft-files-widget tbody tr {
+    transition: background-color 0.15s;
+    cursor: pointer;
+}
+
+.syft-files-widget tbody tr:hover {
+    background: var(--row-hover);
+}
+
+/* Rainbow flash animations */
+@keyframes rainbow-light {
+    0% { background-color: #ffe9ec; }
+    14.28% { background-color: #fff4ea; }
+    28.57% { background-color: #ffffea; }
+    42.86% { background-color: #eaffef; }
+    57.14% { background-color: #eaf6ff; }
+    71.43% { background-color: #f5eaff; }
+    85.71% { background-color: #ffeaff; }
+    100% { background-color: #ffe9ec; }
+}
+
+@keyframes rainbow-dark {
+    0% { background-color: #3d2c2e; }
+    14.28% { background-color: #3d352c; }
+    28.57% { background-color: #3d3d2c; }
+    42.86% { background-color: #2c3d31; }
+    57.14% { background-color: #2c363d; }
+    71.43% { background-color: #352c3d; }
+    85.71% { background-color: #3d2c3d; }
+    100% { background-color: #3d2c2e; }
+}
+
+.syft-files-widget .rainbow-flash {
+    animation: var(--rainbow-animation) 0.8s ease-in-out;
+}
+
+/* Pagination */
+.syft-files-widget .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--pagination-bg);
+    flex-shrink: 0;
+}
+
+.syft-files-widget .pagination button {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    border: 1px solid var(--border-color);
+    background: var(--button-bg);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.syft-files-widget .pagination button:hover:not(:disabled) {
+    background: var(--button-hover);
+}
+
+.syft-files-widget .pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.syft-files-widget .pagination .page-info {
+    font-size: 0.75rem;
+}
+
+.syft-files-widget .pagination .status {
+    font-size: 0.75rem;
+    font-style: italic;
+    opacity: 0.8;
+    text-align: center;
+    flex: 1;
+}
+
+.syft-files-widget .pagination .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Utility classes */
+.syft-files-widget .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Button styles */
+.syft-files-widget .btn {
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    border: none;
+    cursor: not-allowed;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    transition: all 0.15s;
+    opacity: 0.5;
+}
+
+.syft-files-widget .btn:hover {
+    opacity: 0.5;
+}
+
+.syft-files-widget .btn-blue {
+    background: var(--btn-blue-bg);
+    color: var(--btn-blue-color);
+}
+
+.syft-files-widget .btn-purple {
+    background: var(--btn-purple-bg);
+    color: var(--btn-purple-color);
+}
+
+.syft-files-widget .btn-red {
+    background: var(--btn-red-bg);
+    color: var(--btn-red-color);
+}
+
+.syft-files-widget .btn-green {
+    background: var(--btn-green-bg);
+    color: var(--btn-green-color);
+}
+
+.syft-files-widget .btn-gray {
+    background: var(--btn-gray-bg);
+    color: var(--btn-gray-color);
+}
+
+.syft-files-widget .icon {
+    width: 0.5rem;
+    height: 0.5rem;
+}
+
+/* Autocomplete dropdown */
+.syft-files-widget .autocomplete-dropdown {
+    position: absolute;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.syft-files-widget .autocomplete-dropdown.show {
+    display: block;
+}
+
+.syft-files-widget .autocomplete-option {
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.syft-files-widget .autocomplete-option:hover,
+.syft-files-widget .autocomplete-option.selected {
+    background: var(--option-hover);
+}
+
+/* Type badge */
+.syft-files-widget .type-badge {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--badge-bg);
+    color: var(--badge-color);
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Admin email */
+.syft-files-widget .admin-email {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--secondary-text);
+}
+
+/* Date text */
+.syft-files-widget .date-text {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+}
+
+/* CSS Variables for theming */
+/* Light theme (default) */
+:root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --border-color: #e5e7eb;
+    --search-bg: #f8f9fa;
+    --input-border: #d1d5db;
+    --input-bg: #ffffff;
+    --thead-bg: #f8f9fa;
+    --td-border: #f3f4f6;
+    --row-hover: rgba(0, 0, 0, 0.03);
+    --rainbow-animation: rainbow-light;
+    --pagination-bg: rgba(0, 0, 0, 0.02);
+    --button-bg: white;
+    --button-hover: #f3f4f6;
+    --btn-blue-bg: #dbeafe;
+    --btn-blue-color: #3b82f6;
+    --btn-purple-bg: #e9d5ff;
+    --btn-purple-color: #a855f7;
+    --btn-red-bg: #fee2e2;
+    --btn-red-color: #ef4444;
+    --btn-green-bg: #d1fae5;
+    --btn-green-color: #10b981;
+    --btn-gray-bg: #f3f4f6;
+    --btn-gray-color: #6b7280;
+    --dropdown-bg: white;
+    --option-hover: #f3f4f6;
+    --badge-bg: #ffffff;
+    --badge-color: #374151;
+    --secondary-text: #374151;
+}
+
+/* Dark theme */
+.dark-theme {
+    --bg-color: #1e1e1e;
+    --text-color: #cccccc;
+    --border-color: #3e3e42;
+    --search-bg: #252526;
+    --input-border: #3e3e42;
+    --input-bg: #1e1e1e;
+    --thead-bg: #252526;
+    --td-border: #2d2d30;
+    --row-hover: rgba(255, 255, 255, 0.04);
+    --rainbow-animation: rainbow-dark;
+    --pagination-bg: rgba(255, 255, 255, 0.02);
+    --button-bg: #1e1e1e;
+    --button-hover: #2d2d30;
+    --btn-blue-bg: #1e3a5f;
+    --btn-blue-color: #60a5fa;
+    --btn-purple-bg: #3b2e4d;
+    --btn-purple-color: #c084fc;
+    --btn-red-bg: #4d2828;
+    --btn-red-color: #f87171;
+    --btn-green-bg: #1e4032;
+    --btn-green-color: #34d399;
+    --btn-gray-bg: #2d2d30;
+    --btn-gray-color: #9ca3af;
+    --dropdown-bg: #1e1e1e;
+    --option-hover: #2d2d30;
+    --badge-bg: #1e1e1e;
+    --badge-color: #d1d5db;
+    --secondary-text: #d1d5db;
+}

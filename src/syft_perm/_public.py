@@ -494,78 +494,18 @@ class Files:
 
     def _repr_html_(self) -> str:
         """Generate HTML widget for Jupyter notebooks."""
-        import html as html_module
-        import json
-        import time
-        import uuid
-        from datetime import datetime
-        from pathlib import Path
+        # Import the implementation from __init__.py to avoid duplication
+        from . import _Files
 
-        from IPython.display import HTML, clear_output, display
-
-        container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
-
-        # Check if Jupyter is in dark mode
-        is_dark_mode = is_dark()
-
-        # Check for syft-perm server for live updates
-        syft_perm_url = self._check_server()
-
-        # HTML template
-        html = f"""
-        <!-- HTML and CSS for the widget -->
-        """
-
-        # JavaScript for interactivity
-        js = f"""
-        <script>
-            // JS code for the widget
-        </script>
-        """
-
-        # Initial display with loading state
-        initial_html = f"""
-        <div id="{container_id}">
-            <p>Loading files...</p>
-        </div>
-        <script>
-            // JS to load data
-        </script>
-        """
-        display(HTML(initial_html))
-
-        # Asynchronously fetch and render files
-        def fetch_and_render():
-            try:
-                files_data = self.get()
-                files = files_data["files"]
-                total = files_data["total"]
-
-                # Create chronological index
-                sorted_by_date = sorted(files, key=lambda x: x.get("modified", 0))
-                chronological_ids = {
-                    f"{f['name']}|{f['path']}": i for i, f in enumerate(sorted_by_date)
-                }
-
-                # Build full HTML with data
-                full_html = "..."  # Full HTML content here
-
-                # Update the display
-                clear_output(wait=True)
-                display(HTML(full_html))
-
-            except Exception as e:
-                # Fallback to ASCII representation on error
-                clear_output(wait=True)
-                display(self.__repr__())
-
-        # Run rendering in a separate thread to avoid blocking
-        import threading
-
-        thread = threading.Thread(target=fetch_and_render)
-        thread.start()
-
-        return ""
+        # Create a _Files instance with the same state
+        files_instance = _Files()
+        files_instance._initial_page = self._initial_page
+        files_instance._items_per_page = self._items_per_page
+        files_instance._show_ascii_progress = self._show_ascii_progress
+        if hasattr(self, "_filtered_files"):
+            # For FilteredFiles, we need to pass the filtered data
+            files_instance._cache = getattr(self, "_filtered_files", None)
+        return files_instance._repr_html_()
 
 
 class FilteredFiles(Files):
