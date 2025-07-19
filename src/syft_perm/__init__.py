@@ -1,7 +1,7 @@
 """SyftPerm - File permission management for SyftBox."""
 
 from pathlib import Path as _Path
-from typing import Optional
+from typing import Optional as _Optional
 from typing import Union as _Union
 
 from ._impl import SyftFile as _SyftFile
@@ -911,7 +911,7 @@ class _Files:
 
         return "\n".join(output)
 
-    def _ensure_server_running(self) -> tuple[bool, Optional[int]]:
+    def _ensure_server_running(self) -> tuple[bool, _Optional[int]]:
         """Ensure the permission server is running and return (success, port)."""
         try:
             from ._auto_recovery import ensure_server_running
