@@ -35,8 +35,8 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Verify yaml content uses "**" pattern
         content = folder_yaml.read_text()
-        self.assertIn("pattern: '**'", content)
-        self.assertIn("andrew@openmined.org", content)
+        self.assertIn("pattern: '**'", str(content))
+        self.assertIn("andrew@openmined.org", str(content))
 
     def test_folder_permission_checking_works_correctly(self):
         """Test that SyftFolder can correctly check its own permissions."""
@@ -82,12 +82,12 @@ class TestFolderPermissions(unittest.TestCase):
         # Check explanation shows granted read permission
         explanation = folder.explain_permissions("andrew@openmined.org")
 
-        self.assertIn("READ: ✓ GRANTED", explanation)
-        self.assertIn("WRITE: ✗ DENIED", explanation)
-        self.assertIn("CREATE: ✗ DENIED", explanation)
-        self.assertIn("ADMIN: ✗ DENIED", explanation)
-        self.assertIn("Pattern '**' matched", explanation)
-        self.assertIn(f"Explicitly granted read in {test_folder}", explanation)
+        self.assertIn("READ: ✓ GRANTED", str(explanation))
+        self.assertIn("WRITE: ✗ DENIED", str(explanation))
+        self.assertIn("CREATE: ✗ DENIED", str(explanation))
+        self.assertIn("ADMIN: ✗ DENIED", str(explanation))
+        self.assertIn("Pattern '**' matched", str(explanation))
+        self.assertIn(f"Explicitly granted read in {test_folder}", str(explanation))
 
     def test_file_inheritance_from_folder_permissions(self):
         """Test that files inside folder inherit permissions correctly."""
@@ -108,9 +108,9 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Check file explanation shows inheritance
         file_explanation = file_obj.explain_permissions("andrew@openmined.org")
-        self.assertIn("READ: ✓ GRANTED", file_explanation)
-        self.assertIn(f"Explicitly granted read in {test_folder}", file_explanation)
-        self.assertIn("Pattern '**' matched", file_explanation)
+        self.assertIn("READ: ✓ GRANTED", str(file_explanation))
+        self.assertIn(f"Explicitly granted read in {test_folder}", str(file_explanation))
+        self.assertIn("Pattern '**' matched", str(file_explanation))
 
     def test_folder_permissions_with_multiple_users(self):
         """Test folder permissions with multiple users."""
@@ -150,12 +150,12 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Before granting permissions
         folder_str = str(folder)
-        self.assertIn("No permissions set", folder_str)
+        self.assertIn("No permissions set", str(folder_str))
 
         # After granting permissions
         folder.grant_read_access("andrew@openmined.org", force=True)
         folder_str = str(folder)
-        self.assertIn("andrew@openmined.org", folder_str)
+        self.assertIn("andrew@openmined.org", str(folder_str))
         self.assertIn("Read", folder_str or folder._get_permission_table())
 
     def test_folder_revoke_access(self):
@@ -179,7 +179,7 @@ class TestFolderPermissions(unittest.TestCase):
         self.assertTrue(folder_yaml.exists())
         content = folder_yaml.read_text()
         # Should have empty read list but still have the structure
-        self.assertIn("read: []", content)
+        self.assertIn("read: []", str(content))
 
     def test_grandchild_file_inheritance_from_folder_permissions(self):
         """Test that files in nested subdirectories inherit folder permissions correctly."""
@@ -205,9 +205,9 @@ class TestFolderPermissions(unittest.TestCase):
         # Verify folder permissions
         self.assertTrue(folder.has_read_access("andrew@openmined.org"))
         folder_explanation = folder.explain_permissions("andrew@openmined.org")
-        self.assertIn("READ: ✓ GRANTED", folder_explanation)
-        self.assertIn(f"Explicitly granted read in {test_folder}", folder_explanation)
-        self.assertIn("Pattern '**' matched", folder_explanation)
+        self.assertIn("READ: ✓ GRANTED", str(folder_explanation))
+        self.assertIn(f"Explicitly granted read in {test_folder}", str(folder_explanation))
+        self.assertIn("Pattern '**' matched", str(folder_explanation))
 
         # Open and test direct child file
         direct_file_obj = syft_perm.open(direct_file)
@@ -216,9 +216,9 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Check direct file explanation shows inheritance
         direct_explanation = direct_file_obj.explain_permissions("andrew@openmined.org")
-        self.assertIn("READ: ✓ GRANTED", direct_explanation)
-        self.assertIn(f"Explicitly granted read in {test_folder}", direct_explanation)
-        self.assertIn("Pattern '**' matched", direct_explanation)
+        self.assertIn("READ: ✓ GRANTED", str(direct_explanation))
+        self.assertIn(f"Explicitly granted read in {test_folder}", str(direct_explanation))
+        self.assertIn("Pattern '**' matched", str(direct_explanation))
 
         # Open and test grandchild file (in nested subdirectory)
         grandchild_file_obj = syft_perm.open(grandchild_file)
@@ -227,9 +227,9 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Check grandchild file explanation shows inheritance
         grandchild_explanation = grandchild_file_obj.explain_permissions("andrew@openmined.org")
-        self.assertIn("READ: ✓ GRANTED", grandchild_explanation)
-        self.assertIn(f"Explicitly granted read in {test_folder}", grandchild_explanation)
-        self.assertIn("Pattern '**' matched", grandchild_explanation)
+        self.assertIn("READ: ✓ GRANTED", str(grandchild_explanation))
+        self.assertIn(f"Explicitly granted read in {test_folder}", str(grandchild_explanation))
+        self.assertIn("Pattern '**' matched", str(grandchild_explanation))
 
         # Verify only one yaml file exists (in the root folder)
         folder_yaml = test_folder / "syft.pub.yaml"
@@ -240,8 +240,8 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Verify yaml content uses "**" pattern for inheritance
         content = folder_yaml.read_text()
-        self.assertIn("pattern: '**'", content)
-        self.assertIn("andrew@openmined.org", content)
+        self.assertIn("pattern: '**'", str(content))
+        self.assertIn("andrew@openmined.org", str(content))
 
         # Test that grandchild file can override inherited permissions
         # Revoke access specifically for the grandchild file
@@ -255,9 +255,9 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Check that grandchild explanation shows it was specifically denied
         override_explanation = grandchild_file_obj.explain_permissions("andrew@openmined.org")
-        self.assertIn("READ: ✗ DENIED", override_explanation)
+        self.assertIn("READ: ✗ DENIED", str(override_explanation))
         # Should show the specific file pattern that matched for the override
-        self.assertIn("Pattern 'convo2.txt' matched", override_explanation)
+        self.assertIn("Pattern 'convo2.txt' matched", str(override_explanation))
 
         # Verify that a new yaml file was created in the grandchild's directory
         grandchild_dir_yaml = inner_folder / "syft.pub.yaml"
@@ -267,8 +267,8 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Verify the override yaml content
         override_content = grandchild_dir_yaml.read_text()
-        self.assertIn("pattern: convo2.txt", override_content)
-        self.assertIn("read: []", override_content)  # Empty read permissions (revoked)
+        self.assertIn("pattern: convo2.txt", str(override_content))
+        self.assertIn("read: []", str(override_content))  # Empty read permissions (revoked)
 
     def test_multiple_nested_levels_inheritance(self):
         """Test inheritance through multiple nested levels."""
@@ -303,11 +303,11 @@ class TestFolderPermissions(unittest.TestCase):
 
         # Check explanation
         explanation = deep_file_obj.explain_permissions("andrew@openmined.org")
-        self.assertIn("READ: ✓ GRANTED", explanation)
-        self.assertIn("CREATE: ✓ GRANTED", explanation)
-        self.assertIn("WRITE: ✓ GRANTED", explanation)
-        self.assertIn("ADMIN: ✗ DENIED", explanation)
-        self.assertIn(f"Explicitly granted write in {root_folder}", explanation)
+        self.assertIn("READ: ✓ GRANTED", str(explanation))
+        self.assertIn("CREATE: ✓ GRANTED", str(explanation))
+        self.assertIn("WRITE: ✓ GRANTED", str(explanation))
+        self.assertIn("ADMIN: ✗ DENIED", str(explanation))
+        self.assertIn(f"Explicitly granted write in {root_folder}", str(explanation))
 
         # Verify only root has yaml file
         root_yaml = root_folder / "syft.pub.yaml"

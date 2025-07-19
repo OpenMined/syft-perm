@@ -20,6 +20,313 @@ from ._utils import (
 )
 
 
+class PermissionExplanation:
+    """
+    A permission explanation that renders nicely in both console and Jupyter.
+    """
+
+    def __init__(self, path: str, user: Union[str, None] = None):
+        self.path = path
+        self.user = user
+        self.explanations = {}  # Will be populated by the calling method
+
+    def add_user_explanation(self, user: str, permissions_data: Dict[str, Any]):
+        """Add explanation data for a user."""
+        self.explanations[user] = permissions_data
+
+    def __repr__(self) -> str:
+        """Console string representation."""
+        if self.user is not None:
+            # Single user analysis
+            output = f"Permission analysis for {self.user} on {self.path}:\n\n"
+
+            if self.user in self.explanations:
+                perms = self.explanations[self.user]
+                for perm in ["admin", "write", "create", "read"]:
+                    if perm in perms:
+                        status = "✓ GRANTED" if perms[perm]["granted"] else "✗ DENIED"
+                        output += f"{perm.upper()}: {status}\n"
+                        for reason in perms[perm]["reasons"]:
+                            output += f"  • {reason}\n"
+                        output += "\n"
+        else:
+            # All users analysis
+            output = f"Permission analysis for ALL USERS on {self.path}:\n\n"
+
+            if not self.explanations:
+                output += "No users have any permissions on this file/folder.\n"
+            else:
+                # Sort users for consistent output
+                sorted_users = sorted(self.explanations.keys())
+
+                for current_user in sorted_users:
+                    output += f"👤 {current_user}:\n"
+                    perms = self.explanations[current_user]
+
+                    for perm in ["admin", "write", "create", "read"]:
+                        if perm in perms:
+                            status = "✓ GRANTED" if perms[perm]["granted"] else "✗ DENIED"
+                            output += f"  {perm.upper()}: {status}\n"
+                            for reason in perms[perm]["reasons"]:
+                                output += f"    • {reason}\n"
+
+                    output += "\n"
+
+        return output
+
+    def _repr_html_(self) -> str:
+        """HTML representation for Jupyter notebooks focusing on permission reasons."""
+        from . import _is_dark as is_dark
+
+        # Use the proper dark mode detection
+        is_dark_mode = is_dark()
+
+        # Color scheme based on proper theme detection
+        if is_dark_mode:
+            bg_color = "#1e1e1e"
+            text_color = "#d4d4d4"
+            border_color = "#3e3e42"
+            header_bg = "#252526"
+            granted_color = "#4ade80"
+            denied_color = "#f87171"
+            card_bg = "#2d2d30"
+            reason_bg = "#1f1f1f"
+        else:
+            bg_color = "#ffffff"
+            text_color = "#1f2937"
+            border_color = "#e5e7eb"
+            header_bg = "#f9fafb"
+            granted_color = "#10b981"
+            denied_color = "#ef4444"
+            card_bg = "#f8fafc"
+            reason_bg = "#f1f5f9"
+
+        container_id = f"perm_explanation_{hash(str(self.path) + str(self.user or '')) % 10000}"
+
+        if self.user is not None:
+            # Single user HTML view - focus on REASONS
+            title = f"Permission Reasons: {self.user}"
+
+            html = f"""
+            <div id="{container_id}" style="
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: {bg_color};
+                color: {text_color};
+                border: 1px solid {border_color};
+                border-radius: 8px;
+                margin: 8px 0;
+                overflow: hidden;
+            ">
+                <div style="
+                    background: {header_bg};
+                    padding: 12px 16px;
+                    border-bottom: 1px solid {border_color};
+                ">
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">{title}</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.7;">{self.path}</p>
+                </div>
+                <div style="padding: 16px;">
+            """
+
+            if self.user in self.explanations:
+                perms = self.explanations[self.user]
+                for perm in ["admin", "write", "create", "read"]:
+                    if perm in perms:
+                        granted = perms[perm]["granted"]
+                        status_color = granted_color if granted else denied_color
+                        status_icon = "✓" if granted else "✗"
+                        status_text = "GRANTED" if granted else "DENIED"
+                        reasons = perms[perm]["reasons"]
+
+                        html += f"""
+                        <div style="
+                            margin-bottom: 16px;
+                            padding: 16px;
+                            background: {card_bg};
+                            border-radius: 8px;
+                            border-left: 4px solid {status_color};
+                        ">
+                            <div style="
+                                font-weight: 600;
+                                margin-bottom: 12px;
+                                color: {status_color};
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                                font-size: 14px;
+                            ">
+                                <span>{status_icon}</span>
+                                <span>{perm.upper()}: {status_text}</span>
+                            </div>
+                        """
+
+                        if reasons:
+                            html += f"""
+                            <div style="
+                                background: {reason_bg};
+                                border-radius: 6px;
+                                padding: 12px;
+                                margin-top: 8px;
+                            ">
+                                <div style="
+                                    font-weight: 600;
+                                    margin-bottom: 8px;
+                                    font-size: 12px;
+                                    text-transform: uppercase;
+                                    letter-spacing: 0.5px;
+                                    opacity: 0.8;
+                                ">
+                                    Reasons:
+                                </div>
+                                <ul style="
+                                    margin: 0;
+                                    padding-left: 20px;
+                                    font-size: 13px;
+                                    line-height: 1.5;
+                                ">
+                            """
+                            for reason in reasons:
+                                html += f"<li style='margin-bottom: 6px;'>{reason}</li>"
+                            html += "</ul></div>"
+                        else:
+                            html += f"""
+                            <div style="
+                                background: {reason_bg};
+                                border-radius: 6px;
+                                padding: 12px;
+                                margin-top: 8px;
+                                font-style: italic;
+                                opacity: 0.7;
+                                font-size: 13px;
+                            ">
+                                No specific reasons available
+                            </div>
+                            """
+
+                        html += "</div>"
+
+            html += "</div></div>"
+
+        else:
+            # All users HTML view - focus on REASONS for each user
+            title = "Permission Reasons: All Users"
+
+            html = f"""
+            <div id="{container_id}" style="
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: {bg_color};
+                color: {text_color};
+                border: 1px solid {border_color};
+                border-radius: 8px;
+                margin: 8px 0;
+                overflow: hidden;
+            ">
+                <div style="
+                    background: {header_bg};
+                    padding: 12px 16px;
+                    border-bottom: 1px solid {border_color};
+                ">
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">{title}</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.7;">{self.path}</p>
+                </div>
+                <div style="padding: 16px;">
+            """
+
+            if not self.explanations:
+                html += f"""
+                <div style="
+                    text-align: center;
+                    padding: 24px;
+                    opacity: 0.6;
+                    font-style: italic;
+                ">
+                    No users have any permissions on this file/folder.
+                </div>
+                """
+            else:
+                sorted_users = sorted(self.explanations.keys())
+
+                for i, current_user in enumerate(sorted_users):
+                    if i > 0:
+                        html += f"<hr style='margin: 24px 0; border: none; height: 1px; background: {border_color};'>"
+
+                    html += f"""
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="
+                            margin: 0 0 16px 0;
+                            font-size: 15px;
+                            font-weight: 600;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            color: {text_color};
+                        ">
+                            <span>👤</span>
+                            <span>{current_user}</span>
+                        </h4>
+                    """
+
+                    perms = self.explanations[current_user]
+
+                    # Show each permission with its reasons
+                    for perm in ["admin", "write", "create", "read"]:
+                        if perm in perms:
+                            granted = perms[perm]["granted"]
+                            status_color = granted_color if granted else denied_color
+                            status_icon = "✓" if granted else "✗"
+                            status_text = "GRANTED" if granted else "DENIED"
+                            reasons = perms[perm]["reasons"]
+
+                            html += f"""
+                            <div style="
+                                margin-bottom: 12px;
+                                padding: 12px;
+                                background: {card_bg};
+                                border-radius: 6px;
+                                border-left: 3px solid {status_color};
+                            ">
+                                <div style="
+                                    font-weight: 600;
+                                    margin-bottom: 8px;
+                                    color: {status_color};
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                    font-size: 13px;
+                                ">
+                                    <span>{status_icon}</span>
+                                    <span>{perm.upper()}: {status_text}</span>
+                                </div>
+                            """
+
+                            if reasons:
+                                html += f"""
+                                <div style="
+                                    background: {reason_bg};
+                                    border-radius: 4px;
+                                    padding: 8px;
+                                    margin-top: 6px;
+                                ">
+                                    <ul style="
+                                        margin: 0;
+                                        padding-left: 16px;
+                                        font-size: 12px;
+                                        line-height: 1.4;
+                                    ">
+                                """
+                                for reason in reasons:
+                                    html += f"<li style='margin-bottom: 4px;'>{reason}</li>"
+                                html += "</ul></div>"
+
+                            html += "</div>"
+
+                    html += "</div>"
+
+            html += "</div></div>"
+
+        return html
+
+
 # Permission reason tracking
 class PermissionReason(Enum):
     """Reasons why a permission was granted or denied."""
@@ -1616,19 +1923,45 @@ class SyftFile:
 
         return has_permission, reasons
 
-    def explain_permissions(self, user: str) -> str:
-        """Provide detailed explanation of why user has/lacks permissions."""
-        explanation = f"Permission analysis for {user} on {self._path}:\n\n"
+    def explain_permissions(self, user: Union[str, None] = None) -> PermissionExplanation:
+        """Provide detailed explanation of why user has/lacks permissions.
 
-        for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
-            status = "✓ GRANTED" if has_perm else "✗ DENIED"
-            explanation += f"{perm.upper()}: {status}\n"
-            for reason in reasons:
-                explanation += f"  • {reason}\n"
-            explanation += "\n"
+        Args:
+            user: Email of user to analyze. If None, shows permissions for all users.
 
-        return explanation
+        Returns:
+            PermissionExplanation object that displays nicely in both console and Jupyter
+        """
+        result = PermissionExplanation(str(self._path), user)
+
+        if user is not None:
+            # Single user analysis
+            permissions_data = {}
+            for perm in ["admin", "write", "create", "read"]:
+                has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
+                permissions_data[perm] = {"granted": has_perm, "reasons": reasons}
+
+            result.add_user_explanation(user, permissions_data)
+        else:
+            # All users analysis
+            # Get all permissions and collect unique users
+            all_perms = self._get_all_permissions()
+            all_users = set()
+            for perm_level in all_perms.values():
+                all_users.update(perm_level)
+
+            # Sort users for consistent output
+            sorted_users = sorted(all_users)
+
+            for current_user in sorted_users:
+                permissions_data = {}
+                for perm in ["admin", "write", "create", "read"]:
+                    has_perm, reasons = self._check_permission_with_reasons(current_user, perm)  # type: ignore
+                    permissions_data[perm] = {"granted": has_perm, "reasons": reasons}
+
+                result.add_user_explanation(current_user, permissions_data)
+
+        return result
 
     def move_file_and_its_permissions(self, new_path: Union[str, Path]) -> "SyftFile":
         """
@@ -2318,7 +2651,7 @@ class SyftFolder:
                     setTimeout(checkServerAndReload, 1000);
                 }})();
             </script>
-        </div> 
+        </div>
         """
 
     def _repr_html_(self) -> str:
@@ -2745,19 +3078,45 @@ class SyftFolder:
 
         return has_permission, reasons
 
-    def explain_permissions(self, user: str) -> str:
-        """Provide detailed explanation of why user has/lacks permissions."""
-        explanation = f"Permission analysis for {user} on {self._path}:\n\n"
+    def explain_permissions(self, user: Union[str, None] = None) -> PermissionExplanation:
+        """Provide detailed explanation of why user has/lacks permissions.
 
-        for perm in ["admin", "write", "create", "read"]:
-            has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
-            status = "✓ GRANTED" if has_perm else "✗ DENIED"
-            explanation += f"{perm.upper()}: {status}\n"
-            for reason in reasons:
-                explanation += f"  • {reason}\n"
-            explanation += "\n"
+        Args:
+            user: Email of user to analyze. If None, shows permissions for all users.
 
-        return explanation
+        Returns:
+            PermissionExplanation object that displays nicely in both console and Jupyter
+        """
+        result = PermissionExplanation(str(self._path), user)
+
+        if user is not None:
+            # Single user analysis
+            permissions_data = {}
+            for perm in ["admin", "write", "create", "read"]:
+                has_perm, reasons = self._check_permission_with_reasons(user, perm)  # type: ignore
+                permissions_data[perm] = {"granted": has_perm, "reasons": reasons}
+
+            result.add_user_explanation(user, permissions_data)
+        else:
+            # All users analysis
+            # Get all permissions and collect unique users
+            all_perms = self._get_all_permissions()
+            all_users = set()
+            for perm_level in all_perms.values():
+                all_users.update(perm_level)
+
+            # Sort users for consistent output
+            sorted_users = sorted(all_users)
+
+            for current_user in sorted_users:
+                permissions_data = {}
+                for perm in ["admin", "write", "create", "read"]:
+                    has_perm, reasons = self._check_permission_with_reasons(current_user, perm)  # type: ignore
+                    permissions_data[perm] = {"granted": has_perm, "reasons": reasons}
+
+                result.add_user_explanation(current_user, permissions_data)
+
+        return result
 
     def move_folder_and_permissions(
         self, new_path: Union[str, Path], *, force: bool = False

@@ -218,10 +218,10 @@ class TestHierarchyInheritance(unittest.TestCase):
         explanation = syft_file.explain_permissions("alice@example.com")
 
         # Should show GRANTED for write/create/read, DENIED for admin
-        self.assertIn("ADMIN: ✗ DENIED", explanation)
-        self.assertIn("WRITE: ✓ GRANTED", explanation)
-        self.assertIn("CREATE: ✓ GRANTED", explanation)
-        self.assertIn("READ: ✓ GRANTED", explanation)
+        self.assertIn("ADMIN: ✗ DENIED", str(explanation))
+        self.assertIn("WRITE: ✓ GRANTED", str(explanation))
+        self.assertIn("CREATE: ✓ GRANTED", str(explanation))
+        self.assertIn("READ: ✓ GRANTED", str(explanation))
 
     def test_hierarchy_with_public_access(self):
         """Test permission hierarchy with public (*) access."""

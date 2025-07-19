@@ -484,10 +484,10 @@ rules:
 
         # Use explain_permissions for comprehensive view
         explanation = syft_child.explain_permissions("alice@example.com")
-        self.assertIn("ADMIN: ✗ DENIED", explanation)
-        self.assertIn("WRITE: ✗ DENIED", explanation)
-        self.assertIn("CREATE: ✗ DENIED", explanation)
-        self.assertIn("READ: ✗ DENIED", explanation)
+        self.assertIn("ADMIN: ✗ DENIED", str(explanation))
+        self.assertIn("WRITE: ✗ DENIED", str(explanation))
+        self.assertIn("CREATE: ✗ DENIED", str(explanation))
+        self.assertIn("READ: ✗ DENIED", str(explanation))
 
 
 if __name__ == "__main__":
