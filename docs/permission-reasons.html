@@ -166,13 +166,27 @@
             background: #f8f9fa;
             border: 1px solid #e5e7eb;
             color: #374151;
-            padding: 20px;
             border-radius: 8px;
             margin: 16px 0;
             overflow-x: auto;
+        }
+        
+        .example-yaml pre {
+            margin: 0;
+            padding: 20px;
+            background: transparent;
+            border: none;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        
+        .example-yaml pre code {
             font-family: 'SF Mono', Consolas, Monaco, monospace;
             font-size: 13px;
             line-height: 1.6;
+            color: #374151;
+            background: transparent;
+            padding: 0;
         }
         
         .yaml-comment {
@@ -187,6 +201,11 @@
         
         .yaml-value {
             color: #059669;
+        }
+        
+        /* Ensure YAML displays correctly */
+        .example-yaml pre * {
+            display: inline;
         }
         
         .reason-example {
@@ -380,16 +399,16 @@
             </div>
             
             <div class="example-yaml">
-<span class="yaml-comment"># In ~/SyftBox/datasites/alice@example.com/syft.pub.yaml</span>
-<span class="yaml-key">rules</span>:
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'research/data.csv'</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">read</span>:
-        - <span class="yaml-value">'bob@example.com'</span>
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'research/analysis.py'</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">write</span>:
-        - <span class="yaml-value">'carol@example.com'</span>
+<pre><code># In ~/SyftBox/datasites/alice@example.com/syft.pub.yaml
+rules:
+  - pattern: 'research/data.csv'
+    access:
+      read:
+        - 'bob@example.com'
+  - pattern: 'research/analysis.py'
+    access:
+      write:
+        - 'carol@example.com'</code></pre>
             </div>
             
             <div class="reason-example">
@@ -421,15 +440,15 @@
             </div>
             
             <div class="example-yaml">
-<span class="yaml-key">rules</span>:
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'*.csv'</span>  <span class="yaml-comment"># Matches CSV files in root</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">read</span>:
-        - <span class="yaml-value">'data-team@example.com'</span>
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'**/*.py'</span>  <span class="yaml-comment"># Matches Python files anywhere</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">write</span>:
-        - <span class="yaml-value">'dev-team@example.com'</span>
+<pre><code>rules:
+  - pattern: '*.csv'    # Matches CSV files in root
+    access:
+      read:
+        - 'data-team@example.com'
+  - pattern: '**/*.py'  # Matches Python files anywhere
+    access:
+      write:
+        - 'dev-team@example.com'</code></pre>
             </div>
             
             <p><strong>Common patterns:</strong></p>
@@ -463,11 +482,11 @@
             </div>
             
             <div class="example-yaml">
-<span class="yaml-key">rules</span>:
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'project/*'</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">write</span>:  <span class="yaml-comment"># Write includes read automatically</span>
-        - <span class="yaml-value">'bob@example.com'</span>
+<pre><code>rules:
+  - pattern: 'project/*'
+    access:
+      write:  # Write includes read automatically
+        - 'bob@example.com'</code></pre>
             </div>
             
             <div class="reason-example">
@@ -501,12 +520,12 @@
             </div>
             
             <div class="example-yaml">
-<span class="yaml-comment"># In ~/SyftBox/datasites/alice@example.com/research/syft.pub.yaml</span>
-<span class="yaml-key">rules</span>:
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'**/*'</span>  <span class="yaml-comment"># Applies to all subdirectories</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">read</span>:
-        - <span class="yaml-value">'research-team@example.com'</span>
+<pre><code># In ~/SyftBox/datasites/alice@example.com/research/syft.pub.yaml
+rules:
+  - pattern: '**/*'  # Applies to all subdirectories
+    access:
+      read:
+        - 'research-team@example.com'</code></pre>
             </div>
             
             <div class="reason-example">
@@ -533,15 +552,15 @@
             </div>
             
             <div class="example-yaml">
-<span class="yaml-key">rules</span>:
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'public/*'</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">read</span>:
-        - <span class="yaml-value">'*'</span>  <span class="yaml-comment"># Asterisk means everyone</span>
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'guestbook.txt'</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">write</span>:
-        - <span class="yaml-value">'*'</span>  <span class="yaml-comment"># Anyone can write</span>
+<pre><code>rules:
+  - pattern: 'public/*'
+    access:
+      read:
+        - '*'  # Asterisk means everyone
+  - pattern: 'guestbook.txt'
+    access:
+      write:
+        - '*'  # Anyone can write</code></pre>
             </div>
             
             <div class="info-box">
@@ -591,14 +610,14 @@
             </ul>
             
             <div class="example-yaml">
-<span class="yaml-comment"># User bob@example.com has read but wants write access</span>
-<span class="yaml-key">rules</span>:
-  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'data.csv'</span>
-    <span class="yaml-key">access</span>:
-      <span class="yaml-key">read</span>:
-        - <span class="yaml-value">'bob@example.com'</span>
-      <span class="yaml-key">write</span>:
-        - <span class="yaml-value">'alice@example.com'</span>  <span class="yaml-comment"># Bob not included</span>
+<pre><code># User bob@example.com has read but wants write access
+rules:
+  - pattern: 'data.csv'
+    access:
+      read:
+        - 'bob@example.com'
+      write:
+        - 'alice@example.com'  # Bob not included</code></pre>
             </div>
         </section>
 
