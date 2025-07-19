@@ -17,7 +17,7 @@ keywords = [
     "privacy",
     "federated-learning",
 ]
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
