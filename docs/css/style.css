@@ -1055,6 +1055,26 @@ footer a:hover {
     margin-bottom: var(--space-4);
 }
 
+/* Two-column layout for name fields */
+.newsletter-hubspot-form .hs-form-field:has(input[name*="firstname"]),
+.newsletter-hubspot-form .hs-form-field:has(input[name*="lastname"]) {
+    display: inline-block;
+    width: calc(50% - var(--space-2));
+}
+
+.newsletter-hubspot-form .hs-form-field:has(input[name*="firstname"]) {
+    margin-right: var(--space-4);
+}
+
+@media (max-width: 768px) {
+    .newsletter-hubspot-form .hs-form-field:has(input[name*="firstname"]),
+    .newsletter-hubspot-form .hs-form-field:has(input[name*="lastname"]) {
+        display: block;
+        width: 100%;
+        margin-right: 0;
+    }
+}
+
 .newsletter-hubspot-form label {
     display: block;
     margin-bottom: var(--space-2);
@@ -1122,25 +1142,27 @@ footer a:hover {
 .newsletter-hubspot-form .hubspot-submit,
 .newsletter-hubspot-form input[type="submit"],
 .newsletter-hubspot-form .hs-button {
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-3) var(--space-6);
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.025em;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     background: var(--color-secondary);
     color: white;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     display: inline-block;
-    margin-top: var(--space-2);
+    margin-top: var(--space-3);
+    min-width: 150px;
 }
 
 .newsletter-hubspot-form .hubspot-submit:hover,
 .newsletter-hubspot-form input[type="submit"]:hover,
 .newsletter-hubspot-form .hs-button:hover {
     background: #059669;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
 }
 
 .newsletter-hubspot-form .hubspot-submit:active,
