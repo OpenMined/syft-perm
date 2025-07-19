@@ -95,58 +95,117 @@ file.grant_write_access("bob@company.com")
         </div>
     </section>
 
-    <!-- Simple API Preview -->
+    <!-- Complete API -->
     <section class="api-preview">
         <div class="container">
-            <h2>The Core API</h2>
-            <p class="section-subtitle">Simple methods for common tasks</p>
+            <h2>The Whole API</h2>
+            <p class="section-subtitle">Every single public method and property</p>
             
             <div class="api-examples">
                 <div class="api-example">
-                    <h3>Open a file or folder</h3>
-                    <pre><code class="language-python">file = syft_perm.open("data.csv")</code></pre>
+                    <h3>Opening Files & Folders</h3>
+                    <pre><code class="language-python"># Open files and folders
+file = syft_perm.open("data.csv")
+folder = syft_perm.open("project/")
+remote = syft_perm.open("syft://user@site/file.txt")</code></pre>
                 </div>
                 
                 <div class="api-example">
-                    <h3>Grant permissions</h3>
-                    <pre><code class="language-python">file.grant_read_access("bob@university.edu")
-file.grant_write_access("alice@company.com")
-file.grant_admin_access("admin@org.com")</code></pre>
+                    <h3>Granting Permissions</h3>
+                    <pre><code class="language-python"># Grant different permission levels
+file.grant_read_access("user@example.com")
+file.grant_create_access("user@example.com")
+file.grant_write_access("user@example.com")
+file.grant_admin_access("user@example.com")</code></pre>
                 </div>
                 
                 <div class="api-example">
-                    <h3>See current permissions</h3>
-                    <pre><code class="language-python"># In Jupyter notebooks - interactive widget
-file  # Shows interactive permission editor
-
-# Or use methods:
-file.explain_permissions("user@example.com")
-file.share  # Shows permission widget</code></pre>
-                </div>
-                
-                <div class="api-example">
-                    <h3>Make public (carefully!)</h3>
-                    <pre><code class="language-python">file.grant_read_access("*")  # Anyone can read</code></pre>
-                </div>
-                
-                <div class="api-example">
-                    <h3>Check permissions</h3>
-                    <pre><code class="language-python">file.has_read_access("user@example.com")
+                    <h3>Checking Permissions</h3>
+                    <pre><code class="language-python"># Check if user has specific permissions
+file.has_read_access("user@example.com")
+file.has_create_access("user@example.com")
 file.has_write_access("user@example.com")
 file.has_admin_access("user@example.com")</code></pre>
                 </div>
                 
                 <div class="api-example">
-                    <h3>Revoke permissions</h3>
-                    <pre><code class="language-python">file.revoke_read_access("user@example.com")
+                    <h3>Revoking Permissions</h3>
+                    <pre><code class="language-python"># Revoke specific permission levels
+file.revoke_read_access("user@example.com")
+file.revoke_create_access("user@example.com")
 file.revoke_write_access("user@example.com")
 file.revoke_admin_access("user@example.com")</code></pre>
                 </div>
                 
                 <div class="api-example">
-                    <h3>Filesystem browser</h3>
-                    <pre><code class="language-python">sp.files  # Interactive file browser widget
-sp.files.search("keyword")  # Search files</code></pre>
+                    <h3>Understanding Permissions</h3>
+                    <pre><code class="language-python"># Get detailed explanation of permissions
+explanation = file.explain_permissions("user@example.com")
+print(explanation)</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>File Operations</h3>
+                    <pre><code class="language-python"># Move file with permissions preserved
+new_file = file.move_file_and_its_permissions("new/path.csv")</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Files Browser API</h3>
+                    <pre><code class="language-python"># Browse all files
+sp.files                                    # Interactive widget
+sp.files.all()                             # Get all files
+sp.files.get(limit=10, offset=0)          # Paginated results
+sp.files.search("query")                   # Search files
+sp.files.search(admin="user@example.com")  # Filter by admin
+sp.files.filter(folders=["path1", "path2"]) # Filter by folders
+sp.files[0:10]                            # Slice notation</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Interactive Widgets</h3>
+                    <pre><code class="language-python"># Display interactive widgets (Jupyter only)
+file.share  # Permission sharing widget
+file        # File editor with permissions view
+sp.files    # File browser widget</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Widget Screenshots -->
+    <section class="widgets-section">
+        <div class="container">
+            <h2>The Widgets</h2>
+            <p class="section-subtitle">Beautiful, interactive interfaces for managing permissions</p>
+            
+            <div class="widget-showcase">
+                <div class="widget-item">
+                    <h3>📁 File Browser Widget</h3>
+                    <p>Browse all your SyftBox files with real-time permission info</p>
+                    <div class="widget-screenshot">
+                        <img src="images/widget-file-browser.png" alt="File Browser Widget" style="width: 100%; border: 1px solid #ddd; border-radius: 8px;">
+                    </div>
+                    <pre><code class="language-python">sp.files  # Launch the file browser</code></pre>
+                </div>
+                
+                <div class="widget-item">
+                    <h3>✏️ File Editor Widget</h3>
+                    <p>View and edit files with integrated permission display</p>
+                    <div class="widget-screenshot">
+                        <img src="images/widget-file-editor.png" alt="File Editor Widget" style="width: 100%; border: 1px solid #ddd; border-radius: 8px;">
+                    </div>
+                    <pre><code class="language-python">file = sp.open("data.csv")
+file  # Display in Jupyter</code></pre>
+                </div>
+                
+                <div class="widget-item">
+                    <h3>🔐 Share Editor Widget</h3>
+                    <p>Manage permissions with an intuitive sharing interface</p>
+                    <div class="widget-screenshot">
+                        <img src="images/widget-share-editor.png" alt="Share Editor Widget" style="width: 100%; border: 1px solid #ddd; border-radius: 8px;">
+                    </div>
+                    <pre><code class="language-python">file.share  # Open sharing interface</code></pre>
                 </div>
             </div>
         </div>
