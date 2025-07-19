@@ -11,44 +11,153 @@
             background: white;
             border: 1px solid rgba(0,0,0,0.1);
             border-radius: 12px;
-            padding: var(--space-4);
-            margin-bottom: var(--space-4);
+            padding: var(--space-5);
+            margin-bottom: var(--space-5);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .api-method:hover {
+            box-shadow: var(--shadow-md);
         }
         
         .method-signature {
-            background: var(--color-code-bg);
-            padding: var(--space-2) var(--space-3);
+            background: var(--color-dark);
+            color: white;
+            padding: var(--space-3) var(--space-4);
             border-radius: 8px;
             font-family: var(--font-mono);
+            font-size: 1.2rem;
+            margin-bottom: var(--space-4);
+            display: inline-block;
+        }
+        
+        .method-description {
             font-size: 1.1rem;
+            color: var(--color-gray);
+            margin-bottom: var(--space-4);
+            line-height: 1.6;
+        }
+        
+        .params-section,
+        .returns-section {
+            background: var(--color-light-gray);
+            border-radius: 8px;
+            padding: var(--space-3);
             margin-bottom: var(--space-3);
         }
         
-        .param-list {
-            list-style: none;
-            padding: 0;
-            margin: var(--space-2) 0;
+        .section-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-gray);
+            margin-bottom: var(--space-2);
         }
         
-        .param-list li {
-            padding: var(--space-1) 0;
-            font-family: var(--font-mono);
-            font-size: 0.95rem;
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .param-table th {
+            text-align: left;
+            padding: var(--space-2);
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+            font-weight: 600;
+            color: var(--color-dark);
+        }
+        
+        .param-table td {
+            padding: var(--space-2);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            vertical-align: top;
         }
         
         .param-name {
+            font-family: var(--font-mono);
             color: var(--color-primary);
             font-weight: 600;
+            font-size: 0.95rem;
         }
         
         .param-type {
-            color: var(--color-gray);
+            font-family: var(--font-mono);
+            color: var(--color-accent);
+            font-size: 0.9rem;
         }
         
-        .returns {
-            margin-top: var(--space-3);
-            padding-top: var(--space-3);
-            border-top: 1px solid rgba(0,0,0,0.1);
+        .param-desc {
+            color: var(--color-gray);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .example-section {
+            margin-top: var(--space-4);
+        }
+        
+        .example-section pre {
+            margin: 0;
+            background: var(--color-code-bg);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: var(--space-3);
+        }
+        
+        .api-nav {
+            position: sticky;
+            top: 20px;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: var(--space-3);
+            margin-bottom: var(--space-4);
+        }
+        
+        .api-nav h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-gray);
+            margin-bottom: var(--space-2);
+        }
+        
+        .api-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .api-nav a {
+            display: block;
+            padding: var(--space-1) 0;
+            color: var(--color-dark);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        
+        .api-nav a:hover {
+            color: var(--color-primary);
+        }
+        
+        .api-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: var(--space-6);
+            align-items: start;
+        }
+        
+        @media (max-width: 1024px) {
+            .api-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .api-nav {
+                position: static;
+                margin-bottom: var(--space-6);
+            }
         }
     </style>
 </head>
@@ -74,224 +183,1014 @@
     <section class="api-hero">
         <div class="container">
             <h1>API Reference</h1>
-            <p class="hero-subtitle">Every method, clearly explained.</p>
+            <p class="hero-subtitle">Complete documentation for every method, parameter, and return type.</p>
         </div>
     </section>
 
-    <!-- Main Functions -->
+    <!-- API Content -->
     <section class="api-section">
         <div class="container">
-            <h2>Opening Files & Folders</h2>
-            
-            <div class="api-method">
-                <div class="method-signature">syft_perm.open(path)</div>
-                <p>Open a file or folder for permission management.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">path</span> <span class="param-type">str</span> - Path to file or directory</li>
-                </ul>
-                <div class="returns">
-                    <strong>Returns:</strong> SyftFile or SyftFolder object
-                </div>
-                <pre><code class="language-python">file = syft_perm.open("data.csv")
-folder = syft_perm.open("project/")</code></pre>
-            </div>
-        </div>
-    </section>
+            <div class="api-content">
+                <!-- Navigation Sidebar -->
+                <aside class="api-nav">
+                    <h3>Quick Navigation</h3>
+                    <ul>
+                        <li><a href="#module-functions">Module Functions</a></li>
+                        <li><a href="#grant-permissions">Granting Permissions</a></li>
+                        <li><a href="#check-permissions">Checking Permissions</a></li>
+                        <li><a href="#revoke-permissions">Revoking Permissions</a></li>
+                        <li><a href="#utility-methods">Utility Methods</a></li>
+                        <li><a href="#files-api">Files API</a></li>
+                        <li><a href="#types">Types & Constants</a></li>
+                    </ul>
+                </aside>
 
-    <!-- Permission Methods -->
-    <section class="api-section alt-bg">
-        <div class="container">
-            <h2>Granting Permissions</h2>
-            
-            <div class="api-method">
-                <div class="method-signature">grant_read_access(user)</div>
-                <p>Grant read-only access to a user.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address or "*" for public</li>
-                </ul>
-                <pre><code class="language-python">file.grant_read_access("alice@example.com")
-file.grant_read_access("*")  # Make public</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">grant_create_access(user)</div>
-                <p>Grant read and create access to a user.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address</li>
-                </ul>
-                <pre><code class="language-python">folder.grant_create_access("bob@example.com")</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">grant_write_access(user)</div>
-                <p>Grant read, create, and write access to a user.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address</li>
-                </ul>
-                <pre><code class="language-python">file.grant_write_access("editor@example.com")</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">grant_admin_access(user)</div>
-                <p>Grant full control including permission management.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address</li>
-                </ul>
-                <pre><code class="language-python">file.grant_admin_access("admin@example.com")</code></pre>
-            </div>
-        </div>
-    </section>
+                <!-- Main Content -->
+                <div class="api-main">
+                    <!-- Module Functions -->
+                    <section id="module-functions">
+                        <h2>Module Functions</h2>
+                        
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.open(path)</div>
+                            <p class="method-description">
+                                Opens a file or folder with SyftBox permissions. Returns a SyftFile or SyftFolder object
+                                that provides methods for managing permissions.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">path</span></td>
+                                            <td><span class="param-type">str | Path</span></td>
+                                            <td><span class="param-desc">Path to the file or folder. Can be a local path, relative path, or syft:// URL</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">SyftFile | SyftFolder</span></td>
+                                            <td><span class="param-desc">SyftFile object if path is a file, SyftFolder object if path is a directory</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Raises</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">ValueError</span></td>
+                                            <td><span class="param-desc">If the path cannot be resolved or doesn't exist</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Open a local file
+file = syft_perm.open("data.csv")
 
-    <!-- Checking Permissions -->
-    <section class="api-section">
-        <div class="container">
-            <h2>Checking Permissions</h2>
-            
-            <div class="api-method">
-                <div class="method-signature">has_read_access(user)</div>
-                <p>Check if a user can read the file.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
-                </ul>
-                <div class="returns">
-                    <strong>Returns:</strong> bool - True if user has read access
-                </div>
-                <pre><code class="language-python">if file.has_read_access("alice@example.com"):
-    print("Alice can read this file")</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">has_create_access(user)</div>
-                <p>Check if a user can create files in the folder.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
-                </ul>
-                <div class="returns">
-                    <strong>Returns:</strong> bool - True if user has create access
-                </div>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">has_write_access(user)</div>
-                <p>Check if a user can write to the file.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
-                </ul>
-                <div class="returns">
-                    <strong>Returns:</strong> bool - True if user has write access
-                </div>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">has_admin_access(user)</div>
-                <p>Check if a user has admin permissions.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to check</li>
-                </ul>
-                <div class="returns">
-                    <strong>Returns:</strong> bool - True if user has admin access
-                </div>
-            </div>
-        </div>
-    </section>
+# Open a folder
+folder = syft_perm.open("my_project/")
 
-    <!-- Revoking Permissions -->
-    <section class="api-section alt-bg">
-        <div class="container">
-            <h2>Revoking Permissions</h2>
-            
-            <div class="api-method">
-                <div class="method-signature">revoke_read_access(user)</div>
-                <p>Remove read access for a user.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
-                </ul>
-                <pre><code class="language-python">file.revoke_read_access("alice@example.com")</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">revoke_create_access(user)</div>
-                <p>Remove create access for a user.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
-                </ul>
-                <pre><code class="language-python">folder.revoke_create_access("alice@example.com")</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">revoke_write_access(user)</div>
-                <p>Remove write access for a user.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
-                </ul>
-                <pre><code class="language-python">file.revoke_write_access("team@example.com")</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">revoke_admin_access(user)</div>
-                <p>Remove admin access for a user.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
-                </ul>
-                <pre><code class="language-python">file.revoke_admin_access("admin@example.com")</code></pre>
-            </div>
-        </div>
-    </section>
+# Open a remote file
+remote_file = syft_perm.open("syft://alice@datasite.org/data.csv")</code></pre>
+                            </div>
+                        </div>
+                    </section>
 
-    <!-- Utility Methods -->
-    <section class="api-section">
-        <div class="container">
-            <h2>Utility Methods</h2>
-            
-            <div class="api-method">
-                <div class="method-signature">share</div>
-                <p>Display an interactive permission sharing widget (Jupyter/web only).</p>
-                <pre><code class="language-python">file.share  # Shows interactive sharing widget</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">move_file_and_its_permissions(new_path)</div>
-                <p>Move a file to a new location while preserving its permissions.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">new_path</span> <span class="param-type">str</span> - New path for the file</li>
-                </ul>
-                <div class="returns">
-                    <strong>Returns:</strong> SyftFile - New file object at the new location
-                </div>
-                <pre><code class="language-python">new_file = file.move_file_and_its_permissions("archive/data.csv")</code></pre>
-            </div>
-            
-            <div class="api-method">
-                <div class="method-signature">explain_permissions(user)</div>
-                <p>Get detailed explanation of why a user has or doesn't have access.</p>
-                <ul class="param-list">
-                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to explain</li>
-                </ul>
-                <div class="returns">
-                    <strong>Returns:</strong> str - Human-readable explanation
-                </div>
-                <pre><code class="language-python">explanation = file.explain_permissions("alice@example.com")
+                    <!-- Granting Permissions -->
+                    <section id="grant-permissions">
+                        <h2>Granting Permissions</h2>
+                        
+                        <div class="api-method">
+                            <div class="method-signature">file.grant_read_access(user)</div>
+                            <p class="method-description">
+                                Grants read-only access to a user. The user can view the file contents but cannot modify or delete it.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user, or "*" to grant public access</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Grant read access to a specific user
+file.grant_read_access("bob@company.com")
+
+# Make file publicly readable
+file.grant_read_access("*")</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.grant_create_access(user)</div>
+                            <p class="method-description">
+                                Grants create access to a user. Includes read permission plus the ability to create new files in folders.
+                                For files, this is equivalent to read access.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Allow user to create files in a folder
+folder.grant_create_access("alice@company.com")</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.grant_write_access(user)</div>
+                            <p class="method-description">
+                                Grants write access to a user. Includes read and create permissions plus the ability to modify existing files.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Allow user to edit files
+file.grant_write_access("team@company.com")</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.grant_admin_access(user)</div>
+                            <p class="method-description">
+                                Grants admin access to a user. Includes all permissions plus the ability to manage permissions for other users.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Grant full control to admin
+file.grant_admin_access("admin@company.com")</code></pre>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Checking Permissions -->
+                    <section id="check-permissions">
+                        <h2>Checking Permissions</h2>
+                        
+                        <div class="api-method">
+                            <div class="method-signature">file.has_read_access(user)</div>
+                            <p class="method-description">
+                                Checks if a user has read access to the file or folder.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user to check</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">bool</span></td>
+                                            <td><span class="param-desc">True if the user has read access, False otherwise</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python">if file.has_read_access("bob@company.com"):
+    print("Bob can read this file")</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.has_create_access(user)</div>
+                            <p class="method-description">
+                                Checks if a user has create access. For folders, this means they can create new files.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user to check</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">bool</span></td>
+                                            <td><span class="param-desc">True if the user has create access, False otherwise</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.has_write_access(user)</div>
+                            <p class="method-description">
+                                Checks if a user has write access to modify the file.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user to check</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">bool</span></td>
+                                            <td><span class="param-desc">True if the user has write access, False otherwise</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.has_admin_access(user)</div>
+                            <p class="method-description">
+                                Checks if a user has admin access to manage permissions.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user to check</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">bool</span></td>
+                                            <td><span class="param-desc">True if the user has admin access, False otherwise</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Revoking Permissions -->
+                    <section id="revoke-permissions">
+                        <h2>Revoking Permissions</h2>
+                        
+                        <div class="api-method">
+                            <div class="method-signature">file.revoke_read_access(user)</div>
+                            <p class="method-description">
+                                Revokes read access from a user. This removes all permissions for the user.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user, or "*" to revoke public access</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.revoke_create_access(user)</div>
+                            <p class="method-description">
+                                Revokes create access from a user. The user retains read access if they had higher permissions.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.revoke_write_access(user)</div>
+                            <p class="method-description">
+                                Revokes write access from a user. The user retains read and create access if they had higher permissions.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.revoke_admin_access(user)</div>
+                            <p class="method-description">
+                                Revokes admin access from a user. The user retains read, create, and write access.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">None</span></td>
+                                            <td><span class="param-desc">This method modifies permissions in-place</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Utility Methods -->
+                    <section id="utility-methods">
+                        <h2>Utility Methods</h2>
+                        
+                        <div class="api-method">
+                            <div class="method-signature">file.explain_permissions(user)</div>
+                            <p class="method-description">
+                                Provides a detailed explanation of why a user has or doesn't have specific permissions,
+                                including inheritance chains and pattern matches.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">user</span></td>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Email address of the user to explain permissions for</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">str</span></td>
+                                            <td><span class="param-desc">Human-readable explanation of the user's permissions</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python">explanation = file.explain_permissions("alice@example.com")
 print(explanation)
-# "alice@example.com has read access granted directly on data.csv"</code></pre>
-            </div>
-        </div>
-    </section>
+# Output: alice@example.com has the following permissions:
+# - read access from: /data/syft.pub.yaml (pattern: '*.csv')</code></pre>
+                            </div>
+                        </div>
 
-    <!-- Permission Hierarchy -->
-    <section class="api-section alt-bg">
-        <div class="container">
-            <h2>Permission Hierarchy</h2>
-            <p>Permissions follow a simple hierarchy:</p>
-            <div style="text-align: center; font-size: 1.3rem; margin: var(--space-4) 0;">
-                <code>read</code> → <code>create</code> → <code>write</code> → <code>admin</code>
+                        <div class="api-method">
+                            <div class="method-signature">file.move_file_and_its_permissions(new_path)</div>
+                            <p class="method-description">
+                                Moves a file to a new location while preserving its permissions. Creates any necessary
+                                syft.pub.yaml files to maintain the same access controls.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">new_path</span></td>
+                                            <td><span class="param-type">str | Path</span></td>
+                                            <td><span class="param-desc">Destination path for the file</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">SyftFile</span></td>
+                                            <td><span class="param-desc">New SyftFile object at the destination path</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Move file and keep permissions
+new_file = file.move_file_and_its_permissions("archive/data.csv")</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">file.share</div>
+                            <p class="method-description">
+                                Property that displays an interactive permission sharing widget in Jupyter notebooks.
+                                Shows current permissions and allows adding/removing users.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="2"><em>This is a property, not a method - no parameters</em></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">IPython.display.HTML</span></td>
+                                            <td><span class="param-desc">Interactive widget (in Jupyter) or None (in console)</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Display sharing widget in Jupyter
+file.share  # Note: property, not method call</code></pre>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Files API -->
+                    <section id="files-api">
+                        <h2>Files API</h2>
+                        
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.files</div>
+                            <p class="method-description">
+                                Global instance providing access to file browsing and search functionality.
+                                In Jupyter notebooks, displays an interactive file browser widget.
+                            </p>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Display interactive file browser
+syft_perm.files</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.files.all()</div>
+                            <p class="method-description">
+                                Returns all files with permissions in your SyftBox datasites directory.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="2"><em>No parameters</em></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">list[dict]</span></td>
+                                            <td><span class="param-desc">List of file metadata dictionaries containing name, path, permissions, size, etc.</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.files.get(limit=50, offset=0)</div>
+                            <p class="method-description">
+                                Returns a paginated list of files with permissions.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">limit</span></td>
+                                            <td><span class="param-type">int</span></td>
+                                            <td><span class="param-desc">Number of items per page (default: 50)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">offset</span></td>
+                                            <td><span class="param-type">int</span></td>
+                                            <td><span class="param-desc">Starting index (default: 0)</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">dict</span></td>
+                                            <td><span class="param-desc">Dictionary with 'files', 'total_count', 'offset', 'limit', and 'has_more' keys</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.files.search(query=None, admin=None)</div>
+                            <p class="method-description">
+                                Search files by query string and/or filter by admin user.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">query</span></td>
+                                            <td><span class="param-type">str | None</span></td>
+                                            <td><span class="param-desc">Search term for file names and paths</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">admin</span></td>
+                                            <td><span class="param-type">str | None</span></td>
+                                            <td><span class="param-desc">Filter by admin email address</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">Files</span></td>
+                                            <td><span class="param-desc">Filtered Files instance (displays as widget in Jupyter)</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.files[start:end]</div>
+                            <p class="method-description">
+                                Slice notation for selecting files by index range.
+                            </p>
+                            
+                            <div class="params-section">
+                                <div class="section-title">Parameters</div>
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">start</span></td>
+                                            <td><span class="param-type">int</span></td>
+                                            <td><span class="param-desc">Starting index (inclusive)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">end</span></td>
+                                            <td><span class="param-type">int</span></td>
+                                            <td><span class="param-desc">Ending index (exclusive)</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="returns-section">
+                                <div class="section-title">Returns</div>
+                                <table class="param-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-type">Files</span></td>
+                                            <td><span class="param-desc">Files instance with selected range</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Get first 10 files
+first_ten = syft_perm.files[0:10]</code></pre>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Types and Constants -->
+                    <section id="types">
+                        <h2>Types & Constants</h2>
+                        
+                        <div class="api-method">
+                            <div class="method-signature">Permission Levels</div>
+                            <p class="method-description">
+                                SyftPerm uses a hierarchical permission system where each level includes all permissions from lower levels:
+                            </p>
+                            
+                            <div class="params-section">
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Level</th>
+                                            <th>Value</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">read</span></td>
+                                            <td><span class="param-type">"read"</span></td>
+                                            <td><span class="param-desc">Can view file contents</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">create</span></td>
+                                            <td><span class="param-type">"create"</span></td>
+                                            <td><span class="param-desc">Read + can create new files in folders</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">write</span></td>
+                                            <td><span class="param-type">"write"</span></td>
+                                            <td><span class="param-desc">Read + Create + can modify existing files</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">admin</span></td>
+                                            <td><span class="param-type">"admin"</span></td>
+                                            <td><span class="param-desc">Read + Create + Write + can manage permissions</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">Special Users</div>
+                            <p class="method-description">
+                                Special user identifiers with specific meanings:
+                            </p>
+                            
+                            <div class="params-section">
+                                <table class="param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Identifier</th>
+                                            <th>Meaning</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">*</span></td>
+                                            <td><span class="param-desc">Public access (anyone can access)</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">user@example.com</span></td>
+                                            <td><span class="param-desc">Specific user identified by email</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                </div>
             </div>
-            <p>Each level includes all permissions from previous levels:</p>
-            <ul style="font-size: 1.1rem; line-height: 2;">
-                <li><strong>read</strong> - Can view file contents</li>
-                <li><strong>create</strong> - Can read + create new files</li>
-                <li><strong>write</strong> - Can read + create + modify existing files</li>
-                <li><strong>admin</strong> - Can read + create + write + manage permissions</li>
-            </ul>
         </div>
     </section>
 
