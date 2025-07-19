@@ -196,14 +196,20 @@ nav {
    Hero Section
    ================================ */
 .hero {
-    padding: var(--space-16) 0 var(--space-20) 0;
+    padding: var(--space-8) 0;
     text-align: center;
     background: var(--color-light-gray);
-    margin-top: -1px; /* Seamless connection with swoop */
+    min-height: calc(100vh - 70px);
+    display: flex;
+    align-items: center;
+}
+
+.hero .container {
+    width: 100%;
 }
 
 .hero-title {
-    font-size: 4.5rem;
+    font-size: 4rem;
     font-weight: 900;
     margin-bottom: var(--space-3);
     letter-spacing: -2px;
@@ -212,9 +218,9 @@ nav {
 }
 
 .hero-subtitle {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     color: var(--color-gray);
-    margin-bottom: var(--space-8);
+    margin-bottom: var(--space-6);
     font-weight: 400;
 }
 
@@ -226,8 +232,8 @@ nav {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: var(--space-3);
     align-items: stretch;
-    margin-bottom: var(--space-8);
-    max-width: 1200px;
+    margin-bottom: var(--space-6);
+    max-width: 1100px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -266,12 +272,13 @@ pre {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     flex: 1;
     margin: 0;
+    font-size: 0.9rem;
 }
 
 code {
     font-family: var(--font-mono);
-    font-size: 0.85rem;
-    line-height: 1.5;
+    font-size: 0.9rem;
+    line-height: 1.6;
     word-break: break-word;
 }
 
@@ -299,7 +306,7 @@ code {
    Install Section
    ================================ */
 .install-section {
-    margin-bottom: var(--space-8);
+    margin-bottom: 0;
 }
 
 .install-command {
