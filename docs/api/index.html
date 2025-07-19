@@ -202,18 +202,39 @@ file.grant_read_access("*")  # Make public</code></pre>
             <h2>Revoking Permissions</h2>
             
             <div class="api-method">
-                <div class="method-signature">revoke_access(user)</div>
-                <p>Remove all permissions for a user.</p>
+                <div class="method-signature">revoke_read_access(user)</div>
+                <p>Remove read access for a user.</p>
                 <ul class="param-list">
                     <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
                 </ul>
-                <pre><code class="language-python">file.revoke_access("alice@example.com")</code></pre>
+                <pre><code class="language-python">file.revoke_read_access("alice@example.com")</code></pre>
             </div>
             
             <div class="api-method">
-                <div class="method-signature">revoke_all_access()</div>
-                <p>Remove all permissions from everyone (except owner).</p>
-                <pre><code class="language-python">file.revoke_all_access()</code></pre>
+                <div class="method-signature">revoke_create_access(user)</div>
+                <p>Remove create access for a user.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
+                </ul>
+                <pre><code class="language-python">folder.revoke_create_access("alice@example.com")</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">revoke_write_access(user)</div>
+                <p>Remove write access for a user.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
+                </ul>
+                <pre><code class="language-python">file.revoke_write_access("team@example.com")</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">revoke_admin_access(user)</div>
+                <p>Remove admin access for a user.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">user</span> <span class="param-type">str</span> - Email address to revoke</li>
+                </ul>
+                <pre><code class="language-python">file.revoke_admin_access("admin@example.com")</code></pre>
             </div>
         </div>
     </section>
@@ -224,13 +245,21 @@ file.grant_read_access("*")  # Make public</code></pre>
             <h2>Utility Methods</h2>
             
             <div class="api-method">
-                <div class="method-signature">get_permissions()</div>
-                <p>Get a dictionary of all current permissions.</p>
+                <div class="method-signature">share</div>
+                <p>Display an interactive permission sharing widget (Jupyter/web only).</p>
+                <pre><code class="language-python">file.share  # Shows interactive sharing widget</code></pre>
+            </div>
+            
+            <div class="api-method">
+                <div class="method-signature">move_file_and_its_permissions(new_path)</div>
+                <p>Move a file to a new location while preserving its permissions.</p>
+                <ul class="param-list">
+                    <li><span class="param-name">new_path</span> <span class="param-type">str</span> - New path for the file</li>
+                </ul>
                 <div class="returns">
-                    <strong>Returns:</strong> dict - Users mapped to their permission levels
+                    <strong>Returns:</strong> SyftFile - New file object at the new location
                 </div>
-                <pre><code class="language-python">perms = file.get_permissions()
-# {'alice@example.com': 'read', 'bob@example.com': 'write'}</code></pre>
+                <pre><code class="language-python">new_file = file.move_file_and_its_permissions("archive/data.csv")</code></pre>
             </div>
             
             <div class="api-method">

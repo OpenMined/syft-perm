@@ -36,12 +36,20 @@ file.grant_write_access("team@company.com")    # Can view + create + modify
 file.grant_admin_access("admin@company.com")   # Full control
 
 # 3. Revoking permissions
+file.revoke_read_access("bob@company.com")     # Remove all access
+file.revoke_create_access("alice@company.com") # Remove create (keeps read)
 file.revoke_write_access("team@company.com")   # Remove write (keeps read/create)
 file.revoke_admin_access("admin@company.com")  # Remove admin privileges
 
 # 4. Checking permissions
 if file.has_read_access("bob@company.com"):
     print("Bob can read this file")
+
+if file.has_create_access("alice@company.com"):
+    print("Alice can create new files")
+
+if file.has_write_access("team@company.com"):
+    print("Team can modify this file")
     
 if file.has_admin_access("admin@company.com"):
     print("Admin has full control")
@@ -58,10 +66,9 @@ sliced = sp.files[0:5]                          # First 5 files using slice
 
 # 7. Moving files while preserving permissions
 new_file = file.move_file_and_its_permissions("archive/data.csv")
-new_folder = folder.move_folder_and_permissions("projects/archived/")
 
 # 8. Interactive features (Jupyter/web)
-file.share()                                    # Show sharing widget
+file.share                                      # Show sharing widget
 ```
 
 ### Permission Hierarchy Explained
@@ -70,14 +77,13 @@ file.share()                                    # Show sharing widget
 - **Write**: Read + Create + modify existing files  
 - **Admin**: Read + Create + Write + manage permissions
 
-### Pro Tips
+### Interactive Features
 ```python
-# Force permission changes (bypass safety checks)
-file.grant_admin_access("user@example.com", force=True)
+# Display interactive sharing widget in Jupyter
+file.share  # Note: property, not method
 
-# Check terminal flag for advanced file handling
-if file.get_terminal():
-    print("This file has terminal flag set")
+# Move files with permissions preserved
+new_file = file.move_file_and_its_permissions("new/path/file.csv")
 ```
 
 ## Permission Hierarchy

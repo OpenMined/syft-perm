@@ -71,9 +71,9 @@ file.grant_read_access("colleague@university.edu")
 if file.has_read_access("reviewer@journal.org"):
     print("Reviewer can read the file")
 
-# See all permissions
-permissions = file.get_permissions()
-print(permissions)</code></pre>
+# Explain why someone has/doesn't have access
+explanation = file.explain_permissions("reviewer@journal.org")
+print(explanation)</code></pre>
         </div>
     </section>
 
