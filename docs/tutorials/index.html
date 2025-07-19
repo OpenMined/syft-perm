@@ -162,8 +162,8 @@
     <!-- Tutorials Hero -->
     <section class="tutorials-hero">
         <div class="container">
-            <h1>Comprehensive Tutorials</h1>
-            <p class="hero-subtitle">From beginner to expert - master SyftBox permissions step by step.</p>
+            <h1>SyftPerm Tutorial</h1>
+            <p class="hero-subtitle">Master SyftBox permissions in just 10 minutes!</p>
         </div>
     </section>
 
@@ -171,111 +171,34 @@
     <section class="tutorials-section">
         <div class="container">
             <div class="quickstart-card">
-                <h2>⚡ Start Here: 5-Minute Quick Start</h2>
-                <p>New to SyftPerm? Get up and running in just 5 minutes with our interactive notebook.</p>
-                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/syft-perm-5-minute-quickstart.ipynb" class="launch-btn">Launch Quick Start →</a>
+                <h2>⚡ SyftPerm in 10 Minutes</h2>
+                <p>Learn everything you need to know about SyftPerm with our comprehensive interactive tutorial.</p>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/syft-perm-10-minute-tutorial.ipynb" class="launch-btn">Launch Tutorial →</a>
             </div>
 
-            <h2 style="margin-bottom: var(--space-6);">📚 Complete Tutorial Series</h2>
+            <h2 style="margin-bottom: var(--space-6);">📚 What You'll Learn</h2>
             
-            <!-- Tutorial 1 -->
+            <!-- Tutorial Overview -->
             <div class="tutorial-card">
                 <div class="tutorial-title">
-                    <span class="tutorial-number">1</span>
-                    <h3>Permission Fundamentals</h3>
-                    <span class="difficulty difficulty-beginner">Beginner</span>
+                    <h3>Complete SyftPerm Tutorial</h3>
+                    <span class="difficulty difficulty-beginner">Beginner to Advanced</span>
                 </div>
-                <p>Master the core concepts of SyftBox permissions from the ground up.</p>
+                <p>This comprehensive tutorial covers everything from basic concepts to advanced federated learning scenarios.</p>
                 <ul class="tutorial-topics">
-                    <li>The 4-level permission hierarchy (Read → Create → Write → Admin)</li>
-                    <li>Understanding syft.pub.yaml structure</li>
-                    <li>Managing multiple users with different access levels</li>
-                    <li>Public access patterns using wildcards</li>
-                    <li>Basic folder inheritance principles</li>
-                    <li>Permission debugging and reasoning</li>
-                    <li>Ownership and automatic permissions</li>
+                    <li>Part 1: Installation and Setup</li>
+                    <li>Part 2: Sign my Guestbook (and learn the UIs)</li>
+                    <li>Part 3: Create your own guestbook! (create and permission your first file)</li>
+                    <li>Part 4: Ask a friend to sign your guestbook!!</li>
+                    <li>Part 5: Let's Practice the Python API!</li>
+                    <li>Part 6: How does the permission system work? Let's EXPLORE!</li>
+                    <li>Part 7: How does permission enforcement work? Let's TEST it!</li>
+                    <li>Part 8: What if permissions conflict? Let's CREATE conflicts!</li>
+                    <li>Part 9: Tips and Tricks - Let's DISCOVER UI Features!</li>
+                    <li>Part 10: What does this mean for Privacy & AI? Let's BUILD something!</li>
+                    <li>Part 11: The future of federated learning with SyftBox</li>
                 </ul>
-                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/01-comprehensive-syftbox-permissions-fundamentals.ipynb" class="launch-btn">Start Tutorial →</a>
-            </div>
-
-            <!-- Tutorial 2 -->
-            <div class="tutorial-card">
-                <div class="tutorial-title">
-                    <span class="tutorial-number">2</span>
-                    <h3>Patterns and Matching</h3>
-                    <span class="difficulty difficulty-intermediate">Intermediate</span>
-                </div>
-                <p>Unlock the power of glob patterns to control permissions at scale.</p>
-                <ul class="tutorial-topics">
-                    <li>Basic glob patterns: *, ?, and character ranges</li>
-                    <li>Recursive matching with ** (double asterisk)</li>
-                    <li>Pattern specificity and conflict resolution</li>
-                    <li>Advanced double-star pattern techniques</li>
-                    <li>First-match-wins principle</li>
-                    <li>Pattern debugging strategies</li>
-                    <li>Common pitfalls and solutions</li>
-                </ul>
-                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/02-patterns-and-matching.ipynb" class="launch-btn">Start Tutorial →</a>
-            </div>
-
-            <!-- Tutorial 3 -->
-            <div class="tutorial-card">
-                <div class="tutorial-title">
-                    <span class="tutorial-number">3</span>
-                    <h3>Inheritance and Hierarchy</h3>
-                    <span class="difficulty difficulty-intermediate">Intermediate</span>
-                </div>
-                <p>Learn how permissions flow through your directory structure.</p>
-                <ul class="tutorial-topics">
-                    <li>Deep dive into the nearest-node algorithm</li>
-                    <li>Pattern matching in inheritance contexts</li>
-                    <li>Complex multi-level permission scenarios</li>
-                    <li>The "no accumulation" principle explained</li>
-                    <li>Debugging inheritance issues effectively</li>
-                    <li>Real-world organizational hierarchies</li>
-                    <li>Advanced inheritance patterns</li>
-                </ul>
-                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/03-inheritance-and-hierarchy.ipynb" class="launch-btn">Start Tutorial →</a>
-            </div>
-
-            <!-- Tutorial 4 -->
-            <div class="tutorial-card">
-                <div class="tutorial-title">
-                    <span class="tutorial-number">4</span>
-                    <h3>Terminal Nodes and Limits</h3>
-                    <span class="difficulty difficulty-advanced">Advanced</span>
-                </div>
-                <p>Advanced features for security and resource control.</p>
-                <ul class="tutorial-topics">
-                    <li>Terminal nodes that block inheritance completely</li>
-                    <li>Setting and enforcing file size limits</li>
-                    <li>Using the file limits API effectively</li>
-                    <li>Directory and symlink restrictions</li>
-                    <li>Advanced terminal node scenarios</li>
-                    <li>Combining limits with terminal nodes</li>
-                    <li>Real-world security patterns</li>
-                </ul>
-                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/04-terminal-nodes-and-limits.ipynb" class="launch-btn">Start Tutorial →</a>
-            </div>
-
-            <!-- Tutorial 5 -->
-            <div class="tutorial-card">
-                <div class="tutorial-title">
-                    <span class="tutorial-number">5</span>
-                    <h3>Advanced Scenarios & Best Practices</h3>
-                    <span class="difficulty difficulty-advanced">Advanced</span>
-                </div>
-                <p>Master complex permission scenarios and learn best practices for production deployments.</p>
-                <ul class="tutorial-topics">
-                    <li>Complex permission hierarchies</li>
-                    <li>Multi-user access patterns</li>
-                    <li>Security best practices</li>
-                    <li>Troubleshooting strategies</li>
-                    <li>Production deployment tips</li>
-                    <li>Common pitfalls and solutions</li>
-                    <li>Real-world case studies</li>
-                </ul>
-                <a href="https://github.com/OpenMined/syft-perm/blob/main/tutorials/05-mastery-complex-scenarios.ipynb" class="launch-btn">Start Tutorial →</a>
+                <a href="https://github.com/OpenMined/syft-perm/blob/main/syft-perm-10-minute-tutorial.ipynb" class="launch-btn">Start Tutorial →</a>
             </div>
         </div>
     </section>
@@ -285,16 +208,18 @@
         <div class="container">
             <h2>🎯 Your Learning Path</h2>
             <div style="background: var(--color-light-gray); padding: var(--space-4); border-radius: 12px; margin-top: var(--space-4);">
-                <h3>Recommended Progression:</h3>
-                <ol style="font-size: 1.1rem; line-height: 2;">
-                    <li><strong>Start with the 5-minute quickstart</strong> - Get a taste of what's possible</li>
-                    <li><strong>Complete Tutorial 1</strong> - Build a solid foundation</li>
-                    <li><strong>Practice with Tutorial 2</strong> - Master pattern matching</li>
-                    <li><strong>Advance through Tutorials 3-4</strong> - Learn sophisticated techniques</li>
-                    <li><strong>Challenge yourself with Tutorial 5</strong> - Become a SyftPerm expert</li>
-                </ol>
+                <h3>Getting Started:</h3>
+                <p style="font-size: 1.1rem; line-height: 2;">
+                    The <strong>SyftPerm in 10 Minutes</strong> tutorial is all you need! It takes you from complete beginner to advanced user in a single, comprehensive journey. The tutorial is designed to be completed in about 10-15 minutes, but you can take your time to explore and experiment with each concept.
+                </p>
                 
-                <p style="margin-top: var(--space-3);"><strong>Time Investment:</strong> Each tutorial takes 30-60 minutes. Complete the entire series in a weekend!</p>
+                <p style="margin-top: var(--space-3);"><strong>What makes this tutorial special:</strong></p>
+                <ul style="font-size: 1.1rem; line-height: 2;">
+                    <li>Interactive code examples you can run immediately</li>
+                    <li>Real-world scenarios including federated learning</li>
+                    <li>Hands-on practice with the UI widgets</li>
+                    <li>Progressive difficulty from basics to advanced concepts</li>
+                </ul>
             </div>
         </div>
     </section>

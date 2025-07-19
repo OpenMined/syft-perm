@@ -36,14 +36,15 @@
             <div class="code-comparison">
                 <div class="code-before">
                     <div class="code-label">🔍 SEE permissions clearly</div>
-                    <pre><code class="language-python"># In Jupyter notebooks - rich permission tables
+                    <pre><code class="language-python"># In Jupyter notebooks - interactive permission editor
 file = syft_perm.open("data.csv")
-file  # Shows HTML table with current permissions
+file  # Shows interactive permission editor widget
 
-# User              Read  Write  Admin  Reason
-# alice@example.com  ✓     ✗      ✗     Explicitly granted read
-# bob@company.com    ✓     ✓      ✗     Inherited from /data/
-# *                  ✗     ✗      ✗     No permission found</code></pre>
+# Or view permissions in console:
+print(file)  # Shows permission table
+# User               Read  Create  Write  Admin  Reason
+# alice@example.com  ✓     ✓       ✓              admin.yaml: Admin permission granted
+# bob@example.com    ✓                            read.yaml: Pattern '*.txt' matched</code></pre>
                 </div>
                 
                 <div class="code-arrow">+</div>
@@ -97,8 +98,8 @@ file.grant_write_access("bob@company.com")
     <!-- Simple API Preview -->
     <section class="api-preview">
         <div class="container">
-            <h2>The Entire API</h2>
-            <p class="section-subtitle">Yes, really. That's all of it.</p>
+            <h2>The Core API</h2>
+            <p class="section-subtitle">Simple methods for common tasks</p>
             
             <div class="api-examples">
                 <div class="api-example">
@@ -115,14 +116,37 @@ file.grant_admin_access("admin@org.com")</code></pre>
                 
                 <div class="api-example">
                     <h3>See current permissions</h3>
-                    <pre><code class="language-python"># In Jupyter notebooks - automatic HTML tables
-file  # Shows who has access and why
-folder.show_permissions()  # Rich inheritance view</code></pre>
+                    <pre><code class="language-python"># In Jupyter notebooks - interactive widget
+file  # Shows interactive permission editor
+
+# Or use methods:
+file.explain_permissions("user@example.com")
+file.share  # Shows permission widget</code></pre>
                 </div>
                 
                 <div class="api-example">
                     <h3>Make public (carefully!)</h3>
                     <pre><code class="language-python">file.grant_read_access("*")  # Anyone can read</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Check permissions</h3>
+                    <pre><code class="language-python">file.has_read_access("user@example.com")
+file.has_write_access("user@example.com")
+file.has_admin_access("user@example.com")</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Revoke permissions</h3>
+                    <pre><code class="language-python">file.revoke_read_access("user@example.com")
+file.revoke_write_access("user@example.com")
+file.revoke_admin_access("user@example.com")</code></pre>
+                </div>
+                
+                <div class="api-example">
+                    <h3>Filesystem browser</h3>
+                    <pre><code class="language-python">sp.files  # Interactive file browser widget
+sp.files.search("keyword")  # Search files</code></pre>
                 </div>
             </div>
         </div>
