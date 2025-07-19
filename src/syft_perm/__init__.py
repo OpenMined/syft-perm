@@ -1,7 +1,7 @@
 """SyftPerm - File permission management for SyftBox."""
 
 from pathlib import Path as _Path
-from typing import Union as _Union
+from typing import Optional, Union as _Union
 
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
@@ -910,6 +910,33 @@ class _Files:
 
         return "\n".join(output)
 
+    def _ensure_server_running(self) -> tuple[bool, Optional[int]]:
+        """Ensure the permission server is running and return (success, port)."""
+        try:
+            from ._auto_recovery import ensure_server_running
+            from .server import get_server_url, start_server
+
+            # Check if server is already running
+            server_url = get_server_url()
+            if server_url:
+                # Verify it's actually responding
+                success, error = ensure_server_running(server_url)
+                if success:
+                    # Extract port from URL
+                    port = int(server_url.split(":")[-1].rstrip("/"))
+                    return True, port
+
+            # Server not running or not healthy, start it
+            server_url = start_server()
+            if server_url:
+                # Extract port from URL
+                port = int(server_url.split(":")[-1].rstrip("/"))
+                return True, port
+
+            return False, None
+        except Exception:
+            return False, None
+
     def _repr_html_(self) -> str:
         """Generate SyftObjects-style widget for Jupyter."""
         import html as html_module
@@ -922,14 +949,11 @@ class _Files:
 
         from IPython.display import HTML, clear_output, display
 
-        # Check if server is available
+        # First, check if server is already available without starting it
         try:
             import json
             import urllib.error
             import urllib.request
-
-            server_available = False
-            server_port = None
 
             def check_server(port):
                 try:
@@ -937,16 +961,14 @@ class _Files:
                         f"http://localhost:{port}/", timeout=0.1
                     ) as response:
                         if response.status == 200:
-                            # Only read first 100 bytes to check for "SyftPerm"
                             content = response.read(100).decode("utf-8")
                             return "SyftPerm" in content
                 except Exception:
                     pass
                 return False
 
-            tried_ports = []
-
-            # First, try to read port from config file
+            # Quick check for existing server
+            server_port = None
             config_path = Path.home() / ".syftperm" / "config.json"
             if config_path.exists():
                 try:
@@ -954,25 +976,21 @@ class _Files:
 
                     with builtins.open(config_path, "r") as f:
                         config = json.load(f)
-                        configured_port = config.get("port")
-                        if configured_port:
-                            tried_ports.append(configured_port)
-                            if check_server(configured_port):
-                                server_available = True
-                                server_port = configured_port
-                except Exception as e:
+                        configured_port = config.get("port", 8765)
+                        if check_server(configured_port):
+                            server_port = configured_port
+                except Exception:
                     pass
 
-            # If not found via config, fall back to scanning ports 8000-8100
-            if not server_available:
-                for port in range(8000, 8101):
-                    tried_ports.append(port)
+            # If not found, quick scan common ports
+            if not server_port:
+                for port in [8765, 8000, 8001]:
                     if check_server(port):
-                        server_available = True
                         server_port = port
                         break
 
-            if server_available:
+            # If server already running, show it immediately
+            if server_port:
                 # Detect dark mode for iframe styling
                 is_dark_mode = _is_dark()
                 border_color = "#3e3e42" if is_dark_mode else "#ddd"
@@ -995,6 +1013,44 @@ class _Files:
             pass
 
         container_id = f"syft_files_{uuid.uuid4().hex[:8]}"
+
+        # Start server in background thread if not available
+        def start_server_background():
+            try:
+                success, port = self._ensure_server_running()
+                if success and port:
+                    # Server started successfully, update the display to show iframe
+                    from IPython.display import HTML, display
+
+                    iframe_html = f"""
+                    <script>
+                    // Wait a moment for server to be fully ready
+                    setTimeout(function() {{
+                        // Replace the entire container with the iframe
+                        var container = document.getElementById('{container_id}');
+                        if (container) {{
+                            container.innerHTML = `
+                                <div style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden;">
+                                    <iframe 
+                                        src="http://localhost:{port}/files-widget" 
+                                        width="100%" 
+                                        height="100%" 
+                                        frameborder="0"
+                                        style="border: none;"
+                                        allow="clipboard-read; clipboard-write">
+                                    </iframe>
+                                </div>
+                            `;
+                        }}
+                    }}, 1000);
+                    </script>
+                    """
+                    display(HTML(iframe_html))
+            except Exception:
+                pass  # Silently fail in background
+
+        thread = threading.Thread(target=start_server_background, daemon=True)
+        thread.start()
 
         # Detect dark mode early for loading animation
         is_dark_mode = _is_dark()
@@ -2368,8 +2424,8 @@ class _Files:
         // Background server checking - only run when server was not initially available
         """
 
-        # Add the background server checking JavaScript only if server is not available
-        if not server_available:
+        # Server checking code removed - server is now started automatically in background
+        if False:  # Disabled - server is now started automatically
             html += f"""
         // Use a unique variable name to avoid redeclaration errors
         if (typeof window.syftPermServerFound_{container_id} === 'undefined') {{
