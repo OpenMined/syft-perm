@@ -449,7 +449,7 @@ code {
    ================================ */
 .gradient-feature {
     padding: var(--space-16) 0;
-    background: linear-gradient(135deg, #ff0080 0%, #ff8c00 20%, #ffea00 40%, #00ff00 60%, #00a8ff 80%, #a200ff 100%);
+    background: linear-gradient(90deg, #4568dc 0%, #b06ab3 100%);
     color: white;
     position: relative;
     overflow: hidden;
