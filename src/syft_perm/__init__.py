@@ -1,7 +1,8 @@
 """SyftPerm - File permission management for SyftBox."""
 
 from pathlib import Path as _Path
-from typing import Optional, Union as _Union
+from typing import Optional
+from typing import Union as _Union
 
 from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
