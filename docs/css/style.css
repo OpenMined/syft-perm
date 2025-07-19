@@ -1178,8 +1178,10 @@ footer a:hover {
 }
 
 .newsletter-hubspot-form .hs-error-msg {
-    color: #EF4444;
-    font-size: 0.9rem;
+    color: #f87171;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: var(--space-1);
 }
 
 .newsletter-hubspot-form .hs-form .hs-fieldtype-checkbox ul {
