@@ -438,15 +438,39 @@ code {
 }
 
 /* ================================
-   CTA Section
+   Tutorial CTA Section
    ================================ */
-.cta {
+.tutorial-cta {
     padding: var(--space-16) 0;
     text-align: center;
+    background: linear-gradient(135deg, var(--color-gradient-start) 0%, var(--color-gradient-end) 100%);
+    color: white;
 }
 
-.cta h2 {
+.tutorial-cta h2 {
+    margin-bottom: var(--space-3);
+    font-size: 3rem;
+    color: white;
+}
+
+.tutorial-subtitle {
+    font-size: 1.5rem;
     margin-bottom: var(--space-6);
+    opacity: 0.95;
+}
+
+.tutorial-highlights {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-8);
+}
+
+.highlight {
+    font-size: 1.1rem;
+    font-weight: 600;
+    opacity: 0.95;
 }
 
 .cta-buttons {
@@ -485,6 +509,31 @@ code {
 .btn-secondary:hover {
     background: transparent;
     border-color: var(--color-dark);
+}
+
+.btn-large {
+    padding: var(--space-3) var(--space-5);
+    font-size: 1.2rem;
+}
+
+/* Tutorial CTA specific button styles */
+.tutorial-cta .btn-primary {
+    background: white;
+    color: var(--color-dark);
+}
+
+.tutorial-cta .btn-primary:hover {
+    background: var(--color-light-gray);
+}
+
+.tutorial-cta .btn-secondary {
+    background: transparent;
+    color: white;
+    border: 2px solid white;
+}
+
+.tutorial-cta .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* ================================
