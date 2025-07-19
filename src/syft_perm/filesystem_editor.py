@@ -6423,6 +6423,42 @@ def generate_share_modal_html(
 
             }}
 
+            // Check if user already exists
+
+            const allUsers = new Set();
+
+            const hasReasons = currentPermissions && Object.values(currentPermissions).some(userPerm =>
+
+                userPerm && typeof userPerm === 'object' && userPerm.reasons
+
+            );
+
+            if (hasReasons) {{
+
+                Object.keys(currentPermissions).forEach(user => allUsers.add(user));
+
+            }} else {{
+
+                Object.values(currentPermissions).forEach(userList => {{
+
+                    if (Array.isArray(userList)) {{
+
+                        userList.forEach(user => allUsers.add(user));
+
+                    }}
+
+                }});
+
+            }}
+
+            if (allUsers.has(email)) {{
+
+                showError('User already has access');
+
+                return;
+
+            }}
+
             // Add to pending changes
 
             if (!pendingChanges[email]) {{
@@ -6433,39 +6469,91 @@ def generate_share_modal_html(
 
             pendingChanges[email].level = permission;
 
-            // Update UI immediately
+            // Update UI immediately - handle both formats correctly
 
             const newPerms = JSON.parse(JSON.stringify(currentPermissions));
 
-            ['read', 'create', 'write', 'admin'].forEach(perm => {{
+            if (hasReasons || Object.keys(currentPermissions).some(key => 
 
-                if (!newPerms[perm]) newPerms[perm] = [];
+                typeof currentPermissions[key] === 'object' && 
 
-                newPerms[perm] = newPerms[perm].filter(u => u !== email);
+                currentPermissions[key].permissions)) {{
 
-            }});
+                // Use new format with reasons
 
-            if (permission === 'read') {{
+                newPerms[email] = {{
 
-                newPerms.read.push(email);
+                    permissions: {{
 
-            }} else if (permission === 'write') {{
+                        read: permission === 'read' || permission === 'write' || permission === 'admin' ? [email] : [],
 
-                newPerms.read.push(email);
+                        create: permission === 'write' || permission === 'admin' ? [email] : [],
 
-                newPerms.create.push(email);
+                        write: permission === 'write' || permission === 'admin' ? [email] : [],
 
-                newPerms.write.push(email);
+                        admin: permission === 'admin' ? [email] : []
 
-            }} else if (permission === 'admin') {{
+                    }},
 
-                newPerms.read.push(email);
+                    reasons: {{
 
-                newPerms.create.push(email);
+                        [permission]: {{
 
-                newPerms.write.push(email);
+                            granted: true,
 
-                newPerms.admin.push(email);
+                            reasons: [`Manually granted ${{permission}} permission`]
+
+                        }}
+
+                    }}
+
+                }};
+
+            }} else {{
+
+                // Use old format
+
+                if (!newPerms.read) newPerms.read = [];
+
+                if (!newPerms.create) newPerms.create = [];
+
+                if (!newPerms.write) newPerms.write = [];
+
+                if (!newPerms.admin) newPerms.admin = [];
+
+                // Remove user from all permissions first
+
+                ['read', 'create', 'write', 'admin'].forEach(perm => {{
+
+                    newPerms[perm] = newPerms[perm].filter(u => u !== email);
+
+                }});
+
+                // Add user with appropriate permissions
+
+                if (permission === 'read') {{
+
+                    newPerms.read.push(email);
+
+                }} else if (permission === 'write') {{
+
+                    newPerms.read.push(email);
+
+                    newPerms.create.push(email);
+
+                    newPerms.write.push(email);
+
+                }} else if (permission === 'admin') {{
+
+                    newPerms.read.push(email);
+
+                    newPerms.create.push(email);
+
+                    newPerms.write.push(email);
+
+                    newPerms.admin.push(email);
+
+                }}
 
             }}
 
