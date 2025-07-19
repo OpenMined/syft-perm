@@ -58,49 +58,63 @@
         }
         
         .filesystem-diagram {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 24px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
             margin: 24px 0;
-            font-family: 'SF Mono', Monaco, monospace;
-            font-size: 14px;
-            line-height: 1.6;
+            font-family: 'SF Mono', Consolas, Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.8;
             overflow-x: auto;
+            white-space: pre;
         }
         
         .file-tree {
-            position: relative;
+            color: #374151;
         }
         
-        .tree-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 0;
+        .tree-line {
+            color: #9ca3af;
         }
         
-        .tree-item.highlighted {
-            background: rgba(16, 185, 129, 0.1);
+        .folder-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .file-name {
+            color: #374151;
+        }
+        
+        .highlight-owner {
+            background: #f3e8ff;
+            padding: 2px 6px;
             border-radius: 4px;
-            padding: 4px 8px;
-            margin: 2px -8px;
+            color: #7c3aed;
+            font-weight: 600;
         }
         
-        .tree-item.owner {
-            background: rgba(168, 85, 247, 0.1);
+        .highlight-yaml {
+            background: #fce7f3;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #db2777;
+            font-weight: 600;
         }
         
-        .tree-item.pattern-match {
-            background: rgba(59, 130, 246, 0.1);
+        .highlight-file {
+            background: #dbeafe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #2563eb;
         }
         
-        .tree-item.inherited {
-            background: rgba(251, 146, 60, 0.1);
-        }
-        
-        .tree-item.yaml-location {
-            background: rgba(236, 72, 153, 0.1);
+        .highlight-pattern {
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #d97706;
         }
         
         .permission-badge {
@@ -113,45 +127,66 @@
         }
         
         .badge-read {
-            background: rgba(34, 197, 94, 0.2);
-            color: #15803d;
+            background: #dcfce7;
+            color: #166534;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
         }
         
         .badge-write {
-            background: rgba(59, 130, 246, 0.2);
+            background: #dbeafe;
             color: #1e40af;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
         }
         
         .badge-admin {
-            background: rgba(168, 85, 247, 0.2);
+            background: #f3e8ff;
             color: #6b21a8;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
         }
         
         .badge-owner {
-            background: rgba(236, 72, 153, 0.2);
+            background: #fce7f3;
             color: #be185d;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
         }
         
         .example-yaml {
-            background: #282c34;
-            color: #abb2bf;
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            color: #374151;
             padding: 20px;
             border-radius: 8px;
             margin: 16px 0;
             overflow-x: auto;
+            font-family: 'SF Mono', Consolas, Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.6;
         }
         
         .yaml-comment {
-            color: #5c6370;
-            font-style: italic;
+            color: #6b7280;
+            font-style: normal;
         }
         
         .yaml-key {
-            color: #e06c75;
+            color: #dc2626;
+            font-weight: 600;
         }
         
         .yaml-value {
-            color: #98c379;
+            color: #059669;
         }
         
         .reason-example {
@@ -168,6 +203,16 @@
             border-radius: 4px;
             font-size: 13px;
             color: #1e293b;
+            font-family: 'SF Mono', Consolas, Monaco, monospace;
+        }
+        
+        code {
+            font-family: 'SF Mono', Consolas, Monaco, monospace;
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #374151;
         }
         
         .info-box {
@@ -221,6 +266,22 @@
             .hierarchy-arrow {
                 transform: rotate(90deg);
             }
+        }
+        
+        pre {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+        
+        pre code {
+            background: transparent;
+            padding: 0;
+            font-size: 13px;
+            line-height: 1.6;
         }
     </style>
 </head>
@@ -276,16 +337,14 @@
             </div>
             
             <div class="filesystem-diagram">
-                <div class="file-tree">
-~/SyftBox/
-└── datasites/
-    └── <span class="tree-item owner">alice@example.com/</span> <span class="permission-badge badge-owner">OWNER</span>
-        ├── syft.pub.yaml
-        ├── public/
-        │   └── <span class="tree-item owner">research.csv</span> <span class="permission-badge badge-admin">All permissions</span>
-        └── private/
-            └── <span class="tree-item owner">notes.txt</span> <span class="permission-badge badge-admin">All permissions</span>
-                </div>
+                <div class="file-tree"><span class="tree-line">~/SyftBox/</span>
+<span class="tree-line">└── datasites/</span>
+    <span class="tree-line">└──</span> <span class="highlight-owner">alice@example.com/</span> <span class="badge-owner">OWNER</span>
+        <span class="tree-line">├──</span> syft.pub.yaml
+        <span class="tree-line">├──</span> public/
+        <span class="tree-line">│   └──</span> research.csv    <span class="badge-admin">All permissions</span>
+        <span class="tree-line">└──</span> private/
+            <span class="tree-line">└──</span> notes.txt      <span class="badge-admin">All permissions</span></div>
             </div>
             
             <div class="reason-example">
@@ -311,15 +370,13 @@
             </div>
             
             <div class="filesystem-diagram">
-                <div class="file-tree">
-~/SyftBox/datasites/alice@example.com/
-├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">Contains rules</span>
-├── research/
-│   ├── <span class="tree-item highlighted">data.csv</span> <span class="permission-badge badge-read">bob: read</span>
-│   └── <span class="tree-item highlighted">analysis.py</span> <span class="permission-badge badge-write">carol: write</span>
-└── public/
-    └── results.pdf
-                </div>
+                <div class="file-tree"><span class="tree-line">~/SyftBox/datasites/alice@example.com/</span>
+<span class="tree-line">├──</span> <span class="highlight-yaml">syft.pub.yaml</span>  <span style="color: #6b7280">← Contains rules</span>
+<span class="tree-line">├──</span> research/
+<span class="tree-line">│   ├──</span> <span class="highlight-file">data.csv</span>      <span class="badge-read">bob: read</span>
+<span class="tree-line">│   └──</span> <span class="highlight-file">analysis.py</span>   <span class="badge-write">carol: write</span>
+<span class="tree-line">└──</span> public/
+    <span class="tree-line">└──</span> results.pdf</div>
             </div>
             
             <div class="example-yaml">
@@ -351,18 +408,16 @@
             </div>
             
             <div class="filesystem-diagram">
-                <div class="file-tree">
-~/SyftBox/datasites/alice@example.com/
-├── syft.pub.yaml
-├── data/
-│   ├── <span class="tree-item pattern-match">experiment1.csv</span> <span class="permission-badge badge-read">Pattern: *.csv</span>
-│   ├── <span class="tree-item pattern-match">experiment2.csv</span> <span class="permission-badge badge-read">Pattern: *.csv</span>
-│   └── notes.txt
-└── code/
-    ├── <span class="tree-item pattern-match">main.py</span> <span class="permission-badge badge-write">Pattern: **/*.py</span>
-    └── utils/
-        └── <span class="tree-item pattern-match">helper.py</span> <span class="permission-badge badge-write">Pattern: **/*.py</span>
-                </div>
+                <div class="file-tree"><span class="tree-line">~/SyftBox/datasites/alice@example.com/</span>
+<span class="tree-line">├──</span> syft.pub.yaml
+<span class="tree-line">├──</span> data/
+<span class="tree-line">│   ├──</span> <span class="highlight-pattern">experiment1.csv</span>  ✓ Matches <code>*.csv</code>
+<span class="tree-line">│   ├──</span> <span class="highlight-pattern">experiment2.csv</span>  ✓ Matches <code>*.csv</code>
+<span class="tree-line">│   └──</span> notes.txt
+<span class="tree-line">└──</span> code/
+    <span class="tree-line">├──</span> <span class="highlight-pattern">main.py</span>      ✓ Matches <code>**/*.py</code>
+    <span class="tree-line">└──</span> utils/
+        <span class="tree-line">└──</span> <span class="highlight-pattern">helper.py</span>  ✓ Matches <code>**/*.py</code></div>
             </div>
             
             <div class="example-yaml">
@@ -399,17 +454,12 @@
             </div>
             
             <div class="filesystem-diagram">
-                <div class="file-tree">
-~/SyftBox/datasites/alice@example.com/
-├── syft.pub.yaml
-└── project/
-    ├── <span class="tree-item inherited">README.md</span> 
-        <span class="permission-badge badge-read">✓ read</span>
-        <span class="permission-badge badge-write">✓ write (granted)</span>
-    └── <span class="tree-item inherited">data.csv</span>
-        <span class="permission-badge badge-read">✓ read (inherited)</span>
-        <span class="permission-badge badge-write">✓ write (granted)</span>
-                </div>
+                <div class="file-tree"><span class="tree-line">Bob has <strong>write</strong> permission on project/*</span>
+<span class="tree-line">Write automatically includes: read, create</span>
+
+<span class="folder-name">project/</span>
+<span class="tree-line">├──</span> README.md   <span class="badge-write">✓ write</span> <span class="badge-read">✓ read (inherited)</span>
+<span class="tree-line">└──</span> data.csv    <span class="badge-write">✓ write</span> <span class="badge-read">✓ read (inherited)</span></div>
             </div>
             
             <div class="example-yaml">
@@ -441,16 +491,13 @@
             </div>
             
             <div class="filesystem-diagram">
-                <div class="file-tree">
-~/SyftBox/datasites/alice@example.com/
-├── research/
-│   ├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">Defines permissions</span>
-│   ├── 2024/
-│   │   └── january/
-│   │       └── <span class="tree-item inherited">results.csv</span> <span class="permission-badge badge-read">Inherited</span>
-│   └── 2023/
-│       └── <span class="tree-item inherited">old-data.csv</span> <span class="permission-badge badge-read">Inherited</span>
-                </div>
+                <div class="file-tree"><span class="folder-name">research/</span>
+<span class="tree-line">├──</span> <span class="highlight-yaml">syft.pub.yaml</span>  <span style="color: #6b7280">← Nearest permission file</span>
+<span class="tree-line">├──</span> 2024/
+<span class="tree-line">│   └──</span> january/
+<span class="tree-line">│       └──</span> results.csv   <span style="color: #6b7280">↑ Inherits from research/</span>
+<span class="tree-line">└──</span> 2023/
+    <span class="tree-line">└──</span> old-data.csv  <span style="color: #6b7280">↑ Inherits from research/</span></div>
             </div>
             
             <div class="example-yaml">
@@ -478,13 +525,11 @@
             </div>
             
             <div class="filesystem-diagram">
-                <div class="file-tree">
-~/SyftBox/datasites/alice@example.com/
-├── public/
-│   ├── <span class="tree-item highlighted">dataset.csv</span> <span class="permission-badge badge-read">Everyone</span>
-│   └── <span class="tree-item highlighted">README.md</span> <span class="permission-badge badge-read">Everyone</span>
-└── <span class="tree-item highlighted">guestbook.txt</span> <span class="permission-badge badge-write">Everyone</span>
-                </div>
+                <div class="file-tree"><span class="folder-name">alice@example.com/</span>
+<span class="tree-line">├──</span> public/
+<span class="tree-line">│   ├──</span> dataset.csv   <span class="badge-read">🌍 Everyone can read</span>
+<span class="tree-line">│   └──</span> README.md     <span class="badge-read">🌍 Everyone can read</span>
+<span class="tree-line">└──</span> guestbook.txt     <span class="badge-write">🌍 Everyone can write</span></div>
             </div>
             
             <div class="example-yaml">
@@ -576,15 +621,16 @@
             </ol>
             
             <div class="filesystem-diagram">
-                <div class="file-tree">
-~/SyftBox/datasites/alice@example.com/
-├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">3️⃣ Last resort</span>
-├── research/
-│   ├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">2️⃣ Parent dir</span>
-│   └── 2024/
-│       ├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">1️⃣ Same dir (highest priority)</span>
-│       └── data.csv
-                </div>
+                <div class="file-tree"><span class="tree-line">For file: research/2024/data.csv</span>
+<span class="tree-line">syft-perm searches in this order:</span>
+
+<span class="folder-name">alice@example.com/</span>
+<span class="tree-line">├──</span> syft.pub.yaml      <span style="color: #6b7280">3️⃣ Last resort</span>
+<span class="tree-line">└──</span> research/
+    <span class="tree-line">├──</span> syft.pub.yaml  <span style="color: #6b7280">2️⃣ Parent directory</span>
+    <span class="tree-line">└──</span> 2024/
+        <span class="tree-line">├──</span> <span class="highlight-yaml">syft.pub.yaml</span>  <span style="color: #059669">1️⃣ Same directory (used first)</span>
+        <span class="tree-line">└──</span> data.csv</div>
             </div>
             
             <h3>Multiple Rules</h3>
