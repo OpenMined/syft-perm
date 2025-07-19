@@ -11,7 +11,7 @@ from ._public import FilteredFiles as _FilteredFiles
 from ._public import files
 from ._public import is_dark as _is_dark
 
-__version__ = "0.3.92"
+__version__ = "0.4.0"
 
 __all__ = ["open", "files"]
 
