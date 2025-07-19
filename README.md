@@ -87,7 +87,7 @@ file.share                                      # Show sharing widget
 ## Learn More
 
 - **[1-Minute Quick Start](https://openmined.github.io/syft-perm/quickstart.html)** - Get productive immediately
-- **[10-Minute Tutorial]([https://openmined.github.io/syft-perm/tutorials/](https://github.com/OpenMined/syft-perm/blob/main/syft-perm-10-minute-tutorial.ipynb))** - Master advanced features
+- **[10-Minute Tutorial](https://github.com/OpenMined/syft-perm/blob/main/syft-perm-10-minute-tutorial.ipynb)** - Master advanced features
 - **[API Reference](https://openmined.github.io/syft-perm/api/)** - Complete Python API docs
 
 ## Requirements
