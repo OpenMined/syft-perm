@@ -347,7 +347,7 @@ class _Files:
                         "is_dir": True,
                         "permissions": {},
                         "is_user_datasite": is_user_datasite,
-                        "has_yaml": path.joinpath("syft.pub.yaml").exists(),
+                        "_has_yaml": path.joinpath("syft.pub.yaml").exists(),
                         "size": folder_size,
                         "modified": path.stat().st_mtime if path.exists() else 0,
                         "extension": "folder",
@@ -364,16 +364,16 @@ class _Files:
                 is_user_datasite = user_email and datasite_owner == user_email
 
                 # Get permissions for this file
-                has_yaml = False
+                _has_yaml = False
                 permissions_summary = []
                 try:
                     syft_obj = open(path)
                     permissions = syft_obj.permissions_dict.copy()
 
-                    if hasattr(syft_obj, "has_yaml"):
-                        has_yaml = syft_obj.has_yaml
+                    if hasattr(syft_obj, "_has_yaml"):
+                        _has_yaml = syft_obj._has_yaml()
                     elif any(users for users in permissions.values()):
-                        has_yaml = True
+                        _has_yaml = True
 
                     # Build permissions summary
                     user_highest_perm = {}
@@ -399,7 +399,7 @@ class _Files:
                             permissions_summary.append(f"{perm_level}: {user_list}")
                 except Exception:
                     permissions = {}
-                    has_yaml = False
+                    _has_yaml = False
                     permissions_summary = []
 
                 # Get file extension
@@ -412,7 +412,7 @@ class _Files:
                         "is_dir": False,
                         "permissions": permissions,
                         "is_user_datasite": is_user_datasite,
-                        "has_yaml": has_yaml,
+                        "_has_yaml": _has_yaml,
                         "size": path.stat().st_size if path.exists() else 0,
                         "modified": path.stat().st_mtime if path.exists() else 0,
                         "extension": file_ext,

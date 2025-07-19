@@ -84,7 +84,7 @@ class TestTerminalMethods(unittest.TestCase):
 
         # Verify both terminal and permissions exist
         self.assertTrue(folder.get_terminal())
-        permissions = folder.permissions_dict
+        permissions = folder._permissions_dict
         self.assertIn("user@example.com", permissions["read"])
 
     def test_terminal_yaml_structure(self):
@@ -141,7 +141,7 @@ class TestTerminalMethods(unittest.TestCase):
         self.assertTrue(folder.get_terminal())
 
         # Verify permissions work
-        permissions = folder.permissions_dict
+        permissions = folder._permissions_dict
         self.assertIn("alice@example.com", permissions["read"])
         self.assertIn("bob@example.com", permissions["write"])
 
@@ -153,13 +153,13 @@ class TestTerminalMethods(unittest.TestCase):
         folder = syft_perm.open(test_folder)
 
         # Access permissions to populate cache
-        _ = folder.permissions_dict
+        _ = folder._permissions_dict
 
         # Set terminal (should clear cache)
         folder.set_terminal(True)
 
         # Access permissions again (should work with new terminal setting)
-        permissions = folder.permissions_dict
+        permissions = folder._permissions_dict
         self.assertIsInstance(permissions, dict)
 
 

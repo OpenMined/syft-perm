@@ -19,7 +19,7 @@ class TestPermissionsDictProperty:
 
             # Check property exists and returns dict
             assert hasattr(f, "permissions_dict")
-            perms = f.permissions_dict
+            perms = f._permissions_dict
             assert isinstance(perms, dict)
             assert "read" in perms
             assert "write" in perms
@@ -35,9 +35,9 @@ class TestPermissionsDictProperty:
             f = sp.open(test_file)
 
             # Check property exists and returns bool
-            assert hasattr(f, "has_yaml")
-            has_yaml = f.has_yaml
-            assert isinstance(has_yaml, bool)
+            assert hasattr(f, "_has_yaml")
+            _has_yaml = f._has_yaml()
+            assert isinstance(_has_yaml, bool)
 
     def test_has_yaml_detects_yaml_files(self):
         """Test that has_yaml correctly detects syft.pub.yaml files."""
@@ -86,7 +86,7 @@ class TestPermissionsDictProperty:
             test_file.write_text("test data")
 
             f = sp.open(test_file)
-            perms = f.permissions_dict
+            perms = f._permissions_dict
 
             # Check permissions
             assert "user1@example.com" in perms["read"]
@@ -131,8 +131,8 @@ class TestPermissionsDictProperty:
             f = sp.open(test_file)
 
             # Call permissions_dict multiple times
-            perms1 = f.permissions_dict
-            perms2 = f.permissions_dict
+            perms1 = f._permissions_dict
+            perms2 = f._permissions_dict
 
             # Should return the same dict (from cache)
             assert perms1 == perms2
