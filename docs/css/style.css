@@ -1016,6 +1016,131 @@ footer a:hover {
 }
 
 /* ================================
+   HubSpot Form Styles
+   ================================ */
+.newsletter-hubspot-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.newsletter-hubspot-form .hs-form {
+    text-align: left;
+}
+
+.newsletter-hubspot-form .hs-form-field {
+    margin-bottom: var(--space-3);
+}
+
+.newsletter-hubspot-form label {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+}
+
+.newsletter-hubspot-form .hs-form-required {
+    color: var(--color-secondary);
+}
+
+.newsletter-hubspot-form .hubspot-input,
+.newsletter-hubspot-form input[type="text"],
+.newsletter-hubspot-form input[type="email"],
+.newsletter-hubspot-form textarea {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--color-dark);
+    font-family: var(--font-sans);
+}
+
+.newsletter-hubspot-form .hubspot-input:focus,
+.newsletter-hubspot-form input[type="text"]:focus,
+.newsletter-hubspot-form input[type="email"]:focus,
+.newsletter-hubspot-form textarea:focus {
+    outline: none;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.newsletter-hubspot-form textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.newsletter-hubspot-form .hs-input[type="checkbox"] {
+    margin-right: var(--space-1);
+}
+
+.newsletter-hubspot-form .hubspot-checkbox-wrapper,
+.newsletter-hubspot-form .hs-form-booleancheckbox {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: var(--space-2);
+}
+
+.newsletter-hubspot-form .hubspot-checkbox-wrapper label,
+.newsletter-hubspot-form .hs-form-booleancheckbox label {
+    margin-bottom: 0;
+    margin-left: var(--space-1);
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.newsletter-hubspot-form .hubspot-submit,
+.newsletter-hubspot-form input[type="submit"],
+.newsletter-hubspot-form .hs-button {
+    padding: var(--space-2) var(--space-4);
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-secondary);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    margin-top: var(--space-2);
+}
+
+.newsletter-hubspot-form .hubspot-submit:hover,
+.newsletter-hubspot-form input[type="submit"]:hover,
+.newsletter-hubspot-form .hs-button:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.newsletter-hubspot-form .hubspot-submit:active,
+.newsletter-hubspot-form input[type="submit"]:active,
+.newsletter-hubspot-form .hs-button:active {
+    transform: translateY(0);
+}
+
+.newsletter-hubspot-form .hs-error-msgs {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-1) 0 0 0;
+}
+
+.newsletter-hubspot-form .hs-error-msg {
+    color: #EF4444;
+    font-size: 0.9rem;
+}
+
+.newsletter-hubspot-form .hs-form .hs-fieldtype-checkbox ul {
+    list-style: none;
+    padding: 0;
+}
+
+.newsletter-hubspot-form .hs-form .hs-fieldtype-checkbox li {
+    margin-bottom: var(--space-2);
+}
+
+/* ================================
    Quick Start Page Styles
    ================================ */
 .quickstart-hero {
