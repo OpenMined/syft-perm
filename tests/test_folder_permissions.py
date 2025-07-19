@@ -357,12 +357,12 @@ class TestFolderPermissions(unittest.TestCase):
         file2_explanation = file2_obj.explain_permissions("user@example.com")
 
         # file1 should show inheritance from folder
-        self.assertIn("READ: ✓ GRANTED", file1_explanation)
-        self.assertIn(f"Explicitly granted read in {test_folder}", file1_explanation)
+        self.assertIn("READ: ✓ GRANTED", str(file1_explanation))
+        self.assertIn(f"Explicitly granted read in {test_folder}", str(file1_explanation))
 
         # file2 should show specific denial
-        self.assertIn("READ: ✗ DENIED", file2_explanation)
-        self.assertIn("Pattern 'file2.txt' matched", file2_explanation)
+        self.assertIn("READ: ✗ DENIED", str(file2_explanation))
+        self.assertIn("Pattern 'file2.txt' matched", str(file2_explanation))
 
         # Verify yaml file structure
         folder_yaml = test_folder / "syft.pub.yaml"

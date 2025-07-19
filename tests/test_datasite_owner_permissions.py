@@ -35,7 +35,7 @@ class TestDatasiteOwnerPermissions(unittest.TestCase):
 
         # Open the file and check permissions
         file_obj = syft_perm.open(test_file)
-        permissions = file_obj._permissions_dict
+        permissions = file_obj.permissions_dict
 
         # user1@example.com should have all permissions including admin
         self.assertIn("user1@example.com", permissions["read"])
@@ -57,7 +57,7 @@ class TestDatasiteOwnerPermissions(unittest.TestCase):
 
         # Open the folder and check permissions
         folder_obj = syft_perm.open(test_folder)
-        permissions = folder_obj._permissions_dict
+        permissions = folder_obj.permissions_dict
 
         # user2@example.com should have all permissions including admin
         self.assertIn("user2@example.com", permissions["read"])
@@ -82,7 +82,7 @@ class TestDatasiteOwnerPermissions(unittest.TestCase):
 
         # Open the nested file and check permissions
         file_obj = syft_perm.open(nested_file)
-        permissions = file_obj._permissions_dict
+        permissions = file_obj.permissions_dict
 
         # user1@example.com should have all permissions
         self.assertIn("user1@example.com", permissions["read"])
@@ -94,7 +94,7 @@ class TestDatasiteOwnerPermissions(unittest.TestCase):
         """Test that the datasite root folder itself grants admin permissions to the owner."""
         # Open the datasite root folder directly
         folder_obj = syft_perm.open(self.user1_datasite)
-        permissions = folder_obj._permissions_dict
+        permissions = folder_obj.permissions_dict
 
         # user1@example.com should have all permissions
         self.assertIn("user1@example.com", permissions["read"])
@@ -134,7 +134,7 @@ class TestDatasiteOwnerPermissions(unittest.TestCase):
         file_obj.grant_read_access("user2@example.com", force=True)
 
         # Refresh to get updated permissions
-        permissions = file_obj._permissions_dict
+        permissions = file_obj.permissions_dict
 
         # Both owner and explicitly granted user should have appropriate permissions
         self.assertIn("user1@example.com", permissions["admin"])  # Owner has admin

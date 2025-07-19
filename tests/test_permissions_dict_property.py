@@ -19,7 +19,7 @@ class TestPermissionsDictProperty:
 
             # Check property exists and returns dict
             assert hasattr(f, "permissions_dict")
-            perms = f._permissions_dict
+            perms = f.permissions_dict
             assert isinstance(perms, dict)
             assert "read" in perms
             assert "write" in perms
@@ -35,9 +35,9 @@ class TestPermissionsDictProperty:
             f = sp.open(test_file)
 
             # Check property exists and returns bool
-            assert hasattr(f, "_has_yaml")
-            _has_yaml = f._has_yaml()
-            assert isinstance(_has_yaml, bool)
+            assert hasattr(f, "has_yaml")
+            has_yaml = f.has_yaml
+            assert isinstance(has_yaml, bool)
 
     def test_has_yaml_detects_yaml_files(self):
         """Test that has_yaml correctly detects syft.pub.yaml files."""
@@ -60,6 +60,7 @@ class TestPermissionsDictProperty:
             f1 = sp.open(test_file1)
             f2 = sp.open(test_file2)
 
+            # Check that has_yaml correctly detects the presence of yaml files
             assert f1.has_yaml is False
             assert f2.has_yaml is True
 
@@ -86,7 +87,7 @@ class TestPermissionsDictProperty:
             test_file.write_text("test data")
 
             f = sp.open(test_file)
-            perms = f._permissions_dict
+            perms = f.permissions_dict
 
             # Check permissions
             assert "user1@example.com" in perms["read"]
@@ -106,11 +107,11 @@ class TestPermissionsDictProperty:
 
             # Check required fields exist
             assert "permissions" in first_file
-            assert "has_yaml" in first_file
+            assert "_has_yaml" in first_file
 
             # Check types
             assert isinstance(first_file["permissions"], dict)
-            assert isinstance(first_file["has_yaml"], bool)
+            assert isinstance(first_file["_has_yaml"], bool)
 
             # Check permissions structure - it should be a dict
             # (may be empty if no permissions are set in the test environment)
@@ -131,8 +132,8 @@ class TestPermissionsDictProperty:
             f = sp.open(test_file)
 
             # Call permissions_dict multiple times
-            perms1 = f._permissions_dict
-            perms2 = f._permissions_dict
+            perms1 = f.permissions_dict
+            perms2 = f.permissions_dict
 
             # Should return the same dict (from cache)
             assert perms1 == perms2
