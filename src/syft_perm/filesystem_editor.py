@@ -6077,8 +6077,16 @@ def generate_share_modal_html(
                 }}
 
                 const data = await response.json();
+                
+                // Debug: Log the raw response data
+                console.log('Raw response data from /permissions/:', data);
+
+                // Store the full data structure
 
                 currentPermissions = data.permissions || {{}};
+                
+                // Debug: Log what currentPermissions is set to
+                console.log('currentPermissions set to:', currentPermissions);
 
                 renderUsersList();
 
@@ -6097,6 +6105,10 @@ def generate_share_modal_html(
                         userPerm && typeof userPerm === 'object' && userPerm.reasons
 
                     );
+                    
+                    // Debug: Log hasReasons check result
+                    console.log('hasReasons check evaluates to:', hasReasons);
+                    console.log('Object.values(currentPermissions):', Object.values(currentPermissions));
 
                     if (hasReasons) {{
 
@@ -6176,31 +6188,69 @@ def generate_share_modal_html(
 
             const allUsers = new Set();
 
+            // Debug log to see what we're working with
+
+            console.log('Current permissions:', currentPermissions);
+
+            // Check if we have the permissions format from the API response
+
+            let actualPermissions = currentPermissions;
+
+            if (currentPermissions.permissions) {{
+
+                // We have a response object with a permissions property
+
+                actualPermissions = currentPermissions.permissions;
+
+            }}
+            
+            // Debug: Log what actualPermissions contains
+            console.log('actualPermissions in renderUsersList:', actualPermissions);
+
             // Check if we have permission reasons (new format) or simple permissions (old format)
 
-            const hasReasons = currentPermissions && Object.values(currentPermissions).some(userPerm =>
+            const hasReasons = actualPermissions && Object.values(actualPermissions).some(value =>
 
-                userPerm && typeof userPerm === 'object' && userPerm.reasons
+                value && typeof value === 'object' && value.reasons && !Array.isArray(value)
 
             );
+            
+            // Debug: Log hasReasons check in renderUsersList
+            console.log('hasReasons in renderUsersList:', hasReasons);
+            console.log('Object.keys(actualPermissions):', Object.keys(actualPermissions));
+            console.log('Object.values(actualPermissions):', Object.values(actualPermissions));
 
             if (hasReasons) {{
 
-                // New format with reasons
+                // New format with reasons - users are keys
+                
+                // Debug: Log what we're treating as users
+                console.log('hasReasons is true, treating these as users:', Object.keys(actualPermissions));
 
-                Object.keys(currentPermissions).forEach(user => {{
+                Object.keys(actualPermissions).forEach(user => {{
 
-                    allUsers.add(user);
+                    if (user !== 'read' && user !== 'create' && user !== 'write' && user !== 'admin') {{
+
+                        allUsers.add(user);
+                        console.log('Adding user:', user);
+
+                    }} else {{
+                        console.log('Skipping key (not a user):', user);
+                    }}
 
                 }});
 
             }} else {{
 
-                // Old format without reasons
+                // Old format - permissions are keys with user arrays as values
 
-                Object.values(currentPermissions).forEach(userList => {{
+                ['read', 'create', 'write', 'admin'].forEach(permType => {{
 
-                    userList.forEach(user => allUsers.add(user));
+                    if (actualPermissions[permType] && Array.isArray(actualPermissions[permType])) {{
+
+                        actualPermissions[permType].forEach(user => allUsers.add(user));
+
+                    }}
 
                 }});
 
@@ -6224,7 +6274,7 @@ def generate_share_modal_html(
 
                     // New format with reasons
 
-                    const userData = currentPermissions[user];
+                    const userData = actualPermissions[user];
 
                     if (userData && userData.permissions) {{
 
@@ -6244,7 +6294,7 @@ def generate_share_modal_html(
 
                     ['read', 'create', 'write', 'admin'].forEach(perm => {{
 
-                        userPerms[perm] = currentPermissions[perm]?.includes(user) || false;
+                        userPerms[perm] = actualPermissions[perm]?.includes(user) || false;
 
                     }});
 
@@ -6427,23 +6477,32 @@ def generate_share_modal_html(
 
             const allUsers = new Set();
 
-            const hasReasons = currentPermissions && Object.values(currentPermissions).some(userPerm =>
+            // Check if we have the new format with reasons
+            const hasReasons = currentPermissions && Object.values(currentPermissions).some(value =>
 
-                userPerm && typeof userPerm === 'object' && userPerm.reasons
+                value && typeof value === 'object' && value.reasons && !Array.isArray(value)
 
             );
 
             if (hasReasons) {{
 
-                Object.keys(currentPermissions).forEach(user => allUsers.add(user));
+                Object.keys(currentPermissions).forEach(user => {{
+
+                    if (user !== 'read' && user !== 'create' && user !== 'write' && user !== 'admin') {{
+
+                        allUsers.add(user);
+
+                    }}
+
+                }});
 
             }} else {{
 
-                Object.values(currentPermissions).forEach(userList => {{
+                ['read', 'create', 'write', 'admin'].forEach(permType => {{
 
-                    if (Array.isArray(userList)) {{
+                    if (currentPermissions[permType] && Array.isArray(currentPermissions[permType])) {{
 
-                        userList.forEach(user => allUsers.add(user));
+                        currentPermissions[permType].forEach(user => allUsers.add(user));
 
                     }}
 
@@ -6473,40 +6532,65 @@ def generate_share_modal_html(
 
             const newPerms = JSON.parse(JSON.stringify(currentPermissions));
 
-            if (hasReasons || Object.keys(currentPermissions).some(key => 
-
-                typeof currentPermissions[key] === 'object' && 
-
-                currentPermissions[key].permissions)) {{
+            if (hasReasons) {{
 
                 // Use new format with reasons
+                // First check if user already exists in newPerms
+                if (!newPerms[email]) {{
+                    newPerms[email] = {{
+                        permissions: {{
+                            read: [],
+                            create: [],
+                            write: [],
+                            admin: []
+                        }},
+                        reasons: {{}}
+                    }};
+                }}
 
-                newPerms[email] = {{
+                // Update permissions based on level
+                const userPerms = newPerms[email].permissions;
+                
+                // Clear all permissions first
+                userPerms.read = [];
+                userPerms.create = [];
+                userPerms.write = [];
+                userPerms.admin = [];
+                
+                // Add appropriate permissions based on level
+                if (permission === 'read' || permission === 'write' || permission === 'admin') {{
+                    userPerms.read = [email];
+                }}
+                if (permission === 'write' || permission === 'admin') {{
+                    userPerms.create = [email];
+                    userPerms.write = [email];
+                }}
+                if (permission === 'admin') {{
+                    userPerms.admin = [email];
+                }}
 
-                    permissions: {{
-
-                        read: permission === 'read' || permission === 'write' || permission === 'admin' ? [email] : [],
-
-                        create: permission === 'write' || permission === 'admin' ? [email] : [],
-
-                        write: permission === 'write' || permission === 'admin' ? [email] : [],
-
-                        admin: permission === 'admin' ? [email] : []
-
+                // Update reasons
+                newPerms[email].reasons = {{
+                    read: {{
+                        granted: permission === 'read' || permission === 'write' || permission === 'admin',
+                        reasons: permission === 'read' || permission === 'write' || permission === 'admin' 
+                            ? [`Manually granted ${{permission}} permission`] : []
                     }},
-
-                    reasons: {{
-
-                        [permission]: {{
-
-                            granted: true,
-
-                            reasons: [`Manually granted ${{permission}} permission`]
-
-                        }}
-
+                    create: {{
+                        granted: permission === 'write' || permission === 'admin',
+                        reasons: permission === 'write' || permission === 'admin' 
+                            ? [`Manually granted ${{permission}} permission`] : []
+                    }},
+                    write: {{
+                        granted: permission === 'write' || permission === 'admin',
+                        reasons: permission === 'write' || permission === 'admin' 
+                            ? [`Manually granted ${{permission}} permission`] : []
+                    }},
+                    admin: {{
+                        granted: permission === 'admin',
+                        reasons: permission === 'admin' 
+                            ? [`Manually granted ${{permission}} permission`] : []
                     }}
-
                 }};
 
             }} else {{
@@ -6557,6 +6641,7 @@ def generate_share_modal_html(
 
             }}
 
+            // Update currentPermissions with the new data
             currentPermissions = newPerms;
 
             renderUsersList();
