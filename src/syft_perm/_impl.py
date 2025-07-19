@@ -838,12 +838,12 @@ class SyftFile:
         return self._path.name
 
     @property
-    def permissions_dict(self) -> Dict[str, List[str]]:
+    def _permissions_dict(self) -> Dict[str, List[str]]:
         """Get all permissions for this file as a dictionary."""
         return self._get_all_permissions()
 
     @property
-    def has_yaml(self) -> bool:
+    def _has_yaml(self) -> bool:
         """Check if this file has any associated yaml permission files."""
         # Check if any yaml files were found during permission resolution
         # This is simpler: if we have ANY permissions (including "*"),
@@ -2123,7 +2123,7 @@ class SyftFolder:
         return self._path.name
 
     @property
-    def permissions_dict(self) -> Dict[str, List[str]]:
+    def _permissions_dict(self) -> Dict[str, List[str]]:
         """Get all permissions for this folder as a dictionary."""
         return self._get_all_permissions()
 

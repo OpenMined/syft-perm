@@ -154,9 +154,9 @@ if _SERVER_AVAILABLE:
             if action != "deleted" and path.exists() and not path.is_dir():
                 try:
                     syft_obj = syft_open(path)
-                    permissions = syft_obj.permissions_dict.copy()
+                    permissions = syft_obj._permissions_dict.copy()
                     file_info["permissions"] = permissions
-                    file_info["has_yaml"] = hasattr(syft_obj, "has_yaml") and syft_obj.has_yaml
+                    file_info["has_yaml"] = hasattr(syft_obj, "_has_yaml") and syft_obj._has_yaml
 
                     # Build permissions summary
                     user_highest_perm = {}

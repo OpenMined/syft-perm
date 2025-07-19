@@ -304,7 +304,7 @@ class _Files:
                 permissions_summary = []
                 try:
                     syft_obj = open(path)
-                    permissions = syft_obj.permissions_dict.copy()
+                    permissions = syft_obj._permissions_dict.copy()
 
                     # Build permissions summary
                     user_highest_perm = {}
@@ -368,10 +368,10 @@ class _Files:
                 permissions_summary = []
                 try:
                     syft_obj = open(path)
-                    permissions = syft_obj.permissions_dict.copy()
+                    permissions = syft_obj._permissions_dict.copy()
 
                     if hasattr(syft_obj, "_has_yaml"):
-                        _has_yaml = syft_obj._has_yaml()
+                        _has_yaml = syft_obj._has_yaml
                     elif any(users for users in permissions.values()):
                         _has_yaml = True
 

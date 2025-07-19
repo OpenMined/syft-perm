@@ -47,7 +47,9 @@
       "Bash(flake8:*)",
       "Bash(mypy:*)",
       "Bash(pip install isort flake8 mypy)",
-      "Bash(black:*)"
+      "Bash(black:*)",
+      "Bash(pip3 install:*)",
+      "Bash(source:*)"
     ],
     "deny": []
   }
