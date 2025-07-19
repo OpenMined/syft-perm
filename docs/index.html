@@ -287,11 +287,18 @@ rules:
             target: "#hubspot-form-container",
             css: "",
             cssClass: "newsletter-hubspot-form",
-            onFormReady: function($form) {
+            onFormReady: function(form) {
                 // Style the form to match our design
-                $form.find('input[type="text"], input[type="email"], textarea').addClass('hubspot-input');
-                $form.find('input[type="submit"]').addClass('hubspot-submit');
-                $form.find('input[type="checkbox"]').parent().addClass('hubspot-checkbox-wrapper');
+                const formElement = form[0] || form;
+                formElement.querySelectorAll('input[type="text"], input[type="email"], textarea').forEach(el => {
+                    el.classList.add('hubspot-input');
+                });
+                formElement.querySelectorAll('input[type="submit"]').forEach(el => {
+                    el.classList.add('hubspot-submit');
+                });
+                formElement.querySelectorAll('input[type="checkbox"]').forEach(el => {
+                    el.parentElement.classList.add('hubspot-checkbox-wrapper');
+                });
             }
         });
     </script>
