@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Permission Reasons - syft-perm</title>
+    <link rel="icon" type="image/svg+xml" href="images/syftbox-logo.svg">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .reason-guide {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .reason-section {
+            margin-bottom: 60px;
+            background: var(--color-white);
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .reason-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--color-light-gray);
+        }
+        
+        .reason-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--color-light-gray);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .reason-title {
+            flex: 1;
+        }
+        
+        .reason-title h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--color-dark);
+        }
+        
+        .reason-title p {
+            margin: 4px 0 0 0;
+            color: var(--color-gray);
+            font-size: 1rem;
+        }
+        
+        .filesystem-diagram {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 24px 0;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+        
+        .file-tree {
+            position: relative;
+        }
+        
+        .tree-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        
+        .tree-item.highlighted {
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin: 2px -8px;
+        }
+        
+        .tree-item.owner {
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        .tree-item.pattern-match {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .tree-item.inherited {
+            background: rgba(251, 146, 60, 0.1);
+        }
+        
+        .tree-item.yaml-location {
+            background: rgba(236, 72, 153, 0.1);
+        }
+        
+        .permission-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .badge-read {
+            background: rgba(34, 197, 94, 0.2);
+            color: #15803d;
+        }
+        
+        .badge-write {
+            background: rgba(59, 130, 246, 0.2);
+            color: #1e40af;
+        }
+        
+        .badge-admin {
+            background: rgba(168, 85, 247, 0.2);
+            color: #6b21a8;
+        }
+        
+        .badge-owner {
+            background: rgba(236, 72, 153, 0.2);
+            color: #be185d;
+        }
+        
+        .example-yaml {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 16px 0;
+            overflow-x: auto;
+        }
+        
+        .yaml-comment {
+            color: #5c6370;
+            font-style: italic;
+        }
+        
+        .yaml-key {
+            color: #e06c75;
+        }
+        
+        .yaml-value {
+            color: #98c379;
+        }
+        
+        .reason-example {
+            background: #f1f5f9;
+            border-left: 4px solid var(--color-accent);
+            padding: 16px 20px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .reason-example code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #1e293b;
+        }
+        
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 24px 0;
+        }
+        
+        .info-box h3 {
+            margin: 0 0 8px 0;
+            color: #1e40af;
+            font-size: 1.1rem;
+        }
+        
+        .info-box p {
+            margin: 0;
+            color: #3730a3;
+        }
+        
+        .permission-hierarchy {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            margin: 24px 0;
+            padding: 24px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .hierarchy-level {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 100px;
+        }
+        
+        .hierarchy-arrow {
+            color: #6b7280;
+            font-size: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .permission-hierarchy {
+                flex-direction: column;
+            }
+            
+            .hierarchy-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="nav-wrapper">
+                <div class="logo-group">
+                    <img src="images/syftbox-logo.svg" alt="SyftBox" class="syftbox-logo">
+                    <a href="index.html" class="logo">syft-perm</a>
+                </div>
+                <div class="nav-links">
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="permission-reasons.html" class="active">Permission Reasons</a>
+                    <a href="api/index.html">API</a>
+                    <a href="https://github.com/OpenMined/syft-perm" class="github-link">GitHub</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="reason-guide">
+        <h1 style="text-align: center; margin-bottom: 16px;">Understanding Permission Reasons</h1>
+        <p style="text-align: center; color: var(--color-gray); margin-bottom: 48px; font-size: 1.2rem;">
+            Every permission in syft-perm has a clear reason. This guide explains each one with visual examples.
+        </p>
+
+        <!-- Permission Hierarchy -->
+        <div class="info-box">
+            <h3>📊 Permission Hierarchy</h3>
+            <p>Higher permission levels include all lower levels:</p>
+        </div>
+        
+        <div class="permission-hierarchy">
+            <div class="hierarchy-level badge-read">Read</div>
+            <div class="hierarchy-arrow">→</div>
+            <div class="hierarchy-level" style="background: rgba(251, 146, 60, 0.2); color: #c2410c;">Create</div>
+            <div class="hierarchy-arrow">→</div>
+            <div class="hierarchy-level badge-write">Write</div>
+            <div class="hierarchy-arrow">→</div>
+            <div class="hierarchy-level badge-admin">Admin</div>
+        </div>
+
+        <!-- Owner of Path -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">👑</div>
+                <div class="reason-title">
+                    <h2>Owner of path</h2>
+                    <p>The user owns the datasite or is in the ownership path</p>
+                </div>
+            </div>
+            
+            <div class="filesystem-diagram">
+                <div class="file-tree">
+~/SyftBox/
+└── datasites/
+    └── <span class="tree-item owner">alice@example.com/</span> <span class="permission-badge badge-owner">OWNER</span>
+        ├── syft.pub.yaml
+        ├── public/
+        │   └── <span class="tree-item owner">research.csv</span> <span class="permission-badge badge-admin">All permissions</span>
+        └── private/
+            └── <span class="tree-item owner">notes.txt</span> <span class="permission-badge badge-admin">All permissions</span>
+                </div>
+            </div>
+            
+            <div class="reason-example">
+                <strong>Example:</strong> Alice automatically has <code>admin</code> access to all files in her datasite <code>alice@example.com/</code> because she is the owner.
+            </div>
+            
+            <p>This reason appears when:</p>
+            <ul>
+                <li>The file is within the user's own datasite directory</li>
+                <li>The directory name matches the user's email address</li>
+                <li>No explicit permissions are needed - ownership grants full control</li>
+            </ul>
+        </section>
+
+        <!-- Explicit Permissions -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">🎯</div>
+                <div class="reason-title">
+                    <h2>Explicitly granted [permission] in [path]</h2>
+                    <p>Direct permission grant in a YAML file</p>
+                </div>
+            </div>
+            
+            <div class="filesystem-diagram">
+                <div class="file-tree">
+~/SyftBox/datasites/alice@example.com/
+├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">Contains rules</span>
+├── research/
+│   ├── <span class="tree-item highlighted">data.csv</span> <span class="permission-badge badge-read">bob: read</span>
+│   └── <span class="tree-item highlighted">analysis.py</span> <span class="permission-badge badge-write">carol: write</span>
+└── public/
+    └── results.pdf
+                </div>
+            </div>
+            
+            <div class="example-yaml">
+<span class="yaml-comment"># In ~/SyftBox/datasites/alice@example.com/syft.pub.yaml</span>
+<span class="yaml-key">rules</span>:
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'research/data.csv'</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">read</span>:
+        - <span class="yaml-value">'bob@example.com'</span>
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'research/analysis.py'</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">write</span>:
+        - <span class="yaml-value">'carol@example.com'</span>
+            </div>
+            
+            <div class="reason-example">
+                <strong>Example:</strong> Bob sees "Explicitly granted read in /alice@example.com/syft.pub.yaml" when accessing <code>data.csv</code>
+            </div>
+        </section>
+
+        <!-- Pattern Matching -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">🔍</div>
+                <div class="reason-title">
+                    <h2>Pattern '[pattern]' matched</h2>
+                    <p>File matches a glob pattern in permission rules</p>
+                </div>
+            </div>
+            
+            <div class="filesystem-diagram">
+                <div class="file-tree">
+~/SyftBox/datasites/alice@example.com/
+├── syft.pub.yaml
+├── data/
+│   ├── <span class="tree-item pattern-match">experiment1.csv</span> <span class="permission-badge badge-read">Pattern: *.csv</span>
+│   ├── <span class="tree-item pattern-match">experiment2.csv</span> <span class="permission-badge badge-read">Pattern: *.csv</span>
+│   └── notes.txt
+└── code/
+    ├── <span class="tree-item pattern-match">main.py</span> <span class="permission-badge badge-write">Pattern: **/*.py</span>
+    └── utils/
+        └── <span class="tree-item pattern-match">helper.py</span> <span class="permission-badge badge-write">Pattern: **/*.py</span>
+                </div>
+            </div>
+            
+            <div class="example-yaml">
+<span class="yaml-key">rules</span>:
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'*.csv'</span>  <span class="yaml-comment"># Matches CSV files in root</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">read</span>:
+        - <span class="yaml-value">'data-team@example.com'</span>
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'**/*.py'</span>  <span class="yaml-comment"># Matches Python files anywhere</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">write</span>:
+        - <span class="yaml-value">'dev-team@example.com'</span>
+            </div>
+            
+            <p><strong>Common patterns:</strong></p>
+            <ul>
+                <li><code>*</code> - Matches any characters (except /)</li>
+                <li><code>**</code> - Matches any characters (including /)</li>
+                <li><code>*.csv</code> - All CSV files in current directory</li>
+                <li><code>**/*.csv</code> - All CSV files in any subdirectory</li>
+                <li><code>data/*</code> - Everything in the data folder</li>
+                <li><code>**/*</code> - Everything recursively</li>
+            </ul>
+        </section>
+
+        <!-- Inheritance -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">🔗</div>
+                <div class="reason-title">
+                    <h2>Included via [higher permission] permission in [path]</h2>
+                    <p>Permission inherited from a higher access level</p>
+                </div>
+            </div>
+            
+            <div class="filesystem-diagram">
+                <div class="file-tree">
+~/SyftBox/datasites/alice@example.com/
+├── syft.pub.yaml
+└── project/
+    ├── <span class="tree-item inherited">README.md</span> 
+        <span class="permission-badge badge-read">✓ read</span>
+        <span class="permission-badge badge-write">✓ write (granted)</span>
+    └── <span class="tree-item inherited">data.csv</span>
+        <span class="permission-badge badge-read">✓ read (inherited)</span>
+        <span class="permission-badge badge-write">✓ write (granted)</span>
+                </div>
+            </div>
+            
+            <div class="example-yaml">
+<span class="yaml-key">rules</span>:
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'project/*'</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">write</span>:  <span class="yaml-comment"># Write includes read automatically</span>
+        - <span class="yaml-value">'bob@example.com'</span>
+            </div>
+            
+            <div class="reason-example">
+                <strong>Example:</strong> Bob has <code>write</code> permission on project files. He automatically gets <code>read</code> access with the reason "Included via write permission in /alice@example.com/syft.pub.yaml"
+            </div>
+            
+            <div class="info-box">
+                <h3>💡 Remember the hierarchy</h3>
+                <p>Admin access includes Write, Create, and Read. Write access includes Create and Read. Create access includes Read.</p>
+            </div>
+        </section>
+
+        <!-- Nearest Node Algorithm -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">📍</div>
+                <div class="reason-title">
+                    <h2>Nearest-node: Inherited from parent directory</h2>
+                    <p>No specific rule found, using closest parent's permissions</p>
+                </div>
+            </div>
+            
+            <div class="filesystem-diagram">
+                <div class="file-tree">
+~/SyftBox/datasites/alice@example.com/
+├── research/
+│   ├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">Defines permissions</span>
+│   ├── 2024/
+│   │   └── january/
+│   │       └── <span class="tree-item inherited">results.csv</span> <span class="permission-badge badge-read">Inherited</span>
+│   └── 2023/
+│       └── <span class="tree-item inherited">old-data.csv</span> <span class="permission-badge badge-read">Inherited</span>
+                </div>
+            </div>
+            
+            <div class="example-yaml">
+<span class="yaml-comment"># In ~/SyftBox/datasites/alice@example.com/research/syft.pub.yaml</span>
+<span class="yaml-key">rules</span>:
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'**/*'</span>  <span class="yaml-comment"># Applies to all subdirectories</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">read</span>:
+        - <span class="yaml-value">'research-team@example.com'</span>
+            </div>
+            
+            <div class="reason-example">
+                <strong>Example:</strong> Files in <code>2024/january/</code> inherit permissions from <code>research/syft.pub.yaml</code> because there's no closer YAML file defining permissions.
+            </div>
+        </section>
+
+        <!-- Public Access -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">🌍</div>
+                <div class="reason-title">
+                    <h2>Public access (*)</h2>
+                    <p>File is accessible to everyone</p>
+                </div>
+            </div>
+            
+            <div class="filesystem-diagram">
+                <div class="file-tree">
+~/SyftBox/datasites/alice@example.com/
+├── public/
+│   ├── <span class="tree-item highlighted">dataset.csv</span> <span class="permission-badge badge-read">Everyone</span>
+│   └── <span class="tree-item highlighted">README.md</span> <span class="permission-badge badge-read">Everyone</span>
+└── <span class="tree-item highlighted">guestbook.txt</span> <span class="permission-badge badge-write">Everyone</span>
+                </div>
+            </div>
+            
+            <div class="example-yaml">
+<span class="yaml-key">rules</span>:
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'public/*'</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">read</span>:
+        - <span class="yaml-value">'*'</span>  <span class="yaml-comment"># Asterisk means everyone</span>
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'guestbook.txt'</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">write</span>:
+        - <span class="yaml-value">'*'</span>  <span class="yaml-comment"># Anyone can write</span>
+            </div>
+            
+            <div class="info-box">
+                <h3>⚠️ Security Note</h3>
+                <p>Use public access (*) carefully. It grants access to anyone with a SyftBox account.</p>
+            </div>
+        </section>
+
+        <!-- Manual Grant -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">✏️</div>
+                <div class="reason-title">
+                    <h2>Manually granted [permission] permission</h2>
+                    <p>Permission added through the UI or API</p>
+                </div>
+            </div>
+            
+            <p>This reason appears when:</p>
+            <ul>
+                <li>Using the share button in the syft-perm web interface</li>
+                <li>Calling <code>file.grant_read_access("user@example.com")</code> in Python</li>
+                <li>Using the permission API endpoints directly</li>
+            </ul>
+            
+            <div class="reason-example">
+                <strong>Example:</strong> After clicking "Share" and adding bob@example.com with read access, Bob sees "Manually granted read permission"
+            </div>
+        </section>
+
+        <!-- Permission Denied Reasons -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">🚫</div>
+                <div class="reason-title">
+                    <h2>Permission Denied Reasons</h2>
+                    <p>Why a user doesn't have access</p>
+                </div>
+            </div>
+            
+            <p>When a permission check returns <code>granted: false</code>, you might see:</p>
+            
+            <ul>
+                <li><strong>"No matching rules found"</strong> - No YAML rules grant this permission</li>
+                <li><strong>"User not in access list"</strong> - Rules exist but don't include this user</li>
+                <li><strong>"Pattern 'X' matched"</strong> - A pattern matched but didn't grant the requested permission level</li>
+            </ul>
+            
+            <div class="example-yaml">
+<span class="yaml-comment"># User bob@example.com has read but wants write access</span>
+<span class="yaml-key">rules</span>:
+  - <span class="yaml-key">pattern</span>: <span class="yaml-value">'data.csv'</span>
+    <span class="yaml-key">access</span>:
+      <span class="yaml-key">read</span>:
+        - <span class="yaml-value">'bob@example.com'</span>
+      <span class="yaml-key">write</span>:
+        - <span class="yaml-value">'alice@example.com'</span>  <span class="yaml-comment"># Bob not included</span>
+            </div>
+        </section>
+
+        <!-- Special Cases -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">⚡</div>
+                <div class="reason-title">
+                    <h2>Special Cases</h2>
+                    <p>Other reasons you might encounter</p>
+                </div>
+            </div>
+            
+            <h3>YAML File Locations</h3>
+            <p>syft-perm searches for <code>syft.pub.yaml</code> files in this order:</p>
+            <ol>
+                <li>Same directory as the file</li>
+                <li>Parent directories (moving up)</li>
+                <li>Datasite root directory</li>
+            </ol>
+            
+            <div class="filesystem-diagram">
+                <div class="file-tree">
+~/SyftBox/datasites/alice@example.com/
+├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">3️⃣ Last resort</span>
+├── research/
+│   ├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">2️⃣ Parent dir</span>
+│   └── 2024/
+│       ├── <span class="tree-item yaml-location">syft.pub.yaml</span> <span class="permission-badge">1️⃣ Same dir (highest priority)</span>
+│       └── data.csv
+                </div>
+            </div>
+            
+            <h3>Multiple Rules</h3>
+            <p>When multiple rules match a file:</p>
+            <ul>
+                <li>All matching rules are combined</li>
+                <li>Permissions are additive (never subtractive)</li>
+                <li>Most specific pattern takes precedence for conflicting rules</li>
+            </ul>
+        </section>
+
+        <!-- Tips -->
+        <section class="reason-section">
+            <div class="reason-header">
+                <div class="reason-icon">💡</div>
+                <div class="reason-title">
+                    <h2>Pro Tips</h2>
+                    <p>Best practices for understanding permissions</p>
+                </div>
+            </div>
+            
+            <ol>
+                <li>
+                    <strong>Use explain_permissions()</strong>
+                    <pre><code>file = syft_perm.open("data.csv")
+explanation = file.explain_permissions("bob@example.com")
+print(explanation)</code></pre>
+                </li>
+                
+                <li>
+                    <strong>Check the permission table in Jupyter</strong>
+                    <pre><code>file = syft_perm.open("research/")
+file  # Shows interactive permission viewer</code></pre>
+                </li>
+                
+                <li>
+                    <strong>Look for the YAML file path in reasons</strong>
+                    <p>The reason often includes the exact YAML file location, helping you find where to make changes.</p>
+                </li>
+                
+                <li>
+                    <strong>Remember inheritance</strong>
+                    <p>If you see "Included via write permission", the user has write access somewhere that automatically grants read.</p>
+                </li>
+            </ol>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
