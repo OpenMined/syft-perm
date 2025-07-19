@@ -77,15 +77,6 @@ file.share                                      # Show sharing widget
 - **Write**: Read + Create + modify existing files  
 - **Admin**: Read + Create + Write + manage permissions
 
-### Interactive Features
-```python
-# Display interactive sharing widget in Jupyter
-file.share  # Note: property, not method
-
-# Move files with permissions preserved
-new_file = file.move_file_and_its_permissions("new/path/file.csv")
-```
-
 ## Permission Hierarchy
 
 - **Read** - View file contents
