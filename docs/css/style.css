@@ -389,6 +389,42 @@ code {
 }
 
 /* ================================
+   Video Demo Section
+   ================================ */
+.video-demo {
+    padding: var(--space-10) 0;
+    background: var(--color-white);
+}
+
+.video-demo h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: var(--space-2);
+    color: var(--color-dark);
+}
+
+.video-demo .section-subtitle {
+    text-align: center;
+    font-size: 1.25rem;
+    color: var(--color-gray);
+    margin-bottom: var(--space-6);
+}
+
+.demo-video-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.demo-video-container video {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    background: var(--color-white);
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* ================================
    Real Example Section
    ================================ */
 .real-example {
