@@ -1057,7 +1057,7 @@ footer a:hover {
    HubSpot Form Styles
    ================================ */
 .newsletter-hubspot-form {
-    max-width: 800px;
+    max-width: 500px;
     margin: 0 auto;
 }
 
@@ -1066,27 +1066,41 @@ footer a:hover {
 }
 
 .newsletter-hubspot-form .hs-form-field {
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-3);
 }
 
-/* Form field grid layout */
-.newsletter-hubspot-form .hs-form > .hs-form-field:first-child,
+/* Two-column grid for name fields */
+.newsletter-hubspot-form .hs-form {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(1),
 .newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(2) {
-    display: inline-block;
-    width: calc(50% - var(--space-2));
-    vertical-align: top;
+    grid-column: span 1;
 }
 
-.newsletter-hubspot-form .hs-form > .hs-form-field:first-child {
-    margin-right: var(--space-4);
+.newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(3),
+.newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(4),
+.newsletter-hubspot-form .hs-fieldtype-checkbox,
+.newsletter-hubspot-form .hs-submit {
+    grid-column: 1 / -1;
 }
 
-@media (max-width: 768px) {
-    .newsletter-hubspot-form .hs-form > .hs-form-field:first-child,
+@media (min-width: 480px) {
+    .newsletter-hubspot-form .hs-form {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 479px) {
+    .newsletter-hubspot-form .hs-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(1),
     .newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(2) {
-        display: block;
-        width: 100%;
-        margin-right: 0;
+        grid-column: 1 / -1;
     }
 }
 
@@ -1109,14 +1123,14 @@ footer a:hover {
 .newsletter-hubspot-form input[type="email"],
 .newsletter-hubspot-form textarea {
     width: 100%;
-    padding: var(--space-3) var(--space-4);
-    font-size: 1.05rem;
-    border: 2px solid transparent;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.95);
+    padding: var(--space-2) var(--space-3);
+    font-size: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
     color: var(--color-dark);
     font-family: var(--font-sans);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .newsletter-hubspot-form .hubspot-input:focus,
@@ -1126,8 +1140,7 @@ footer a:hover {
     outline: none;
     background: white;
     border-color: var(--color-secondary);
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
-    transform: translateY(-1px);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
 .newsletter-hubspot-form textarea {
@@ -1141,29 +1154,6 @@ footer a:hover {
     font-size: 0.95rem;
 }
 
-/* Add subtle animation to form fields */
-.newsletter-hubspot-form .hs-form-field {
-    animation: fadeInUp 0.6s ease-out forwards;
-    opacity: 0;
-}
-
-.newsletter-hubspot-form .hs-form-field:nth-child(1) { animation-delay: 0.1s; }
-.newsletter-hubspot-form .hs-form-field:nth-child(2) { animation-delay: 0.2s; }
-.newsletter-hubspot-form .hs-form-field:nth-child(3) { animation-delay: 0.3s; }
-.newsletter-hubspot-form .hs-form-field:nth-child(4) { animation-delay: 0.4s; }
-.newsletter-hubspot-form .hs-fieldtype-checkbox { animation-delay: 0.5s; }
-.newsletter-hubspot-form .hs-submit { animation-delay: 0.6s; }
-
-@keyframes fadeInUp {
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-}
 
 .newsletter-hubspot-form .hs-input[type="checkbox"] {
     margin-right: var(--space-2);
@@ -1177,11 +1167,7 @@ footer a:hover {
 .newsletter-hubspot-form .hs-form-booleancheckbox {
     display: flex;
     align-items: flex-start;
-    margin-bottom: var(--space-3);
-    background: rgba(255, 255, 255, 0.05);
-    padding: var(--space-3);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: var(--space-2);
 }
 
 .newsletter-hubspot-form .hubspot-checkbox-wrapper label,
@@ -1190,35 +1176,33 @@ footer a:hover {
     margin-left: var(--space-2);
     font-weight: 400;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.9);
     font-size: 0.95rem;
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 .newsletter-hubspot-form .hubspot-submit,
 .newsletter-hubspot-form input[type="submit"],
 .newsletter-hubspot-form .hs-button {
-    padding: var(--space-3) var(--space-6);
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: 0.025em;
+    padding: var(--space-2) var(--space-5);
+    font-size: 1rem;
+    font-weight: 600;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     background: var(--color-secondary);
     color: white;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     display: inline-block;
     margin-top: var(--space-3);
-    min-width: 150px;
 }
 
 .newsletter-hubspot-form .hubspot-submit:hover,
 .newsletter-hubspot-form input[type="submit"]:hover,
 .newsletter-hubspot-form .hs-button:hover {
     background: #059669;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
 }
 
 .newsletter-hubspot-form .hubspot-submit:active,
@@ -1251,27 +1235,18 @@ footer a:hover {
 
 /* Checkbox section styling */
 .newsletter-hubspot-form .hs-fieldtype-checkbox {
-    margin-top: var(--space-4);
-    padding-top: var(--space-4);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .newsletter-hubspot-form .hs-fieldtype-checkbox .hs-form-booleancheckbox {
-    background: rgba(255, 255, 255, 0.05);
-    padding: var(--space-3);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-}
-
-.newsletter-hubspot-form .hs-fieldtype-checkbox .hs-form-booleancheckbox:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    padding: var(--space-2) 0;
 }
 
 .newsletter-hubspot-form .hs-fieldtype-checkbox .hs-form-booleancheckbox input[type="checkbox"] {
     flex-shrink: 0;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 /* Submit button container */
