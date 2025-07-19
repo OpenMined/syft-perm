@@ -655,8 +655,22 @@ code {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%);
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.newsletter-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.01) 35px, rgba(255,255,255,.01) 70px);
     pointer-events: none;
 }
 
@@ -1055,20 +1069,21 @@ footer a:hover {
     margin-bottom: var(--space-4);
 }
 
-/* Two-column layout for name fields */
-.newsletter-hubspot-form .hs-form-field:has(input[name*="firstname"]),
-.newsletter-hubspot-form .hs-form-field:has(input[name*="lastname"]) {
+/* Form field grid layout */
+.newsletter-hubspot-form .hs-form > .hs-form-field:first-child,
+.newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(2) {
     display: inline-block;
     width: calc(50% - var(--space-2));
+    vertical-align: top;
 }
 
-.newsletter-hubspot-form .hs-form-field:has(input[name*="firstname"]) {
+.newsletter-hubspot-form .hs-form > .hs-form-field:first-child {
     margin-right: var(--space-4);
 }
 
 @media (max-width: 768px) {
-    .newsletter-hubspot-form .hs-form-field:has(input[name*="firstname"]),
-    .newsletter-hubspot-form .hs-form-field:has(input[name*="lastname"]) {
+    .newsletter-hubspot-form .hs-form > .hs-form-field:first-child,
+    .newsletter-hubspot-form .hs-form > .hs-form-field:nth-child(2) {
         display: block;
         width: 100%;
         margin-right: 0;
@@ -1116,27 +1131,68 @@ footer a:hover {
 }
 
 .newsletter-hubspot-form textarea {
-    min-height: 100px;
+    min-height: 120px;
     resize: vertical;
 }
 
+.newsletter-hubspot-form input::placeholder,
+.newsletter-hubspot-form textarea::placeholder {
+    color: rgba(107, 114, 128, 0.6);
+    font-size: 0.95rem;
+}
+
+/* Add subtle animation to form fields */
+.newsletter-hubspot-form .hs-form-field {
+    animation: fadeInUp 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+.newsletter-hubspot-form .hs-form-field:nth-child(1) { animation-delay: 0.1s; }
+.newsletter-hubspot-form .hs-form-field:nth-child(2) { animation-delay: 0.2s; }
+.newsletter-hubspot-form .hs-form-field:nth-child(3) { animation-delay: 0.3s; }
+.newsletter-hubspot-form .hs-form-field:nth-child(4) { animation-delay: 0.4s; }
+.newsletter-hubspot-form .hs-fieldtype-checkbox { animation-delay: 0.5s; }
+.newsletter-hubspot-form .hs-submit { animation-delay: 0.6s; }
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
 .newsletter-hubspot-form .hs-input[type="checkbox"] {
-    margin-right: var(--space-1);
+    margin-right: var(--space-2);
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--color-secondary);
 }
 
 .newsletter-hubspot-form .hubspot-checkbox-wrapper,
 .newsletter-hubspot-form .hs-form-booleancheckbox {
     display: flex;
     align-items: flex-start;
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-3);
+    background: rgba(255, 255, 255, 0.05);
+    padding: var(--space-3);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .newsletter-hubspot-form .hubspot-checkbox-wrapper label,
 .newsletter-hubspot-form .hs-form-booleancheckbox label {
     margin-bottom: 0;
-    margin-left: var(--space-1);
+    margin-left: var(--space-2);
     font-weight: 400;
     cursor: pointer;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.95rem;
+    line-height: 1.5;
 }
 
 .newsletter-hubspot-form .hubspot-submit,
@@ -1190,7 +1246,49 @@ footer a:hover {
 }
 
 .newsletter-hubspot-form .hs-form .hs-fieldtype-checkbox li {
-    margin-bottom: var(--space-2);
+    margin-bottom: 0;
+}
+
+/* Checkbox section styling */
+.newsletter-hubspot-form .hs-fieldtype-checkbox {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.newsletter-hubspot-form .hs-fieldtype-checkbox .hs-form-booleancheckbox {
+    background: rgba(255, 255, 255, 0.05);
+    padding: var(--space-3);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.newsletter-hubspot-form .hs-fieldtype-checkbox .hs-form-booleancheckbox:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.newsletter-hubspot-form .hs-fieldtype-checkbox .hs-form-booleancheckbox input[type="checkbox"] {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Submit button container */
+.newsletter-hubspot-form .hs-submit {
+    text-align: center;
+    margin-top: var(--space-6);
+}
+
+/* Success message */
+.newsletter-hubspot-form .submitted-message {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--color-secondary);
+    padding: var(--space-4);
+    border-radius: 12px;
+    font-size: 1.1rem;
+    text-align: center;
 }
 
 /* ================================
