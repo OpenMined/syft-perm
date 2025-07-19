@@ -87,25 +87,6 @@ if file.get_terminal():
 - **Write** - Read + Create + modify existing files
 - **Admin** - Read + Create + Write + manage permissions
 
-## Key Features
-
-- **🎯 Intuitive Permission Hierarchy** - Higher permissions include all lower ones
-- **🌟 Powerful Pattern Matching** - Use `*.py`, `docs/**/*.md` to control multiple files
-- **🔍 Nearest-Node Algorithm** - Predictable inheritance from closest permission rules
-- **🐛 Built-in Debugging** - Trace exactly why permissions work or don't work
-- **📁 Folder-Level Efficiency** - Set permissions once on directories, files inherit automatically
-- **🎮 Interactive Web Editor** - Google Drive-style permission management interface
-
-## Web Editor
-
-For non-technical users, SyftPerm includes a web interface:
-
-```python
-# Get editor URL for any file or folder
-url = sp.get_editor_url("my_project/")
-print(f"Edit permissions at: {url}")
-```
-
 ## Learn More
 
 - **[5-Minute Quick Start](https://openmined.github.io/syft-perm/quickstart.html)** - Get productive immediately
