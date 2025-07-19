@@ -173,34 +173,6 @@ sp.files    # File browser widget</code></pre>
         </div>
     </section>
 
-    <!-- Gradient Feature Section -->
-    <section class="gradient-feature">
-        <div class="container">
-            <h2>Built for Modern Data Science</h2>
-            <p class="section-subtitle">SyftPerm seamlessly integrates with SyftBox to enable secure, privacy-preserving data collaboration</p>
-            
-            <div class="feature-cards">
-                <div class="feature-card">
-                    <div class="feature-icon">🔐</div>
-                    <h3>Granular Control</h3>
-                    <p>Set precise permissions at the file and folder level with intuitive Python APIs</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">🌐</div>
-                    <h3>Federated Ready</h3>
-                    <p>Built for distributed data science workflows across multiple datasites</p>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Lightning Fast</h3>
-                    <p>Optimized for performance with intelligent caching and pattern matching</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Real Example -->
     <section class="real-example">
         <div class="container">
@@ -228,7 +200,7 @@ rules:
     </section>
 
     <!-- Tutorial CTA Section -->
-    <section class="tutorial-cta">
+    <section class="tutorial-cta gradient-feature">
         <div class="container">
             <h2>🚀 Master SyftPerm in 10 Minutes</h2>
             <p class="tutorial-subtitle">Learn everything from basic concepts to advanced federated learning scenarios</p>
@@ -265,6 +237,19 @@ rules:
         </div>
     </section>
 
+    <!-- Newsletter Section -->
+    <section class="newsletter-section">
+        <div class="container">
+            <div class="newsletter-content">
+                <h2>Stay Updated</h2>
+                <p>Get the latest updates on SyftPerm and privacy-preserving data science</p>
+                
+                <!-- HubSpot Form -->
+                <div id="hubspot-form-container"></div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer>
         <div class="container">
@@ -273,5 +258,24 @@ rules:
     </footer>
 
     <script src="js/main.js"></script>
+    
+    <!-- HubSpot Forms Script -->
+    <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/embed/v2.js"></script>
+    <script>
+        hbspt.forms.create({
+            region: "na1",
+            portalId: "6487402",
+            formId: "b7a08fdc-0fb5-4938-99e8-4a09e7bbc09e",
+            target: "#hubspot-form-container",
+            css: "",
+            cssClass: "newsletter-hubspot-form",
+            onFormReady: function($form) {
+                // Style the form to match our design
+                $form.find('input[type="text"], input[type="email"], textarea').addClass('hubspot-input');
+                $form.find('input[type="submit"]').addClass('hubspot-submit');
+                $form.find('input[type="checkbox"]').parent().addClass('hubspot-checkbox-wrapper');
+            }
+        });
+    </script>
 </body>
 </html>

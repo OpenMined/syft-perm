@@ -544,7 +544,6 @@ code {
 .tutorial-cta {
     padding: var(--space-16) 0;
     text-align: center;
-    background: linear-gradient(135deg, var(--color-gradient-start) 0%, var(--color-gradient-end) 100%);
     color: white;
 }
 
