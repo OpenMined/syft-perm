@@ -179,33 +179,29 @@ sp.files    # File browser widget</code></pre>
             <h2>The Widgets</h2>
             <p class="section-subtitle">Beautiful, interactive interfaces for managing permissions</p>
             
-            <div class="widget-showcase">
-                <div class="widget-item">
-                    <h3>📁 File Browser Widget</h3>
-                    <p>Browse all your SyftBox files with real-time permission info</p>
-                    <div class="widget-screenshot">
-                        <img src="images/widget-file-browser.png" alt="File Browser Widget" style="width: 100%; border: 1px solid #ddd; border-radius: 8px;">
-                    </div>
-                    <pre><code class="language-python">sp.files  # Launch the file browser</code></pre>
+            <div class="widget-video-container">
+                <video controls autoplay loop muted playsinline style="width: 100%; max-width: 1000px; margin: 0 auto; display: block; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
+                    <source src="images/syft-perm-widgets-demo.webm" type="video/webm">
+                    <source src="images/syft-perm-widgets-demo.mp4" type="video/mp4">
+                    <img src="images/syft-perm-widgets-demo.gif" alt="SyftPerm Widgets Demo" style="width: 100%; border-radius: 12px;">
+                </video>
+            </div>
+            
+            <div class="widget-features">
+                <div class="widget-feature">
+                    <h3>📁 File Browser</h3>
+                    <p>Browse and search all your SyftBox files with real-time permission info</p>
+                    <code>sp.files</code>
                 </div>
-                
-                <div class="widget-item">
-                    <h3>✏️ File Editor Widget</h3>
+                <div class="widget-feature">
+                    <h3>✏️ File Editor</h3>
                     <p>View and edit files with integrated permission display</p>
-                    <div class="widget-screenshot">
-                        <img src="images/widget-file-editor.png" alt="File Editor Widget" style="width: 100%; border: 1px solid #ddd; border-radius: 8px;">
-                    </div>
-                    <pre><code class="language-python">file = sp.open("data.csv")
-file  # Display in Jupyter</code></pre>
+                    <code>file = sp.open("data.csv")</code>
                 </div>
-                
-                <div class="widget-item">
-                    <h3>🔐 Share Editor Widget</h3>
+                <div class="widget-feature">
+                    <h3>🔐 Share Editor</h3>
                     <p>Manage permissions with an intuitive sharing interface</p>
-                    <div class="widget-screenshot">
-                        <img src="images/widget-share-editor.png" alt="Share Editor Widget" style="width: 100%; border: 1px solid #ddd; border-radius: 8px;">
-                    </div>
-                    <pre><code class="language-python">file.share  # Open sharing interface</code></pre>
+                    <code>file.share</code>
                 </div>
             </div>
         </div>
