@@ -170,12 +170,32 @@ nav {
 }
 
 /* ================================
+   Hero Swoop
+   ================================ */
+.hero-swoop {
+    position: relative;
+    width: 100%;
+    height: 100px;
+    overflow: hidden;
+    background: var(--color-white);
+    margin-top: -1px; /* Prevent gap between header and swoop */
+}
+
+.hero-swoop svg {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* ================================
    Hero Section
    ================================ */
 .hero {
     padding: var(--space-10) 0 var(--space-10) 0;
     text-align: center;
-    background: linear-gradient(180deg, var(--color-white) 0%, var(--color-light-gray) 100%);
+    background: var(--color-light-gray);
+    margin-top: -1px; /* Seamless connection with swoop */
 }
 
 .hero-title {
@@ -425,6 +445,87 @@ code {
 }
 
 /* ================================
+   Gradient Feature Section
+   ================================ */
+.gradient-feature {
+    padding: var(--space-16) 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.gradient-feature::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+    pointer-events: none;
+}
+
+.gradient-feature .container {
+    position: relative;
+    z-index: 1;
+}
+
+.gradient-feature h2 {
+    color: white;
+    text-align: center;
+    font-size: 3rem;
+    margin-bottom: var(--space-3);
+}
+
+.gradient-feature .section-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 700px;
+    margin: 0 auto var(--space-8);
+}
+
+.feature-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: var(--space-6);
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-3);
+}
+
+.feature-card h3 {
+    color: white;
+    font-size: 1.5rem;
+    margin-bottom: var(--space-2);
+}
+
+.feature-card p {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ================================
    Real Example Section
    ================================ */
 .real-example {
@@ -534,6 +635,87 @@ code {
 
 .tutorial-cta .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.1);
+}
+
+/* ================================
+   Newsletter Section
+   ================================ */
+.newsletter-section {
+    padding: var(--space-16) 0;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: white;
+    text-align: center;
+}
+
+.newsletter-content h2 {
+    color: white;
+    font-size: 2.5rem;
+    margin-bottom: var(--space-2);
+}
+
+.newsletter-content > p {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-6);
+    opacity: 0.9;
+}
+
+.newsletter-form {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.form-group {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.email-input {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--color-dark);
+}
+
+.email-input::placeholder {
+    color: var(--color-gray);
+}
+
+.email-input:focus {
+    outline: none;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.submit-btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-secondary);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.submit-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+.form-note {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin: 0;
 }
 
 /* ================================
@@ -1060,5 +1242,14 @@ footer a:hover {
     .nav-links {
         gap: var(--space-3);
         font-size: 0.9rem;
+    }
+    
+    .form-group {
+        flex-direction: column;
+    }
+    
+    .email-input,
+    .submit-btn {
+        width: 100%;
     }
 }
