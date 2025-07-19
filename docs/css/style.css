@@ -441,6 +441,54 @@ code {
 }
 
 /* ================================
+   Why SyftPerm Section
+   ================================ */
+.why-syftperm {
+    padding: var(--space-16) 0;
+    background: var(--color-light-gray);
+}
+
+.why-syftperm h2 {
+    text-align: center;
+    margin-bottom: var(--space-2);
+}
+
+.why-syftperm .section-subtitle {
+    text-align: center;
+    font-size: 1.25rem;
+    color: var(--color-gray);
+    margin-bottom: var(--space-8);
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.value-props {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-4);
+}
+
+.value-prop {
+    background: var(--color-white);
+    padding: var(--space-4);
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.value-prop h3 {
+    color: var(--color-dark);
+    margin-bottom: var(--space-2);
+    font-size: 1.3rem;
+}
+
+.value-prop p {
+    color: var(--color-gray);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ================================
    Video Demo Section
    ================================ */
 .video-demo {

@@ -36,19 +36,19 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
-            <h1 class="hero-title">Stop Fighting File Permissions</h1>
-            <p class="hero-subtitle">See who can do what. Change who should do what. In plain English.</p>
+            <h1 class="hero-title">File Permissions Made Simple</h1>
+            <p class="hero-subtitle">A friendlier way to manage who can access what in SyftBox</p>
             
             <!-- Problem/Solution Split -->
             <div class="code-comparison">
                 <div class="code-before">
-                    <div class="code-label">🔍 SEE permissions clearly</div>
-                    <pre><code class="language-python"># In Jupyter notebooks - interactive permission editor
+                    <div class="code-label">🔍 Visual permission management</div>
+                    <pre><code class="language-python"># Interactive widgets in Jupyter notebooks
 file = syft_perm.open("data.csv")
 file  # Shows interactive permission editor widget
 
-# Or view permissions in console:
-print(file)  # Shows permission table
+# Or view permissions in your terminal:
+print(file)  # Shows clear permission table
 # User               Read  Create  Write  Admin  Reason
 # alice@example.com  ✓     ✓       ✓              admin.yaml: Admin permission granted
 # bob@example.com    ✓                            read.yaml: Pattern '*.txt' matched</code></pre>
@@ -57,14 +57,14 @@ print(file)  # Shows permission table
                 <div class="code-arrow">+</div>
                 
                 <div class="code-after">
-                    <div class="code-label">🎯 SET permissions simply</div>
-                    <pre><code class="language-python"># Simple API instead of YAML wrestling
+                    <div class="code-label">🎯 Pythonic permission APIs</div>
+                    <pre><code class="language-python"># Intuitive Python methods
 file = syft_perm.open("data.csv")
 file.grant_read_access("alice@example.com")
 file.grant_write_access("bob@company.com")
 
-# Automatically creates/updates syft.pub.yaml
-# No manual YAML editing needed!</code></pre>
+# Automatically manages syft.pub.yaml for you
+# Works seamlessly with existing SyftBox!</code></pre>
                 </div>
             </div>
 
@@ -75,6 +75,29 @@ file.grant_write_access("bob@company.com")
                     <button class="copy-btn" data-copy="pip install syft-perm">Copy</button>
                 </div>
                 <p class="install-note">That's it. You're ready to go.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why SyftPerm -->
+    <section class="why-syftperm">
+        <div class="container">
+            <h2>Why We Built This</h2>
+            <p class="section-subtitle">SyftBox's YAML-based permissions are powerful and flexible. SyftPerm makes them more accessible.</p>
+            
+            <div class="value-props">
+                <div class="value-prop">
+                    <h3>🤝 Works With What We Have</h3>
+                    <p>No changes to SyftBox core. SyftPerm is a friendly Python layer on top of our existing syft.pub.yaml system.</p>
+                </div>
+                <div class="value-prop">
+                    <h3>📚 Lowers Learning Curve</h3>
+                    <p>New team members and data scientists can start managing permissions immediately without learning YAML syntax.</p>
+                </div>
+                <div class="value-prop">
+                    <h3>🚀 Speeds Development</h3>
+                    <p>Less time debugging YAML indentation, more time building privacy-preserving applications.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -176,26 +199,26 @@ sp.files    # File browser widget</code></pre>
     <!-- Gradient Feature Section -->
     <section class="gradient-feature">
         <div class="container">
-            <h2>Built for Modern Data Science</h2>
-            <p class="section-subtitle">SyftPerm seamlessly integrates with SyftBox to enable secure, privacy-preserving data collaboration</p>
+            <h2>Designed for Our Workflow</h2>
+            <p class="section-subtitle">Built by the team, for the team, to make our daily work with SyftBox permissions easier</p>
             
             <div class="feature-cards">
                 <div class="feature-card">
                     <div class="feature-icon">🔐</div>
-                    <h3>Granular Control</h3>
-                    <p>Set precise permissions at the file and folder level with intuitive Python APIs</p>
+                    <h3>Same Power, Better UX</h3>
+                    <p>All the granular control we need, now accessible through Python methods we already know</p>
                 </div>
                 
                 <div class="feature-card">
                     <div class="feature-icon">🌐</div>
-                    <h3>Federated Ready</h3>
-                    <p>Built for distributed data science workflows across multiple datasites</p>
+                    <h3>Demo-Friendly</h3>
+                    <p>Show stakeholders how permissions work without explaining YAML syntax</p>
                 </div>
                 
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
-                    <h3>Lightning Fast</h3>
-                    <p>Optimized for performance with intelligent caching and pattern matching</p>
+                    <h3>Faster Debugging</h3>
+                    <p>Quickly see why permissions aren't working with explain_permissions()</p>
                 </div>
             </div>
         </div>
@@ -204,14 +227,14 @@ sp.files    # File browser widget</code></pre>
     <!-- Real Example -->
     <section class="real-example">
         <div class="container">
-            <h2>How It Works: Managing syft.pub.yaml</h2>
-            <p style="text-align: center; margin-bottom: var(--space-6);">SyftPerm automatically creates and updates your permission files:</p>
-            <pre><code class="language-python"># Your Python code:
+            <h2>Under the Hood</h2>
+            <p style="text-align: center; margin-bottom: var(--space-6);">SyftPerm respects our existing infrastructure - it just makes it easier to use:</p>
+            <pre><code class="language-python"># When you write this Python:
 project = syft_perm.open("research_data/")
 project.grant_read_access("reviewer@journal.org")
 project.grant_write_access("team@university.edu")
 
-# Creates this syft.pub.yaml:
+# SyftPerm manages the YAML for you:
 """
 rules:
   - pattern: '**/*'
@@ -223,7 +246,7 @@ rules:
         - 'team@university.edu'
 """
 
-# No manual YAML editing needed!</code></pre>
+# Full compatibility with manual YAML edits!</code></pre>
         </div>
     </section>
 
@@ -244,8 +267,8 @@ rules:
     <section class="newsletter-section">
         <div class="container">
             <div class="newsletter-content">
-                <h2>Stay Updated</h2>
-                <p>Get the latest updates on SyftPerm and privacy-preserving data science</p>
+                <h2>Let's Discuss</h2>
+                <p>Questions? Ideas? Let's talk about how SyftPerm can help our team</p>
                 
                 <!-- HubSpot Form -->
                 <div id="hubspot-form-container"></div>
