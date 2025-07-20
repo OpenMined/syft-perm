@@ -73,6 +73,7 @@ class Files:
         search: _Union[str, None] = None,
         progress_callback=None,
         show_ascii_progress=False,
+        filetype: _Union[str, None] = None,
     ) -> list:
         """Scan SyftBox directory for files with permissions."""
         import os
@@ -196,12 +197,19 @@ class Files:
                     if perms.is_public:
                         has_access = True
 
+                # Apply filetype filter if specified
+                is_directory = path.is_dir()
+                if filetype == "file" and is_directory:
+                    continue
+                if filetype == "folder" and not is_directory:
+                    continue
+
                 files.append(
                     {
                         "name": str(path.relative_to(datasites_path)),
                         "path": str(path),
-                        "is_dir": path.is_dir(),
-                        "size": path.stat().st_size if path.exists() and not path.is_dir() else 0,
+                        "is_dir": is_directory,
+                        "size": path.stat().st_size if path.exists() and not is_directory else 0,
                         "modified": path.stat().st_mtime if path.exists() else 0,
                         "extension": path.suffix.lower(),
                         "permissions": perms.to_dict(),
@@ -239,6 +247,15 @@ class Files:
         """Get all files, bypassing pagination."""
         if self._cache is None or search:
             self._cache = self._scan_files(search=search, show_ascii_progress=True, filetype=filetype or self._filetype)
+        
+        # Apply filetype filter to cached results as well (for mocked tests)
+        if filetype or self._filetype:
+            filter_type = filetype or self._filetype
+            if filter_type == "file":
+                return [f for f in self._cache if not f.get("is_dir", False)]
+            elif filter_type == "folder":
+                return [f for f in self._cache if f.get("is_dir", False)]
+        
         return self._cache
 
     def search(
@@ -252,7 +269,16 @@ class Files:
         if self._cache is None:
             self._cache = self._scan_files(filetype=filetype or self._filetype)
 
-        filtered = self._apply_filters(self._cache, files_query=files, admin=admin)
+        # Apply filetype filter to cached results as well (for mocked tests)
+        cache_to_filter = self._cache
+        if filetype or self._filetype:
+            filter_type = filetype or self._filetype
+            if filter_type == "file":
+                cache_to_filter = [f for f in self._cache if not f.get("is_dir", False)]
+            elif filter_type == "folder":
+                cache_to_filter = [f for f in self._cache if f.get("is_dir", False)]
+
+        filtered = self._apply_filters(cache_to_filter, files_query=files, admin=admin)
 
         return FilteredFiles(filtered, limit=limit, offset=offset)
 
@@ -280,9 +306,19 @@ class Files:
         filtered_files = []
         for file in files:
             matches_files = not search_terms or self._matches_search_terms(file, search_terms)
-            matches_admin = not admin or admin.lower() in [
-                u.lower() for u in file.get("permissions", {}).get("admin", [])
-            ]
+            # Check both datasite_owner and admin permissions
+            matches_admin = False
+            if admin:
+                # Check datasite_owner first (for ownership)
+                if file.get("datasite_owner", "").lower() == admin.lower():
+                    matches_admin = True
+                # Then check admin permissions
+                elif admin.lower() in [
+                    u.lower() for u in file.get("permissions", {}).get("admin", [])
+                ]:
+                    matches_admin = True
+            else:
+                matches_admin = True
 
             if matches_files and matches_admin:
                 filtered_files.append(file)
@@ -295,14 +331,25 @@ class Files:
             return files
 
         # Normalize folder paths
-        normalized_folders = [f.strip().lower().replace("/", "") for f in folders]
+        normalized_folders = []
+        for folder in folders:
+            # Remove syft:// prefix if present
+            if folder.startswith("syft://"):
+                folder = folder[7:]
+            # Ensure folder ends with / for proper prefix matching
+            folder = folder.strip()
+            if folder and not folder.endswith("/"):
+                folder += "/"
+            normalized_folders.append(folder)
 
         filtered_list = []
         for file in files:
             # Check if file path starts with any of the specified folders
-            file_path = file["name"].lower()
-            if any(file_path.startswith(folder) for folder in normalized_folders):
-                filtered_list.append(file)
+            file_path = file.get("name", "")
+            for folder in normalized_folders:
+                if file_path.startswith(folder) or file_path + "/" == folder:
+                    filtered_list.append(file)
+                    break
 
         return filtered_list
 
@@ -346,10 +393,31 @@ class Files:
 
     def __getitem__(self, key) -> "Files":
         if isinstance(key, slice):
-            start = key.start or 0
-            stop = key.stop or 50  # Default to 50 items if not specified
-            limit = stop - start
-            return self.search(limit=limit, offset=start)
+            # Get all files with proper filtering
+            if self._cache is None:
+                self._cache = self._scan_files(filetype=self._filetype)
+            
+            # Apply filetype filter if needed
+            files_to_slice = self._cache
+            if self._filetype:
+                if self._filetype == "file":
+                    files_to_slice = [f for f in self._cache if not f.get("is_dir", False)]
+                elif self._filetype == "folder":
+                    files_to_slice = [f for f in self._cache if f.get("is_dir", False)]
+            
+            # Sort by modified date (newest first)
+            sorted_files = sorted(files_to_slice, key=lambda x: x.get("modified", 0), reverse=True)
+            
+            # Convert from 1-based to 0-based indexing
+            start = (key.start - 1) if key.start is not None and key.start > 0 else key.start
+            stop = (key.stop - 1) if key.stop is not None and key.stop > 0 else key.stop
+            
+            # Apply slice with converted indices
+            adjusted_slice = slice(start, stop, key.step)
+            sliced_files = sorted_files[adjusted_slice]
+            
+            # Return FilteredFiles with the sliced data
+            return FilteredFiles(sliced_files)
         else:
             raise TypeError("Files slicing only supports slicing, not direct indexing.")
 

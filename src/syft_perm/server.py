@@ -12,9 +12,10 @@ from . import open as syft_open
 from ._auto_recovery import ensure_server_running
 from ._syftbox import client as syftbox_client
 from ._utils import get_syftbox_datasites
+from .file_editor import generate_editor_html, register_routes as register_file_editor_routes
+from .files_widget import get_files_widget_html, register_routes as register_files_widget_routes
 from .filesystem_editor import get_current_user_email  # noqa: F401
-from .server_templates.files_widget import get_files_widget_html
-from .server_templates.permission_editor import get_editor_html
+from .share import generate_share_modal_html, register_routes as register_share_routes
 
 _SERVER_AVAILABLE = False
 try:
@@ -331,6 +332,11 @@ if _SERVER_AVAILABLE:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # Register widget routes
+    register_files_widget_routes(app)
+    register_file_editor_routes(app)
+    register_share_routes(app)
 
     # Store file watcher observer for cleanup
     file_watcher_observer = None
@@ -632,43 +638,7 @@ if _SERVER_AVAILABLE:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    @app.get("/editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
-    async def permission_editor(path: str) -> str:
-        """Serve the Google Drive-style permission editor."""
-        return get_editor_html(path)
 
-    @app.get("/files-widget", response_class=HTMLResponse)  # type: ignore[misc]
-    async def files_widget(
-        search: Optional[str] = Query(None, description="Search term for file names"),
-        admin: Optional[str] = Query(None, description="Filter by admin email"),
-        folders: Optional[str] = Query(None, description="Comma-separated folder paths"),
-        page: int = Query(1, ge=1, description="Page number (1-based)"),
-        items_per_page: int = Query(50, ge=1, le=1000, description="Items per page"),
-        start: Optional[int] = Query(None, ge=0, description="Start index for slicing"),
-        end: Optional[int] = Query(None, ge=0, description="End index for slicing"),
-        filetype: Optional[str] = Query(None, description="Filter by file type: 'file' or 'folder'"),
-    ) -> str:
-        """Serve the files widget interface with filtering support."""
-        # Get current user email
-        current_user_email = get_current_user_email() or ""
-
-        # Parse folders if provided
-        folder_list = None
-        if folders:
-            folder_list = [f.strip() for f in folders.split(",") if f.strip()]
-
-        # Generate the widget HTML with parameters
-        return get_files_widget_html(
-            search=search,
-            admin=admin,
-            folders=folder_list,
-            page=page,
-            items_per_page=items_per_page,
-            start=start,
-            end=end,
-            current_user_email=current_user_email,
-            filetype=filetype,
-        )
 
     @app.get("/api/scan-progress")  # type: ignore[misc]
     async def get_scan_progress() -> Dict[str, Any]:
@@ -826,7 +796,7 @@ if _SERVER_AVAILABLE:
                     active_websockets.remove(websocket)
 
     # File System Editor Endpoints
-    from .filesystem_editor import FileSystemManager, generate_editor_html
+    from .filesystem_editor import FileSystemManager
 
     # Initialize the filesystem manager
     fs_manager = FileSystemManager()
@@ -900,45 +870,7 @@ if _SERVER_AVAILABLE:
         current_user = syft_user or get_current_user_email()
         return fs_manager.rename_item(old_path, new_path, user_email=current_user)
 
-    @app.get("/file-editor", response_class=HTMLResponse)  # type: ignore[misc]
-    async def file_editor_interface(syft_user: Optional[str] = Query(None)) -> HTMLResponse:
-        """Serve the file editor interface."""
-        from . import _is_dark
 
-        return HTMLResponse(
-            content=generate_editor_html(is_dark_mode=_is_dark(), syft_user=syft_user)
-        )
-
-    @app.get("/file-editor/{path:path}", response_class=HTMLResponse)  # type: ignore[misc]
-    async def file_editor_with_path(
-        path: str, syft_user: Optional[str] = Query(None), new: Optional[str] = Query(None)
-    ) -> HTMLResponse:
-        """Serve the file editor interface with a specific path."""
-        from . import _is_dark
-
-        is_new_file = new == "true"
-        return HTMLResponse(
-            content=generate_editor_html(
-                initial_path=path,
-                is_dark_mode=_is_dark(),
-                syft_user=syft_user,
-                is_new_file=is_new_file,
-            )
-        )
-
-    @app.get("/share-modal", response_class=HTMLResponse)  # type: ignore[misc]
-    async def share_modal(
-        path: str = Query(...), syft_user: Optional[str] = Query(None)
-    ) -> HTMLResponse:
-        """Serve the share modal as a standalone page."""
-        from . import _is_dark
-        from .filesystem_editor import generate_share_modal_html
-
-        return HTMLResponse(
-            content=generate_share_modal_html(
-                path=path, is_dark_mode=_is_dark(), syft_user=syft_user
-            )
-        )
 
 
 # Server management
