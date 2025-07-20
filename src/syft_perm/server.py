@@ -97,6 +97,10 @@ if _SERVER_AVAILABLE:
     # WebSocket connection management
     active_websockets: List[WebSocket] = []
     websocket_lock = threading.Lock()
+    
+    # File watcher management
+    _active_watchers: Dict[str, any] = {}
+    _watcher_lock = threading.Lock()
 
     # Global event loop for WebSocket operations
     websocket_loop = None
@@ -294,22 +298,49 @@ if _SERVER_AVAILABLE:
                 break
 
         if watch_dir:
+            watch_dir_str = str(watch_dir)
+            
+            # Check if we already have a watcher for this directory
+            with _watcher_lock:
+                if watch_dir_str in _active_watchers:
+                    existing_observer = _active_watchers[watch_dir_str]
+                    if existing_observer and existing_observer.is_alive():
+                        logger.info(f"[FILE WATCHER] File watcher already active for: {watch_dir}")
+                        return existing_observer
+                    else:
+                        # Clean up dead watcher
+                        del _active_watchers[watch_dir_str]
+            
             logger.info(f"[FILE WATCHER] Starting file watcher for: {watch_dir}")
 
             # Set up observer
             observer = Observer()
             event_handler = SyftBoxFileHandler()
-            observer.schedule(event_handler, str(watch_dir), recursive=True)
+            
+            try:
+                observer.schedule(event_handler, watch_dir_str, recursive=True)
+            except Exception as e:
+                logger.info(f"[FILE WATCHER] Error scheduling watch for {watch_dir_str}: {e}")
+                return None
 
             # Start observer in a separate thread
             def start_watcher():
                 try:
                     observer.start()
                     logger.info("[FILE WATCHER] File watcher started successfully")
+                    
+                    # Register as active watcher
+                    with _watcher_lock:
+                        _active_watchers[watch_dir_str] = observer
+                        
                     # Keep the watcher running
                     observer.join()
                 except Exception as e:
                     logger.info(f"[FILE WATCHER] Error starting file watcher: {e}")
+                    # Clean up on error
+                    with _watcher_lock:
+                        if watch_dir_str in _active_watchers:
+                            del _active_watchers[watch_dir_str]
 
             watcher_thread = threading.Thread(target=start_watcher, daemon=True)
             watcher_thread.start()
@@ -340,6 +371,29 @@ if _SERVER_AVAILABLE:
     register_files_widget_routes(app)
     register_file_editor_routes(app)
     register_share_routes(app)
+    
+    # Add server info endpoint to help distinguish server types
+    @app.get("/server-info")
+    async def get_server_info():
+        """Return information about the server type."""
+        # Determine if this is running as a thread or as a SyftBox app
+        import os
+        import threading
+        
+        # Check if we're in a SyftBox app context
+        is_syftbox_app = bool(os.environ.get("SYFTBOX_APP_NAME") or 
+                             os.path.exists("/app") or  # Common container indicator
+                             "syftbox" in str(os.getcwd()).lower())
+        
+        server_type = "syftapp" if is_syftbox_app else "thread"
+        
+        return {
+            "type": server_type,
+            "name": "syft-perm",
+            "version": "0.4.0",
+            "thread_count": threading.active_count(),
+            "pid": os.getpid()
+        }
 
     # Store file watcher observer for cleanup
     file_watcher_observer = None
@@ -363,6 +417,18 @@ if _SERVER_AVAILABLE:
             logger.info("[FILE WATCHER] Stopping file watcher...")
             file_watcher_observer.stop()
             file_watcher_observer.join()
+            
+        # Clean up all active watchers
+        with _watcher_lock:
+            for watch_dir, observer in _active_watchers.items():
+                try:
+                    if observer and observer.is_alive():
+                        logger.info(f"[FILE WATCHER] Stopping watcher for {watch_dir}")
+                        observer.stop()
+                        observer.join(timeout=5)
+                except Exception as e:
+                    logger.info(f"[FILE WATCHER] Error stopping watcher for {watch_dir}: {e}")
+            _active_watchers.clear()
 
     @app.get("/")  # type: ignore[misc]
     async def root() -> Dict[str, str]:
@@ -896,18 +962,43 @@ def start_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     configured_port = _get_configured_port()
     if configured_port:
         # Check if a server is running on the configured port
-        import aiohttp
-
         server_url = f"http://localhost:{configured_port}"
         success, error = ensure_server_running(server_url)
         if success:
             return server_url
         # If not successful, continue to start a new server
 
-    _server_port = port
+    # Try to find an available port
+    import socket
+    
+    def is_port_available(port_to_check: int) -> bool:
+        """Check if a port is available for binding."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind((host, port_to_check))
+                return True
+            except OSError:
+                return False
+    
+    # Try the requested port first, then fallback to alternatives
+    ports_to_try = [port] + list(range(8766, 8776))  # Try 8765, then 8766-8775
+    
+    selected_port = None
+    for port_candidate in ports_to_try:
+        if is_port_available(port_candidate):
+            selected_port = port_candidate
+            break
+    
+    if selected_port is None:
+        raise RuntimeError(f"No available ports found in range {ports_to_try[0]}-{ports_to_try[-1]}")
+    
+    _server_port = selected_port
+    
+    if selected_port != port:
+        logger.info(f"Port {port} was in use, starting server on port {selected_port}")
 
     def run_server() -> None:
-        uvicorn.run(app, host=host, port=port, log_level="warning")
+        uvicorn.run(app, host=host, port=selected_port, log_level="warning")
 
     _server_thread = threading.Thread(target=run_server, daemon=True)
     _server_thread.start()
@@ -915,7 +1006,7 @@ def start_server(port: int = 8765, host: str = "127.0.0.1") -> str:
     # Give the server a moment to start
     time.sleep(1)
 
-    return f"http://{host}:{port}"
+    return f"http://{host}:{selected_port}"
 
 
 def get_server_url() -> Optional[str]:

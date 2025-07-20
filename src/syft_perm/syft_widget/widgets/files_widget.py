@@ -110,17 +110,25 @@ class FilesWidgetUnified(UnifiedWidget):
                 type="info",
             )
 
+        # Add static mode indicator
+        indicator_bg = "rgba(30,30,30,0.8)" if self.html_generator.dark_mode else "rgba(255,255,255,0.8)"
+        indicator_color = "#ccc" if self.html_generator.dark_mode else "#666"
+        
         # Combine all elements
         return f"""
         <div class="syft-widget syft-files-widget" style="
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: {self.html_generator.theme['fg']};
+            position: relative;
         ">
             <h2 style="margin-top: 0; margin-bottom: 16px;">SyftBox Files</h2>
             {notification}
             {search_section}
             {table_html}
             {pagination_info}
+            <div style="position: absolute; bottom: 8px; left: 12px; background: {indicator_bg}; color: {indicator_color}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; z-index: 1000;">
+                unified-static
+            </div>
         </div>
         """
 
@@ -138,11 +146,30 @@ class FilesWidgetUnified(UnifiedWidget):
         if query_string:
             endpoint_url += f"?{query_string}"
 
+        # Determine server type
+        server_type = "unified"  # This is the unified widget system
+        try:
+            import urllib.request
+            import json
+            with urllib.request.urlopen(f"{server_url}/server-info", timeout=1) as response:
+                if response.status == 200:
+                    info = json.loads(response.read().decode('utf-8'))
+                    base_type = info.get('type', 'unknown')
+                    server_type = f"unified-{base_type}"
+        except Exception:
+            pass
+
         # Return iframe with server content
         border_color = self.html_generator.theme["border"]
+        indicator_bg = "rgba(30,30,30,0.8)" if self.html_generator.dark_mode else "rgba(255,255,255,0.8)"
+        indicator_color = "#ccc" if self.html_generator.dark_mode else "#666"
+        
         return f"""
-        <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 12px; overflow: hidden;">
+        <div style="width: 100%; height: 600px; border: 1px solid {border_color}; border-radius: 12px; overflow: hidden; position: relative;">
             <iframe src="{endpoint_url}" style="width: 100%; height: 100%; border: none;"></iframe>
+            <div style="position: absolute; bottom: 8px; left: 12px; background: {indicator_bg}; color: {indicator_color}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; pointer-events: none; z-index: 1000;">
+                {server_type}
+            </div>
         </div>
         """
 

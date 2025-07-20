@@ -32,6 +32,7 @@ from .core import (
     get_cache_stats,
 )
 from .core.permissions import _permission_cache
+from .core.permissions_wrapper import PermissionsWrapper
 from .core.visualization import PermissionExplanation, ShareWidget
 
 FILE_LIMIT = "Blocked by {limit_type} limit"
@@ -96,6 +97,11 @@ class SyftFile:
     def _permissions_dict(self) -> Dict[str, List[str]]:
         """Get all permissions for this file as a dictionary."""
         return self._get_all_permissions()
+
+    @property
+    def permissions(self) -> PermissionsWrapper:
+        """Get permissions wrapper for this file."""
+        return PermissionsWrapper(self._get_all_permissions(), self)
 
     @property
     def _has_yaml(self) -> bool:
@@ -1317,6 +1323,11 @@ class SyftFolder:
     def _permissions_dict(self) -> Dict[str, List[str]]:
         """Get all permissions for this folder as a dictionary."""
         return self._get_all_permissions()
+
+    @property
+    def permissions(self) -> PermissionsWrapper:
+        """Get permissions wrapper for this folder."""
+        return PermissionsWrapper(self._get_all_permissions(), self)
 
     def get_terminal(self) -> bool:
         """Check if this folder is a terminal node (blocks inheritance)."""

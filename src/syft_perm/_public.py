@@ -68,6 +68,36 @@ class Files:
 
         return None
 
+    def _ensure_server_running(self):
+        """Ensure the syft-perm server is running and return (success, port)."""
+        try:
+            # First check if server is already running
+            server_url = self._check_server()
+            if server_url:
+                # Extract port from URL
+                port = int(server_url.split(':')[-1].split('/')[0])
+                return True, port
+            
+            # Try to start the server
+            try:
+                from .server import start_server, get_server_url
+                
+                # Start server (it should return the URL)
+                server_url = start_server()
+                if server_url:
+                    port = int(server_url.split(':')[-1].split('/')[0])
+                    return True, port
+            except ImportError:
+                # Server dependencies not available
+                pass
+            except Exception:
+                # Failed to start server
+                pass
+                
+            return False, None
+        except Exception:
+            return False, None
+
     def _scan_files(
         self,
         search: _Union[str, None] = None,

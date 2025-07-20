@@ -175,9 +175,21 @@ def generate_jupyter_widget(files_instance, use_dark_mode: bool = None) -> str:
             # Detect dark mode for iframe styling
             border_color = "#3e3e42" if is_dark_mode else "#ddd"
 
+            # Determine server type by checking if it's a SyftBox app or thread
+            server_type = "syftapp"  # Default assumption
+            try:
+                import urllib.request
+                with urllib.request.urlopen(f"http://localhost:{server_port}/server-info", timeout=1) as response:
+                    if response.status == 200:
+                        info = json.loads(response.read().decode('utf-8'))
+                        server_type = info.get('type', 'syftapp')
+            except Exception:
+                # If can't determine, assume syftapp since it's running
+                pass
+
             # Return iframe pointing to the server's files-widget endpoint
             iframe_html = f"""
-            <div style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden;">
+            <div style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden; position: relative;">
                 <iframe 
                     src="http://localhost:{server_port}/files-widget" 
                     width="100%" 
@@ -186,6 +198,9 @@ def generate_jupyter_widget(files_instance, use_dark_mode: bool = None) -> str:
                     style="border: none;"
                     allow="clipboard-read; clipboard-write">
                 </iframe>
+                <div style="position: absolute; bottom: 8px; left: 12px; background: {'rgba(30,30,30,0.8)' if is_dark_mode else 'rgba(255,255,255,0.8)'}; color: {'#ccc' if is_dark_mode else '#666'}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; pointer-events: none;">
+                    {server_type}
+                </div>
             </div>
             """
             return iframe_html
@@ -210,7 +225,7 @@ def generate_jupyter_widget(files_instance, use_dark_mode: bool = None) -> str:
                     var container = document.getElementById('{container_id}');
                     if (container) {{
                         container.innerHTML = `
-                            <div style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden;">
+                            <div style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden; position: relative;">
                                 <iframe 
                                     src="http://localhost:{port}/files-widget" 
                                     width="100%" 
@@ -219,6 +234,9 @@ def generate_jupyter_widget(files_instance, use_dark_mode: bool = None) -> str:
                                     style="border: none;"
                                     allow="clipboard-read; clipboard-write">
                                 </iframe>
+                                <div style="position: absolute; bottom: 8px; left: 12px; background: rgba(30,30,30,0.8); color: #ccc; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; pointer-events: none;">
+                                    thread
+                                </div>
                             </div>
                         `;
                     }}
@@ -967,6 +985,9 @@ def generate_jupyter_widget(files_instance, use_dark_mode: bool = None) -> str:
         <div class="pagination">
             <div></div>
             <span class="status" id="{container_id}-status">Loading...</span>
+            <div style="position: absolute; bottom: 8px; left: 12px; background: {'rgba(30,30,30,0.8)' if is_dark_mode else 'rgba(255,255,255,0.8)'}; color: {'#ccc' if is_dark_mode else '#666'}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; z-index: 1000;">
+                static
+            </div>
             <div class="pagination-controls">
                 <button onclick="changePage_{container_id}(-1)" id="{container_id}-prev-btn" disabled>Previous</button>
                 <span class="page-info" id="{container_id}-page-info">Page 1 of {(total + 49) // 50}</span>
