@@ -223,7 +223,13 @@ class Files:
 
         return files
 
-    def get(self, limit: int = 50, offset: int = 0, search: _Union[str, None] = None, filetype: _Union[str, None] = None) -> dict:
+    def get(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        search: _Union[str, None] = None,
+        filetype: _Union[str, None] = None,
+    ) -> dict:
         """
         Get a paginated list of files.
 
@@ -246,8 +252,10 @@ class Files:
     def all(self, search: _Union[str, None] = None, filetype: _Union[str, None] = None) -> list:
         """Get all files, bypassing pagination."""
         if self._cache is None or search:
-            self._cache = self._scan_files(search=search, show_ascii_progress=True, filetype=filetype or self._filetype)
-        
+            self._cache = self._scan_files(
+                search=search, show_ascii_progress=True, filetype=filetype or self._filetype
+            )
+
         # Apply filetype filter to cached results as well (for mocked tests)
         if filetype or self._filetype:
             filter_type = filetype or self._filetype
@@ -255,7 +263,7 @@ class Files:
                 return [f for f in self._cache if not f.get("is_dir", False)]
             elif filter_type == "folder":
                 return [f for f in self._cache if f.get("is_dir", False)]
-        
+
         return self._cache
 
     def search(
@@ -396,7 +404,7 @@ class Files:
             # Get all files with proper filtering
             if self._cache is None:
                 self._cache = self._scan_files(filetype=self._filetype)
-            
+
             # Apply filetype filter if needed
             files_to_slice = self._cache
             if self._filetype:
@@ -404,18 +412,18 @@ class Files:
                     files_to_slice = [f for f in self._cache if not f.get("is_dir", False)]
                 elif self._filetype == "folder":
                     files_to_slice = [f for f in self._cache if f.get("is_dir", False)]
-            
+
             # Sort by modified date (newest first)
             sorted_files = sorted(files_to_slice, key=lambda x: x.get("modified", 0), reverse=True)
-            
+
             # Convert from 1-based to 0-based indexing
             start = (key.start - 1) if key.start is not None and key.start > 0 else key.start
             stop = (key.stop - 1) if key.stop is not None and key.stop > 0 else key.stop
-            
+
             # Apply slice with converted indices
             adjusted_slice = slice(start, stop, key.step)
             sliced_files = sorted_files[adjusted_slice]
-            
+
             # Return FilteredFiles with the sliced data
             return FilteredFiles(sliced_files)
         else:
@@ -565,18 +573,39 @@ class Files:
 
     def _repr_html_(self) -> str:
         """Generate HTML widget for Jupyter notebooks."""
-        # Import the implementation from __init__.py to avoid duplication
-        from . import _Files
+        import os
 
-        # Create a _Files instance with the same state
-        files_instance = _Files()
-        files_instance._initial_page = self._initial_page
-        files_instance._items_per_page = self._items_per_page
-        files_instance._show_ascii_progress = self._show_ascii_progress
-        if hasattr(self, "_filtered_files"):
-            # For FilteredFiles, we need to pass the filtered data
-            files_instance._cache = getattr(self, "_filtered_files", None)
-        return files_instance._repr_html_()
+        # Check feature flag for unified widgets
+        if os.environ.get("SYFT_USE_UNIFIED_WIDGETS", "").lower() == "true":
+            # Use new unified widget
+            from .syft_widget.widgets import FilesWidgetUnified
+
+            # Get file data
+            if self._cache is None:
+                self._cache = self._scan_files(filetype=self._filetype)
+
+            # Create unified widget
+            widget = FilesWidgetUnified(
+                files_data=(
+                    self._cache if not hasattr(self, "_filtered_files") else self._filtered_files
+                ),
+                initial_page=self._initial_page,
+                items_per_page=self._items_per_page,
+            )
+            return widget._repr_html_()
+        else:
+            # Use existing implementation
+            from .jupyter_widget import generate_jupyter_widget
+
+            # Get the file data
+            if self._cache is None:
+                self._cache = self._scan_files(filetype=self._filetype)
+
+            files_to_display = (
+                self._cache if not hasattr(self, "_filtered_files") else self._filtered_files
+            )
+
+            return generate_jupyter_widget(self)
 
 
 class FilteredFiles(Files):
@@ -635,7 +664,11 @@ class FastAPIFiles(Files):
         return FilteredFiles(filtered, limit=limit, offset=offset)
 
     def _scan_files(
-        self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False, filetype: _Union[str, None] = None
+        self,
+        search: _Union[str, None] = None,
+        progress_callback=None,
+        show_ascii_progress=False,
+        filetype: _Union[str, None] = None,
     ) -> list:
         """Fetch files from the FastAPI server."""
         import requests

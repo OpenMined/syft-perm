@@ -21,11 +21,11 @@ class TestFilesFiltering(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.test_users = ["alice@example.com", "bob@example.com", "charlie@example.com"]
         # Clear any cached data in singletons
-        if hasattr(sp.files, '_cache'):
+        if hasattr(sp.files, "_cache"):
             sp.files._cache = None
-        if hasattr(sp.folders, '_cache'):
+        if hasattr(sp.folders, "_cache"):
             sp.folders._cache = None
-        if hasattr(sp.files_and_folders, '_cache'):
+        if hasattr(sp.files_and_folders, "_cache"):
             sp.files_and_folders._cache = None
 
     def tearDown(self):

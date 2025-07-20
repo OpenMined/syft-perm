@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - {{LIBRARY_NAME}}</title>
+    <link rel="icon" type="image/svg+xml" href="images/syftbox-logo.svg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="nav-wrapper">
+                <div class="logo-group">
+                    <img src="images/syftbox-logo.svg" alt="SyftBox" class="syftbox-logo">
+                    <a href="index.html" class="logo">{{LIBRARY_NAME}}</a>
+                </div>
+                <div class="nav-links">
+                    <a href="quickstart.html" class="active">Quick Start</a>
+                    <a href="{{CORE_CONCEPT_PAGE}}.html">{{CORE_CONCEPT_TITLE}}</a>
+                    <a href="api/index.html">API</a>
+                    <a href="https://github.com/OpenMined/{{GITHUB_REPO_NAME}}" class="github-link">GitHub</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Quick Start Content -->
+    <section class="quickstart-hero">
+        <div class="container">
+            <h1>{{QUICKSTART_TITLE}}</h1>
+            <p class="hero-subtitle">{{QUICKSTART_SUBTITLE}}</p>
+        </div>
+    </section>
+
+    <!-- Step 1: Install -->
+    <section class="quickstart-step">
+        <div class="container">
+            <h2><span class="step-number">1</span> Install {{LIBRARY_NAME}}</h2>
+            <div class="install-command">
+                <code>pip install {{PACKAGE_NAME}}</code>
+                <button class="copy-btn" data-copy="pip install {{PACKAGE_NAME}}">Copy</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dynamic Steps -->
+    {{#QUICKSTART_STEPS}}
+    <section class="quickstart-step {{#ALT_BG}}alt-bg{{/ALT_BG}}">
+        <div class="container">
+            <h2><span class="step-number">{{STEP_NUMBER}}</span> {{STEP_TITLE}}</h2>
+            {{#STEP_DESC}}<p>{{STEP_DESC}}</p>{{/STEP_DESC}}
+            <pre><code class="language-python">{{STEP_CODE}}</code></pre>
+        </div>
+    </section>
+    {{/QUICKSTART_STEPS}}
+
+    <!-- What's Next -->
+    <section class="next-steps">
+        <div class="container">
+            <h2>{{NEXT_STEPS_TITLE}}</h2>
+            <p>{{NEXT_STEPS_DESC}}</p>
+            
+            <div class="next-links">
+                {{#NEXT_LINKS}}
+                <div class="next-link">
+                    <h3>{{LINK_ICON}} {{LINK_TITLE}}</h3>
+                    <p>{{LINK_DESC}}</p>
+                    <a href="{{LINK_URL}}" class="btn {{LINK_STYLE}}">{{LINK_BUTTON_TEXT}}</a>
+                </div>
+                {{/NEXT_LINKS}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

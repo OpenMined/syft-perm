@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(grep:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(uv venv:*)",
+      "Bash(.venv/bin/pytest syft_widget/tests/test_unified_widget.py -v)",
+      "Bash(.venv/bin/pytest src/syft_perm/syft_widget/tests/test_unified_widget.py -v)",
+      "Bash(.venv/bin/pytest tests/ --co -q)"
     ],
     "deny": []
   }

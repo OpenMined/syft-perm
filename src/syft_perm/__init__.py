@@ -8,9 +8,7 @@ from ._impl import SyftFile as _SyftFile
 from ._impl import SyftFolder as _SyftFolder
 from ._public import Files as _Files
 from ._public import FilteredFiles as _FilteredFiles
-from ._public import files
-from ._public import folders
-from ._public import files_and_folders
+from ._public import files, files_and_folders, folders
 from ._public import is_dark as _is_dark
 from .fastapi_files import FastAPIFiles as _FastAPIFiles
 
@@ -89,5 +87,3 @@ def _get_file_editor_url(path: _Union[str, _Path] = None) -> str:
     if path:
         return _get_file_editor_url_from_server(str(path))
     return _get_file_editor_url_from_server()
-
-

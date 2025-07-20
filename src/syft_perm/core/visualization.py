@@ -322,63 +322,78 @@ class ShareWidget:
 
     def _repr_html_(self) -> str:
         """Return HTML representation for Jupyter display."""
+        import os
         import urllib.parse as _url
 
         from .. import _is_dark as is_dark
 
-        # Try to ensure/locate a running server first (same logic we added elsewhere)
-        try:
-            from ..server import _SERVER_AVAILABLE
-            from ..server import get_server_url as _get_url
-            from ..server import start_server as _start_server
+        # Check feature flag for unified widgets
+        if os.environ.get("SYFT_USE_UNIFIED_WIDGETS", "").lower() == "true":
+            # Use new unified widget
+            from ..syft_widget.widgets import ShareWidgetUnified
 
-            if _SERVER_AVAILABLE:
-                server_url = _get_url()
-                if _SERVER_AVAILABLE and not server_url:
-                    # Start background server and grab its url
-                    server_url = _start_server()
-        except Exception:
-            server_url = None  # Any import/start failure -> fallback
+            widget = ShareWidgetUnified(syft_object=self._object)
+            return widget._repr_html_()
+        else:
+            # Use existing implementation
+            # Try to ensure/locate a running server first (same logic we added elsewhere)
+            try:
+                from ..server import _SERVER_AVAILABLE
+                from ..server import get_server_url as _get_url
+                from ..server import start_server as _start_server
 
-        if server_url:
-            share_url = f"{server_url}/share-modal?path={_url.quote(self._path)}"
-            if self._syft_user:
-                share_url += f"&syft_user={_url.quote(self._syft_user)}"
-            border = "#3e3e42" if is_dark() else "#ddd"
+                if _SERVER_AVAILABLE:
+                    server_url = _get_url()
+                    if _SERVER_AVAILABLE and not server_url:
+                        # Start background server and grab its url
+                        server_url = _start_server()
+            except Exception:
+                server_url = None  # Any import/start failure -> fallback
+
+            if server_url:
+                share_url = f"{server_url}/share-modal?path={_url.quote(self._path)}"
+                if self._syft_user:
+                    share_url += f"&syft_user={_url.quote(self._syft_user)}"
+                border = "#3e3e42" if is_dark() else "#ddd"
+                return (
+                    f'<div style="width:100%;height:600px;border:1px solid {border};border-radius:12px;overflow:hidden;">'
+                    f'<iframe src="{share_url}" style="width:100%;height:100%;border:none;border-radius:12px;"></iframe></div>'
+                )
+
+            # ---------------- Offline fallback ----------------
+            # Display a simple, read-only permission table similar to __repr__ output
+            rows = (
+                self._object._get_permission_table()
+                if hasattr(self._object, "_get_permission_table")
+                else []
+            )
+            if not rows:
+                return f"<pre>Permissions unknown for {self._path}</pre>"
+
+            # Build HTML table manually
+            header = (
+                "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th></tr>"
+            )
+            body_rows = []
+            for user, r, c, w, a, *_ in rows:
+                body_rows.append(
+                    f"<tr><td>{_url.unquote(user)}</td><td>{r}</td><td>{c}</td><td>{w}</td><td>{a}</td></tr>"
+                )
+            table_html = (
+                "<table style='border-collapse:collapse;'>"
+                + header
+                + "".join(body_rows)
+                + "</table>"
+            )
+
             return (
-                f'<div style="width:100%;height:600px;border:1px solid {border};border-radius:12px;overflow:hidden;">'
-                f'<iframe src="{share_url}" style="width:100%;height:100%;border:none;border-radius:12px;"></iframe></div>'
+                f"<div style='font-family: sans-serif; border:1px solid #ccc; padding:15px; border-radius:8px;'>"
+                f"<h3 style='margin-top:0;'>Share Permissions (read-only)</h3>"
+                f"<p style='margin:4px 0;'><strong>Path:</strong> {self._path}</p>"
+                f"{table_html}"  # noqa: E501
+                f"<p style='margin-top:10px;color:#888;font-size:0.9em;'>Permission editor unavailable (server dependencies not installed).</p>"
+                f"</div>"
             )
-
-        # ---------------- Offline fallback ----------------
-        # Display a simple, read-only permission table similar to __repr__ output
-        rows = (
-            self._object._get_permission_table()
-            if hasattr(self._object, "_get_permission_table")
-            else []
-        )
-        if not rows:
-            return f"<pre>Permissions unknown for {self._path}</pre>"
-
-        # Build HTML table manually
-        header = "<tr><th>User</th><th>Read</th><th>Create</th><th>Write</th><th>Admin</th></tr>"
-        body_rows = []
-        for user, r, c, w, a, *_ in rows:
-            body_rows.append(
-                f"<tr><td>{_url.unquote(user)}</td><td>{r}</td><td>{c}</td><td>{w}</td><td>{a}</td></tr>"
-            )
-        table_html = (
-            "<table style='border-collapse:collapse;'>" + header + "".join(body_rows) + "</table>"
-        )
-
-        return (
-            f"<div style='font-family: sans-serif; border:1px solid #ccc; padding:15px; border-radius:8px;'>"
-            f"<h3 style='margin-top:0;'>Share Permissions (read-only)</h3>"
-            f"<p style='margin:4px 0;'><strong>Path:</strong> {self._path}</p>"
-            f"{table_html}"  # noqa: E501
-            f"<p style='margin-top:10px;color:#888;font-size:0.9em;'>Permission editor unavailable (server dependencies not installed).</p>"
-            f"</div>"
-        )
 
     def __repr__(self) -> str:
         """String representation."""

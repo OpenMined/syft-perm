@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Optional
 
 from ..filesystem_editor.styles import get_editor_styles
-from ..filesystem_editor.themes import get_theme_colors
 from ..filesystem_editor.templates.html_structure import get_editor_html_structure
 from ..filesystem_editor.templates.javascript import get_editor_javascript
+from ..filesystem_editor.themes import get_theme_colors
 
 
 def generate_editor_html(

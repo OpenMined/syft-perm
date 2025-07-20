@@ -1,0 +1,122 @@
+{
+  "LIBRARY_NAME": "syft-compute",
+  "LIBRARY_TAGLINE": "Distributed Computation Made Private",
+  "PACKAGE_NAME": "syft-compute",
+  "GITHUB_REPO_NAME": "syft-compute",
+  "CORE_CONCEPT_PAGE": "computation-plans",
+  "CORE_CONCEPT_TITLE": "Computation Plans",
+  "HUBSPOT_FORM_ID": "b7a08fdc-0fb5-4938-99e8-4a09e7bbc09e",
+  
+  "homepage": {
+    "HERO_TITLE": "Distributed Computation Made Private",
+    "HERO_SUBTITLE": "Run secure computations across multiple data owners without sharing raw data",
+    
+    "PROBLEM_LABEL": "🔍 Traditional Approach",
+    "PROBLEM_CODE_EXAMPLE": "# Data must be centralized\ndata1 = hospital1.export_patient_data()\ndata2 = hospital2.export_patient_data()\nmerged = pd.concat([data1, data2])\n\n# Privacy violated!\nresult = analyze(merged)",
+    
+    "SOLUTION_LABEL": "🎯 Private Computation",
+    "SOLUTION_CODE_EXAMPLE": "# Data stays with owners\nimport syft_compute as sc\n\n# Define computation\n@sc.private_function\ndef analyze(data1, data2):\n    return statistical_analysis(data1, data2)\n\n# Run without seeing raw data\nresult = analyze.compute()",
+    
+    "INSTALL_NOTE": "Works with PyTorch, NumPy, and Pandas • Requires SyftBox 0.8+",
+    
+    "WHY_SUBTITLE": "Enable multi-party computation while preserving privacy and compliance",
+    
+    "VALUE_PROP_1_TITLE": "🔐 Privacy-Preserving",
+    "VALUE_PROP_1_DESC": "Compute on distributed data without exposing raw information",
+    
+    "VALUE_PROP_2_TITLE": "⚖️ Compliance-Ready",
+    "VALUE_PROP_2_DESC": "Meet GDPR, HIPAA, and other regulatory requirements",
+    
+    "VALUE_PROP_3_TITLE": "🚀 Production-Scale",
+    "VALUE_PROP_3_DESC": "Handle real-world datasets with optimized protocols",
+    
+    "DEMO_SUBTITLE": "See privacy-preserving computation in action",
+    "DEMO_IMAGE": "syft-compute-demo.png",
+    
+    "API_EXAMPLES": [
+      {
+        "EXAMPLE_TITLE": "Define Computations",
+        "EXAMPLE_CODE": "# Define a private computation\n@sc.private_function\ndef avg_age_by_condition(patients):\n    return patients.groupby('condition')['age'].mean()\n\n# Computation plan is created\nplan = avg_age_by_condition.plan"
+      },
+      {
+        "EXAMPLE_TITLE": "Connect Data Owners",
+        "EXAMPLE_CODE": "# Connect to data owners\nhospital1 = sc.connect('hospital1.syftbox.org')\nhospital2 = sc.connect('hospital2.syftbox.org')\n\n# Request computation\nresult = plan.compute(\n    hospital1.patients,\n    hospital2.patients\n)"
+      },
+      {
+        "EXAMPLE_TITLE": "Verify & Audit",
+        "EXAMPLE_CODE": "# Verify computation integrity\nverified = result.verify()\n\n# Access audit trail\naudit = result.get_audit_log()\nprint(audit.summary())"
+      }
+    ],
+    
+    "FEATURE_SECTION_TITLE": "Enterprise-Ready Features",
+    "FEATURE_SECTION_SUBTITLE": "Built for real healthcare and research deployments",
+    
+    "FEATURES": [
+      {
+        "FEATURE_ICON": "🏥",
+        "FEATURE_TITLE": "Healthcare-Grade Security",
+        "FEATURE_DESC": "HIPAA-compliant with end-to-end encryption"
+      },
+      {
+        "FEATURE_ICON": "📊",
+        "FEATURE_TITLE": "Rich Analytics",
+        "FEATURE_DESC": "Support for complex statistical and ML operations"
+      },
+      {
+        "FEATURE_ICON": "🔍",
+        "FEATURE_TITLE": "Full Auditability",
+        "FEATURE_DESC": "Complete audit trail for compliance requirements"
+      }
+    ],
+    
+    "REAL_EXAMPLE_TITLE": "Real Healthcare Use Case",
+    "REAL_EXAMPLE_SUBTITLE": "Multi-hospital study without data sharing:",
+    "REAL_EXAMPLE_CODE": "import syft_compute as sc\n\n# Define privacy-preserving analysis\n@sc.private_function\ndef treatment_effectiveness(hospital_data):\n    # Calculate treatment outcomes\n    outcomes = hospital_data.groupby(['treatment', 'outcome']).size()\n    success_rate = outcomes['success'] / outcomes.sum()\n    \n    # Add differential privacy\n    return sc.add_noise(success_rate, epsilon=1.0)\n\n# Connect to participating hospitals\nhospitals = [\n    sc.connect(f'hospital{i}.health-network.org')\n    for i in range(1, 6)\n]\n\n# Run federated analysis\nresults = treatment_effectiveness.compute_federated(\n    [h.clinical_trials for h in hospitals]\n)\n\n# Get aggregated insights without raw data\nprint(f\"Treatment effectiveness: {results.mean():.2%}\")",
+    
+    "TUTORIAL_URL": "https://github.com/OpenMined/syft-compute/blob/main/tutorials/healthcare-tutorial.ipynb",
+    "TUTORIAL_TEXT": "Healthcare Tutorial"
+  },
+  
+  "quickstart": {
+    "QUICKSTART_TITLE": "Start Computing Privately in 5 Minutes",
+    "QUICKSTART_SUBTITLE": "From installation to your first private computation",
+    
+    "QUICKSTART_STEPS": [
+      {
+        "STEP_NUMBER": "2",
+        "STEP_TITLE": "Create Your First Private Function",
+        "STEP_DESC": "Define a computation that respects data privacy:",
+        "STEP_CODE": "import syft_compute as sc\nimport numpy as np\n\n# Define private computation\n@sc.private_function\ndef private_mean(data):\n    return np.mean(data)\n\n# Create computation plan\nplan = private_mean.plan\nprint(plan.privacy_budget)  # ε = 1.0",
+        "ALT_BG": true
+      },
+      {
+        "STEP_NUMBER": "3",
+        "STEP_TITLE": "Run on Remote Data",
+        "STEP_DESC": "Execute without accessing raw data:",
+        "STEP_CODE": "# Connect to data owner\ndata_owner = sc.connect('datasite.example.org')\n\n# Request computation\nresult = plan.compute(data_owner.dataset)\n\n# Get differentially private result\nprint(f\"Private mean: {result.value}\")\nprint(f\"Privacy spent: {result.privacy_spent}\")"
+      }
+    ],
+    
+    "NEXT_STEPS_TITLE": "Ready for Private Computing! 🎉",
+    "NEXT_STEPS_DESC": "You can now run computations on sensitive data while preserving privacy",
+    
+    "NEXT_LINKS": [
+      {
+        "LINK_ICON": "🏥",
+        "LINK_TITLE": "Healthcare Examples",
+        "LINK_DESC": "HIPAA-compliant analyses",
+        "LINK_URL": "https://github.com/OpenMined/syft-compute/tree/main/examples/healthcare",
+        "LINK_STYLE": "btn-primary",
+        "LINK_BUTTON_TEXT": "View Examples"
+      },
+      {
+        "LINK_ICON": "📚",
+        "LINK_TITLE": "Privacy Guarantees",
+        "LINK_DESC": "Understanding differential privacy",
+        "LINK_URL": "computation-plans.html#privacy",
+        "LINK_STYLE": "btn-secondary",
+        "LINK_BUTTON_TEXT": "Learn More"
+      }
+    ]
+  }
+}

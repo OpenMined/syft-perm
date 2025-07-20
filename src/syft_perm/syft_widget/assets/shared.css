@@ -1,0 +1,234 @@
+/* Shared CSS for all syft-perm widgets */
+
+/* Base styles */
+.syft-widget {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.5;
+    color: var(--syft-fg, #1f2937);
+    background: var(--syft-bg, #ffffff);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .syft-widget {
+        --syft-fg: #d4d4d4;
+        --syft-bg: #1e1e1e;
+        --syft-border: #3e3e42;
+        --syft-header-bg: #252526;
+        --syft-card-bg: #2d2d30;
+    }
+}
+
+/* Interactive-only elements in static mode */
+.syft-widget-static [data-interactive-only] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    position: relative;
+}
+
+.syft-widget-static [data-interactive-only]::after {
+    content: attr(data-static-message, " (requires server)");
+    font-size: 0.8em;
+    opacity: 0.7;
+    font-style: italic;
+    margin-left: 4px;
+}
+
+/* Buttons */
+.syft-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.syft-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.syft-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.syft-button-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.syft-button-primary:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.syft-button-secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.syft-button-secondary:hover:not(:disabled) {
+    background: #d1d5db;
+}
+
+.syft-button-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.syft-button-danger:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+/* Inputs */
+.syft-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--syft-border, #e5e7eb);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--syft-bg, #ffffff);
+    color: var(--syft-fg, #1f2937);
+    transition: border-color 0.2s ease;
+}
+
+.syft-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.syft-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Tables */
+.syft-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.syft-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    background: var(--syft-header-bg, #f9fafb);
+    border-bottom: 2px solid var(--syft-border, #e5e7eb);
+}
+
+.syft-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--syft-border, #e5e7eb);
+}
+
+.syft-table tr:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+/* Cards */
+.syft-card {
+    background: var(--syft-card-bg, #f8fafc);
+    border: 1px solid var(--syft-border, #e5e7eb);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.syft-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.syft-card-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Notifications */
+.syft-notification {
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+}
+
+.syft-notification-info {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid #3b82f6;
+    color: #1e40af;
+}
+
+.syft-notification-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid #10b981;
+    color: #047857;
+}
+
+.syft-notification-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid #f59e0b;
+    color: #92400e;
+}
+
+.syft-notification-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+    color: #991b1b;
+}
+
+/* Loading states */
+.syft-loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: #3b82f6;
+    animation: syft-spin 1s ease-in-out infinite;
+}
+
+@keyframes syft-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Utility classes */
+.syft-mt-1 { margin-top: 4px; }
+.syft-mt-2 { margin-top: 8px; }
+.syft-mt-3 { margin-top: 12px; }
+.syft-mt-4 { margin-top: 16px; }
+
+.syft-mb-1 { margin-bottom: 4px; }
+.syft-mb-2 { margin-bottom: 8px; }
+.syft-mb-3 { margin-bottom: 12px; }
+.syft-mb-4 { margin-bottom: 16px; }
+
+.syft-gap-1 { gap: 4px; }
+.syft-gap-2 { gap: 8px; }
+.syft-gap-3 { gap: 12px; }
+.syft-gap-4 { gap: 16px; }
+
+.syft-flex { display: flex; }
+.syft-flex-col { flex-direction: column; }
+.syft-items-center { align-items: center; }
+.syft-justify-between { justify-content: space-between; }
+.syft-justify-center { justify-content: center; }
+
+.syft-text-sm { font-size: 14px; }
+.syft-text-xs { font-size: 12px; }
+.syft-font-semibold { font-weight: 600; }
+.syft-text-muted { opacity: 0.7; }

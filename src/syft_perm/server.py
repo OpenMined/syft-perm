@@ -12,10 +12,13 @@ from . import open as syft_open
 from ._auto_recovery import ensure_server_running
 from ._syftbox import client as syftbox_client
 from ._utils import get_syftbox_datasites
-from .file_editor import generate_editor_html, register_routes as register_file_editor_routes
-from .files_widget import get_files_widget_html, register_routes as register_files_widget_routes
+from .file_editor import generate_editor_html
+from .file_editor import register_routes as register_file_editor_routes
+from .files_widget import get_files_widget_html
+from .files_widget import register_routes as register_files_widget_routes
 from .filesystem_editor import get_current_user_email  # noqa: F401
-from .share import generate_share_modal_html, register_routes as register_share_routes
+from .share import generate_share_modal_html
+from .share import register_routes as register_share_routes
 
 _SERVER_AVAILABLE = False
 try:
@@ -332,7 +335,7 @@ if _SERVER_AVAILABLE:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Register widget routes
     register_files_widget_routes(app)
     register_file_editor_routes(app)
@@ -522,7 +525,9 @@ if _SERVER_AVAILABLE:
         limit: int = Query(50, ge=1, le=1000, description="Number of items per page"),
         offset: int = Query(0, ge=0, description="Starting index"),
         search: Optional[str] = Query(None, description="Search term for file names"),
-        filetype: Optional[str] = Query(None, description="Filter by file type: 'file' or 'folder'"),
+        filetype: Optional[str] = Query(
+            None, description="Filter by file type: 'file' or 'folder'"
+        ),
     ) -> FilesResponse:
         """Get paginated list of files with permissions from SyftBox directory."""
         try:
@@ -561,7 +566,7 @@ if _SERVER_AVAILABLE:
                                 # Still scan subdirectories even if parent doesn't match
                                 scan_directory(item, base_path)
                             continue
-                        
+
                         # Apply filetype filter if provided
                         if filetype:
                             if filetype == "file" and item.is_dir():
@@ -638,8 +643,6 @@ if _SERVER_AVAILABLE:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-
-
     @app.get("/api/scan-progress")  # type: ignore[misc]
     async def get_scan_progress() -> Dict[str, Any]:
         """Get current scan progress."""
@@ -709,7 +712,7 @@ if _SERVER_AVAILABLE:
         if folders:
             folder_list = [f.strip() for f in folders.split(",") if f.strip()]
             filtered_files = sp_files._apply_folder_filter(filtered_files, folder_list)
-        
+
         # Apply filetype filter
         if filetype:
             if filetype == "file":
@@ -869,8 +872,6 @@ if _SERVER_AVAILABLE:
         """Rename a file or directory."""
         current_user = syft_user or get_current_user_email()
         return fs_manager.rename_item(old_path, new_path, user_email=current_user)
-
-
 
 
 # Server management

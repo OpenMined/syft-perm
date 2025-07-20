@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{LIBRARY_NAME}} - {{LIBRARY_TAGLINE}}</title>
+    <link rel="icon" type="image/svg+xml" href="images/syftbox-logo.svg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="nav-wrapper">
+                <div class="logo-group">
+                    <img src="images/syftbox-logo.svg" alt="SyftBox" class="syftbox-logo">
+                    <a href="index.html" class="logo">{{LIBRARY_NAME}}</a>
+                </div>
+                <div class="nav-links">
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="{{CORE_CONCEPT_PAGE}}.html">{{CORE_CONCEPT_TITLE}}</a>
+                    <a href="api/index.html">API</a>
+                    <a href="https://github.com/OpenMined/{{GITHUB_REPO_NAME}}" class="github-link">GitHub</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section with Swoop -->
+    <div class="hero-swoop">
+        <svg viewBox="0 0 1440 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0,0 C480,100 960,100 1440,0 L1440,100 L0,100 Z" fill="#f8f9fa"></path>
+        </svg>
+    </div>
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">{{HERO_TITLE}}</h1>
+            <p class="hero-subtitle">{{HERO_SUBTITLE}}</p>
+            
+            <!-- Problem/Solution Split -->
+            <div class="code-comparison">
+                <div class="code-before">
+                    <div class="code-label">{{PROBLEM_LABEL}}</div>
+                    <pre><code class="language-python">{{PROBLEM_CODE_EXAMPLE}}</code></pre>
+                </div>
+                
+                <div class="code-arrow">+</div>
+                
+                <div class="code-after">
+                    <div class="code-label">{{SOLUTION_LABEL}}</div>
+                    <pre><code class="language-python">{{SOLUTION_CODE_EXAMPLE}}</code></pre>
+                </div>
+            </div>
+
+            <!-- Install Command -->
+            <div class="install-section">
+                <div class="install-command">
+                    <code>pip install {{PACKAGE_NAME}}</code>
+                    <button class="copy-btn" data-copy="pip install {{PACKAGE_NAME}}">Copy</button>
+                </div>
+                <p class="install-note">{{INSTALL_NOTE}}</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Section -->
+    <section class="why-syftperm">
+        <div class="container">
+            <h2>Why We Built This</h2>
+            <p class="section-subtitle">{{WHY_SUBTITLE}}</p>
+            
+            <div class="value-props">
+                <div class="value-prop">
+                    <h3>{{VALUE_PROP_1_TITLE}}</h3>
+                    <p>{{VALUE_PROP_1_DESC}}</p>
+                </div>
+                <div class="value-prop">
+                    <h3>{{VALUE_PROP_2_TITLE}}</h3>
+                    <p>{{VALUE_PROP_2_DESC}}</p>
+                </div>
+                <div class="value-prop">
+                    <h3>{{VALUE_PROP_3_TITLE}}</h3>
+                    <p>{{VALUE_PROP_3_DESC}}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Showcase (Video/Image Demo) -->
+    <section class="video-demo">
+        <div class="container">
+            <h2>See It In Action</h2>
+            <p class="section-subtitle">{{DEMO_SUBTITLE}}</p>
+            
+            <div class="demo-video-container">
+                <!-- Option 1: Video -->
+                <!--
+                <video controls autoplay loop muted playsinline>
+                    <source src="images/{{DEMO_VIDEO_WEBM}}" type="video/webm">
+                    <source src="images/{{DEMO_VIDEO_MP4}}" type="video/mp4">
+                    <img src="images/{{DEMO_FALLBACK_GIF}}" alt="{{LIBRARY_NAME}} Demo">
+                </video>
+                -->
+                
+                <!-- Option 2: Static Image -->
+                <img src="images/{{DEMO_IMAGE}}" alt="{{LIBRARY_NAME}} Demo" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            </div>
+        </div>
+    </section>
+
+    <!-- Complete API Preview -->
+    <section class="api-preview">
+        <div class="container">
+            <h2>The API at a Glance</h2>
+            <p class="section-subtitle">{{API_SUBTITLE}}</p>
+            
+            <div class="api-examples">
+                {{#API_EXAMPLES}}
+                <div class="api-example">
+                    <h3>{{EXAMPLE_TITLE}}</h3>
+                    <pre><code class="language-python">{{EXAMPLE_CODE}}</code></pre>
+                    {{#EXAMPLE_NOTE}}
+                    <p style="margin-top: 12px; font-size: 0.9rem;">
+                        <a href="{{EXAMPLE_LINK}}" style="color: var(--color-accent);">
+                            {{EXAMPLE_LINK_TEXT}} →
+                        </a>
+                    </p>
+                    {{/EXAMPLE_NOTE}}
+                </div>
+                {{/API_EXAMPLES}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Gradient Feature Section -->
+    <section class="gradient-feature">
+        <div class="container">
+            <h2>{{FEATURE_SECTION_TITLE}}</h2>
+            <p class="section-subtitle">{{FEATURE_SECTION_SUBTITLE}}</p>
+            
+            <div class="feature-cards">
+                {{#FEATURES}}
+                <div class="feature-card">
+                    <div class="feature-icon">{{FEATURE_ICON}}</div>
+                    <h3>{{FEATURE_TITLE}}</h3>
+                    <p>{{FEATURE_DESC}}</p>
+                </div>
+                {{/FEATURES}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Real Example -->
+    <section class="real-example">
+        <div class="container">
+            <h2>{{REAL_EXAMPLE_TITLE}}</h2>
+            <p style="text-align: center; margin-bottom: var(--space-6);">{{REAL_EXAMPLE_SUBTITLE}}</p>
+            <pre><code class="language-python">{{REAL_EXAMPLE_CODE}}</code></pre>
+        </div>
+    </section>
+
+    <!-- Tutorial CTA Section -->
+    <section class="tutorial-cta gradient-feature">
+        <div class="container">
+            <h2>Ready to Get Started?</h2>
+            
+            <div class="cta-buttons">
+                <a href="quickstart.html" class="btn btn-primary btn-large">Quick Start Guide</a>
+                {{#TUTORIAL_LINK}}
+                <a href="{{TUTORIAL_URL}}" class="btn btn-primary btn-large">{{TUTORIAL_TEXT}}</a>
+                {{/TUTORIAL_LINK}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter-section">
+        <div class="container">
+            <div class="newsletter-content">
+                <h2>Stay Updated</h2>
+                <p>Get the latest updates about {{LIBRARY_NAME}} and the OpenMined ecosystem</p>
+                
+                <!-- HubSpot Form -->
+                <div id="hubspot-form-container"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    
+    <!-- HubSpot Forms Script -->
+    <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/embed/v2.js"></script>
+    <script>
+        hbspt.forms.create({
+            region: "na1",
+            portalId: "6487402",
+            formId: "{{HUBSPOT_FORM_ID}}",
+            target: "#hubspot-form-container",
+            css: "",
+            cssClass: "newsletter-hubspot-form",
+            onFormReady: function(form) {
+                // Style the form to match our design
+                const formElement = form[0] || form;
+                formElement.querySelectorAll('input[type="text"], input[type="email"], textarea').forEach(el => {
+                    el.classList.add('hubspot-input');
+                });
+                formElement.querySelectorAll('input[type="submit"]').forEach(el => {
+                    el.classList.add('hubspot-submit');
+                });
+                formElement.querySelectorAll('input[type="checkbox"]').forEach(el => {
+                    el.parentElement.classList.add('hubspot-checkbox-wrapper');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

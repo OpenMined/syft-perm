@@ -598,8 +598,19 @@ class SyftFile:
 
     def _repr_html_(self) -> str:
         """Return an interactive iframe when the server is available or a static, read-only widget otherwise."""
-        from . import _get_file_editor_url as get_file_editor_url
-        from . import _is_dark as is_dark
+        import os
+
+        # Check feature flag for unified widgets
+        if os.environ.get("SYFT_USE_UNIFIED_WIDGETS", "").lower() == "true":
+            # Use new unified widget
+            from .syft_widget.widgets import FileEditorWidgetUnified
+
+            widget = FileEditorWidgetUnified(file_path=self._path)
+            return widget._repr_html_()
+        else:
+            # Use existing implementation
+            from . import _get_file_editor_url as get_file_editor_url
+            from . import _is_dark as is_dark
 
         # Helper to quickly decide if a returned URL is actually usable
         def _looks_like_valid_url(url: str) -> bool:

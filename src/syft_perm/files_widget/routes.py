@@ -11,7 +11,7 @@ from .widget import get_files_widget_html
 
 def register_routes(app):
     """Register files widget routes with the FastAPI app."""
-    
+
     @app.get("/files-widget", response_class=HTMLResponse)
     async def files_widget(
         search: Optional[str] = Query(None, description="Search term for file names"),
@@ -21,7 +21,9 @@ def register_routes(app):
         items_per_page: int = Query(50, ge=1, le=1000, description="Items per page"),
         start: Optional[int] = Query(None, ge=0, description="Start index for slicing"),
         end: Optional[int] = Query(None, ge=0, description="End index for slicing"),
-        filetype: Optional[str] = Query(None, description="Filter by file type: 'file' or 'folder'"),
+        filetype: Optional[str] = Query(
+            None, description="Filter by file type: 'file' or 'folder'"
+        ),
     ) -> str:
         """Serve the files widget interface with filtering support."""
         # Get current user email

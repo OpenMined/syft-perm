@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference - {{LIBRARY_NAME}}</title>
+    <link rel="icon" type="image/svg+xml" href="../images/syftbox-logo.svg">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="nav-wrapper">
+                <div class="logo-group">
+                    <img src="../images/syftbox-logo.svg" alt="SyftBox" class="syftbox-logo">
+                    <a href="../index.html" class="logo">{{LIBRARY_NAME}}</a>
+                </div>
+                <div class="nav-links">
+                    <a href="../quickstart.html">Quick Start</a>
+                    <a href="../{{CORE_CONCEPT_PAGE}}.html">{{CORE_CONCEPT_TITLE}}</a>
+                    <a href="index.html" class="active">API</a>
+                    <a href="https://github.com/OpenMined/{{GITHUB_REPO_NAME}}" class="github-link">GitHub</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- API Hero -->
+    <section class="api-hero">
+        <div class="container">
+            <h1>API Reference</h1>
+            <p class="hero-subtitle">Complete documentation for {{LIBRARY_NAME}}</p>
+        </div>
+    </section>
+
+    <!-- Table of Contents -->
+    <section class="api-toc">
+        <div class="container">
+            <div class="toc-wrapper">
+                <h2>Quick Navigation</h2>
+                <div class="toc-grid">
+                    {{#API_MODULES}}
+                    <a href="#{{MODULE_ID}}" class="toc-item">
+                        <h3>{{MODULE_NAME}}</h3>
+                        <p>{{MODULE_DESC}}</p>
+                    </a>
+                    {{/API_MODULES}}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Sections -->
+    {{#API_MODULES}}
+    <section id="{{MODULE_ID}}" class="api-section {{#ALT_BG}}alt-bg{{/ALT_BG}}">
+        <div class="container">
+            <div class="api-content">
+                <h2>{{MODULE_NAME}}</h2>
+                <p class="module-description">{{MODULE_DESCRIPTION}}</p>
+                
+                {{#MODULE_FUNCTIONS}}
+                <div class="api-method">
+                    <div class="method-signature">
+                        <code>{{FUNCTION_SIGNATURE}}</code>
+                    </div>
+                    
+                    <div class="method-details">
+                        <p class="method-description">{{FUNCTION_DESC}}</p>
+                        
+                        {{#HAS_PARAMS}}
+                        <h4>Parameters</h4>
+                        <div class="params-table">
+                            {{#PARAMS}}
+                            <div class="param-row">
+                                <div class="param-name"><code>{{PARAM_NAME}}</code></div>
+                                <div class="param-type">{{PARAM_TYPE}}</div>
+                                <div class="param-desc">{{PARAM_DESC}}</div>
+                            </div>
+                            {{/PARAMS}}
+                        </div>
+                        {{/HAS_PARAMS}}
+                        
+                        {{#HAS_RETURNS}}
+                        <h4>Returns</h4>
+                        <div class="returns">
+                            <span class="return-type">{{RETURN_TYPE}}</span>
+                            <span class="return-desc">{{RETURN_DESC}}</span>
+                        </div>
+                        {{/HAS_RETURNS}}
+                        
+                        {{#HAS_EXAMPLE}}
+                        <h4>Example</h4>
+                        <pre><code class="language-python">{{EXAMPLE_CODE}}</code></pre>
+                        {{/HAS_EXAMPLE}}
+                        
+                        {{#HAS_NOTE}}
+                        <div class="api-note {{NOTE_TYPE}}">
+                            <strong>{{NOTE_LABEL}}:</strong> {{NOTE_TEXT}}
+                        </div>
+                        {{/HAS_NOTE}}
+                    </div>
+                </div>
+                {{/MODULE_FUNCTIONS}}
+            </div>
+        </div>
+    </section>
+    {{/API_MODULES}}
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

@@ -11,7 +11,7 @@ from .editor import generate_editor_html
 
 def register_routes(app):
     """Register file editor routes with the FastAPI app."""
-    
+
     @app.get("/file-editor", response_class=HTMLResponse)
     async def file_editor_interface(syft_user: Optional[str] = Query(None)) -> HTMLResponse:
         """Serve the file editor interface."""

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{CORE_CONCEPT_TITLE}} - {{LIBRARY_NAME}}</title>
+    <link rel="icon" type="image/svg+xml" href="images/syftbox-logo.svg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="nav-wrapper">
+                <div class="logo-group">
+                    <img src="images/syftbox-logo.svg" alt="SyftBox" class="syftbox-logo">
+                    <a href="index.html" class="logo">{{LIBRARY_NAME}}</a>
+                </div>
+                <div class="nav-links">
+                    <a href="quickstart.html">Quick Start</a>
+                    <a href="{{CORE_CONCEPT_PAGE}}.html" class="active">{{CORE_CONCEPT_TITLE}}</a>
+                    <a href="api/index.html">API</a>
+                    <a href="https://github.com/OpenMined/{{GITHUB_REPO_NAME}}" class="github-link">GitHub</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Page Hero -->
+    <section class="page-hero">
+        <div class="container">
+            <h1>{{CORE_CONCEPT_HERO_TITLE}}</h1>
+            <p class="hero-subtitle">{{CORE_CONCEPT_HERO_SUBTITLE}}</p>
+        </div>
+    </section>
+
+    <!-- Introduction -->
+    <section class="content-section">
+        <div class="container">
+            <div class="content-wrapper">
+                <h2>{{INTRO_TITLE}}</h2>
+                <p>{{INTRO_PARAGRAPH_1}}</p>
+                <p>{{INTRO_PARAGRAPH_2}}</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Sections -->
+    {{#CONTENT_SECTIONS}}
+    <section class="content-section {{#ALT_BG}}alt-bg{{/ALT_BG}}">
+        <div class="container">
+            <div class="content-wrapper">
+                <h2>{{SECTION_TITLE}}</h2>
+                {{#SECTION_SUBTITLE}}<p class="section-subtitle">{{SECTION_SUBTITLE}}</p>{{/SECTION_SUBTITLE}}
+                
+                {{#SECTION_ITEMS}}
+                <div class="concept-item">
+                    <h3>{{ITEM_TITLE}}</h3>
+                    {{#ITEM_DESC}}<p>{{ITEM_DESC}}</p>{{/ITEM_DESC}}
+                    {{#ITEM_CODE}}
+                    <pre><code class="language-{{CODE_LANG}}">{{ITEM_CODE}}</code></pre>
+                    {{/ITEM_CODE}}
+                    {{#ITEM_NOTE}}
+                    <div class="note {{NOTE_TYPE}}">
+                        <strong>{{NOTE_LABEL}}:</strong> {{NOTE_TEXT}}
+                    </div>
+                    {{/ITEM_NOTE}}
+                </div>
+                {{/SECTION_ITEMS}}
+            </div>
+        </div>
+    </section>
+    {{/CONTENT_SECTIONS}}
+
+    <!-- Summary -->
+    <section class="summary-section gradient-feature">
+        <div class="container">
+            <h2>{{SUMMARY_TITLE}}</h2>
+            <p class="section-subtitle">{{SUMMARY_SUBTITLE}}</p>
+            
+            <div class="summary-points">
+                {{#SUMMARY_POINTS}}
+                <div class="summary-point">
+                    <div class="summary-icon">{{POINT_ICON}}</div>
+                    <p>{{POINT_TEXT}}</p>
+                </div>
+                {{/SUMMARY_POINTS}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Next Steps -->
+    <section class="next-steps">
+        <div class="container">
+            <h2>{{NEXT_TITLE}}</h2>
+            <div class="cta-buttons">
+                {{#NEXT_ACTIONS}}
+                <a href="{{ACTION_URL}}" class="btn {{ACTION_STYLE}}">{{ACTION_TEXT}}</a>
+                {{/NEXT_ACTIONS}}
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Built with ❤️ by <a href="https://openmined.org">OpenMined</a></p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

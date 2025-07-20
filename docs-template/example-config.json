@@ -1,0 +1,212 @@
+{
+  "LIBRARY_NAME": "syft-example",
+  "LIBRARY_TAGLINE": "Example Library for SyftBox",
+  "PACKAGE_NAME": "syft-example",
+  "GITHUB_REPO_NAME": "syft-example",
+  "CORE_CONCEPT_PAGE": "key-concepts",
+  "CORE_CONCEPT_TITLE": "Key Concepts",
+  "HUBSPOT_FORM_ID": "b7a08fdc-0fb5-4938-99e8-4a09e7bbc09e",
+  
+  "homepage": {
+    "HERO_TITLE": "Example Library Made Simple",
+    "HERO_SUBTITLE": "A powerful tool for doing amazing things in SyftBox",
+    
+    "PROBLEM_LABEL": "🔍 The Old Way",
+    "PROBLEM_CODE_EXAMPLE": "# Complex manual process\ndata = load_data('file.csv')\nprocess_manually(data)\n# Many steps required...",
+    
+    "SOLUTION_LABEL": "🎯 The New Way",
+    "SOLUTION_CODE_EXAMPLE": "# Simple one-liner\nimport syft_example\nresult = syft_example.process('file.csv')",
+    
+    "INSTALL_NOTE": "Compatible with SyftBox 0.8+ • Python 3.8+",
+    
+    "WHY_SUBTITLE": "Making complex workflows simple and accessible for everyone",
+    
+    "VALUE_PROP_1_TITLE": "🚀 Lightning Fast",
+    "VALUE_PROP_1_DESC": "Process data 10x faster with optimized algorithms",
+    
+    "VALUE_PROP_2_TITLE": "🔧 Easy Integration",
+    "VALUE_PROP_2_DESC": "Drop-in replacement for existing workflows",
+    
+    "VALUE_PROP_3_TITLE": "📊 Better Results",
+    "VALUE_PROP_3_DESC": "Improved accuracy with state-of-the-art methods",
+    
+    "DEMO_SUBTITLE": "See the power of automated processing",
+    "DEMO_IMAGE": "demo-screenshot.png",
+    
+    "API_EXAMPLES": [
+      {
+        "EXAMPLE_TITLE": "Loading Data",
+        "EXAMPLE_CODE": "# Load any data format\ndata = syft_example.load('data.csv')\ndata = syft_example.load('data.json')\ndata = syft_example.load('data.parquet')"
+      },
+      {
+        "EXAMPLE_TITLE": "Processing",
+        "EXAMPLE_CODE": "# Process with default settings\nresult = data.process()\n\n# Or customize parameters\nresult = data.process(\n    method='advanced',\n    threshold=0.95\n)"
+      },
+      {
+        "EXAMPLE_TITLE": "Saving Results",
+        "EXAMPLE_CODE": "# Save in any format\nresult.save('output.csv')\nresult.save('output.json')\n\n# Or get raw data\ndf = result.to_dataframe()"
+      }
+    ],
+    
+    "FEATURE_SECTION_TITLE": "Built for Real-World Use",
+    "FEATURE_SECTION_SUBTITLE": "Features that matter for production workflows",
+    
+    "FEATURES": [
+      {
+        "FEATURE_ICON": "⚡",
+        "FEATURE_TITLE": "Blazing Performance",
+        "FEATURE_DESC": "Optimized for large datasets with parallel processing"
+      },
+      {
+        "FEATURE_ICON": "🔐",
+        "FEATURE_TITLE": "Privacy-First",
+        "FEATURE_DESC": "Built-in differential privacy and secure computation"
+      },
+      {
+        "FEATURE_ICON": "📈",
+        "FEATURE_TITLE": "Production Ready",
+        "FEATURE_DESC": "Battle-tested in real deployments"
+      }
+    ],
+    
+    "REAL_EXAMPLE_TITLE": "Real-World Example",
+    "REAL_EXAMPLE_SUBTITLE": "Processing sensitive medical data with privacy guarantees:",
+    "REAL_EXAMPLE_CODE": "import syft_example\n\n# Load medical records\ndata = syft_example.load('patient_records.csv')\n\n# Apply privacy-preserving analysis\nresult = data.process(\n    method='differential_privacy',\n    epsilon=1.0,\n    features=['age', 'diagnosis', 'treatment']\n)\n\n# Get aggregate statistics without exposing individual records\nstats = result.get_statistics()\nprint(stats.summary())",
+    
+    "TUTORIAL_URL": "https://github.com/OpenMined/syft-example/blob/main/tutorial.ipynb",
+    "TUTORIAL_TEXT": "Interactive Tutorial"
+  },
+  
+  "quickstart": {
+    "QUICKSTART_TITLE": "Get Started in 5 Minutes",
+    "QUICKSTART_SUBTITLE": "From installation to your first analysis",
+    
+    "QUICKSTART_STEPS": [
+      {
+        "STEP_NUMBER": "2",
+        "STEP_TITLE": "Your First Analysis",
+        "STEP_DESC": "Load and process your first dataset:",
+        "STEP_CODE": "import syft_example\n\n# Load your data\ndata = syft_example.load('sales_data.csv')\n\n# Run analysis\nresult = data.process()\n\n# View results\nprint(result.summary())",
+        "ALT_BG": true
+      },
+      {
+        "STEP_NUMBER": "3",
+        "STEP_TITLE": "Advanced Features",
+        "STEP_DESC": "Unlock more powerful capabilities:",
+        "STEP_CODE": "# Custom processing pipeline\npipeline = syft_example.Pipeline([\n    ('clean', syft_example.CleanData()),\n    ('transform', syft_example.Transform()),\n    ('analyze', syft_example.Analyze())\n])\n\nresult = pipeline.fit_transform(data)"
+      }
+    ],
+    
+    "NEXT_STEPS_TITLE": "You're Ready to Go! 🎉",
+    "NEXT_STEPS_DESC": "You now have everything you need to start using syft-example",
+    
+    "NEXT_LINKS": [
+      {
+        "LINK_ICON": "📚",
+        "LINK_TITLE": "Full Documentation",
+        "LINK_DESC": "Deep dive into all features",
+        "LINK_URL": "https://docs.example.com",
+        "LINK_STYLE": "btn-primary",
+        "LINK_BUTTON_TEXT": "Read Docs"
+      },
+      {
+        "LINK_ICON": "💡",
+        "LINK_TITLE": "Example Gallery",
+        "LINK_DESC": "Learn from real examples",
+        "LINK_URL": "https://github.com/OpenMined/syft-example/tree/main/examples",
+        "LINK_STYLE": "btn-secondary",
+        "LINK_BUTTON_TEXT": "View Examples"
+      }
+    ]
+  },
+  
+  "core_concept": {
+    "CORE_CONCEPT_HERO_TITLE": "Understanding Key Concepts",
+    "CORE_CONCEPT_HERO_SUBTITLE": "Master the fundamentals of syft-example",
+    
+    "INTRO_TITLE": "Overview",
+    "INTRO_PARAGRAPH_1": "Syft-example is built on three core concepts that work together to provide powerful, privacy-preserving data analysis.",
+    "INTRO_PARAGRAPH_2": "Understanding these concepts will help you get the most out of the library and build more sophisticated workflows.",
+    
+    "CONTENT_SECTIONS": [
+      {
+        "SECTION_TITLE": "Data Loaders",
+        "SECTION_SUBTITLE": "Flexible data ingestion for any format",
+        "SECTION_ITEMS": [
+          {
+            "ITEM_TITLE": "Universal Loading",
+            "ITEM_DESC": "Load data from any source with automatic format detection",
+            "ITEM_CODE": "# Automatic format detection\ndata = syft_example.load('file.csv')\ndata = syft_example.load('s3://bucket/file.parquet')\ndata = syft_example.load('postgresql://db/table')",
+            "CODE_LANG": "python"
+          }
+        ]
+      }
+    ],
+    
+    "SUMMARY_TITLE": "Key Takeaways",
+    "SUMMARY_SUBTITLE": "Remember these core concepts",
+    
+    "SUMMARY_POINTS": [
+      {
+        "POINT_ICON": "📥",
+        "POINT_TEXT": "Data loaders handle any format automatically"
+      },
+      {
+        "POINT_ICON": "⚙️",
+        "POINT_TEXT": "Processors can be chained into pipelines"
+      },
+      {
+        "POINT_ICON": "📊",
+        "POINT_TEXT": "Results provide rich analysis capabilities"
+      }
+    ],
+    
+    "NEXT_TITLE": "Ready to dive deeper?",
+    "NEXT_ACTIONS": [
+      {
+        "ACTION_URL": "api/index.html",
+        "ACTION_STYLE": "btn-primary",
+        "ACTION_TEXT": "Explore the Full API"
+      }
+    ]
+  },
+  
+  "api": {
+    "API_MODULES": [
+      {
+        "MODULE_ID": "data-loading",
+        "MODULE_NAME": "Data Loading",
+        "MODULE_DESC": "Functions for loading data from various sources",
+        "MODULE_DESCRIPTION": "The data loading module provides a unified interface for loading data from files, databases, and remote sources.",
+        "MODULE_FUNCTIONS": [
+          {
+            "FUNCTION_SIGNATURE": "syft_example.load(path: str, **kwargs) -> Dataset",
+            "FUNCTION_DESC": "Load data from any supported source",
+            "HAS_PARAMS": true,
+            "PARAMS": [
+              {
+                "PARAM_NAME": "path",
+                "PARAM_TYPE": "str",
+                "PARAM_DESC": "Path to data source (file, URL, or connection string)"
+              },
+              {
+                "PARAM_NAME": "**kwargs",
+                "PARAM_TYPE": "dict",
+                "PARAM_DESC": "Additional format-specific options"
+              }
+            ],
+            "HAS_RETURNS": true,
+            "RETURN_TYPE": "Dataset",
+            "RETURN_DESC": "Loaded dataset ready for processing",
+            "HAS_EXAMPLE": true,
+            "EXAMPLE_CODE": "# Load CSV with custom delimiter\ndata = syft_example.load('data.csv', delimiter=';')\n\n# Load from S3\ndata = syft_example.load('s3://bucket/data.parquet')",
+            "HAS_NOTE": true,
+            "NOTE_TYPE": "info",
+            "NOTE_LABEL": "Note",
+            "NOTE_TEXT": "Format is automatically detected from file extension"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -12,7 +12,7 @@ from .permission_editor import get_editor_html
 
 def register_routes(app):
     """Register share modal and permission editor routes with the FastAPI app."""
-    
+
     @app.get("/share-modal", response_class=HTMLResponse)
     async def share_modal(
         path: str = Query(...), syft_user: Optional[str] = Query(None)
@@ -23,7 +23,7 @@ def register_routes(app):
                 path=path, is_dark_mode=_is_dark(), syft_user=syft_user
             )
         )
-    
+
     @app.get("/editor/{path:path}", response_class=HTMLResponse)
     async def permission_editor(path: str) -> str:
         """Serve the Google Drive-style permission editor."""
