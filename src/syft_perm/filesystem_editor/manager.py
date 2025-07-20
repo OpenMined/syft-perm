@@ -6,11 +6,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import HTTPException
 
-
-def get_current_user_email():
-    """Helper function to get current user email - you may need to implement this."""
-    # This is a placeholder - implement according to your authentication system
-    return None
+from .utils import get_current_user_email
 
 
 class FileSystemManager:
@@ -219,7 +215,7 @@ class FileSystemManager:
 
                     # Use syft-perm to check admin permissions
 
-                    from . import open as syft_open
+                    from .. import open as syft_open
 
                     syft_folder = syft_open(dir_path)
 
@@ -286,7 +282,7 @@ class FileSystemManager:
 
                     # Use syft-perm to check actual permissions
 
-                    from . import open as syft_open
+                    from .. import open as syft_open
 
                     syft_file = syft_open(file_path)
 
@@ -369,7 +365,7 @@ class FileSystemManager:
 
                 # Use syft-perm to check actual permissions
 
-                from . import open as syft_open
+                from .. import open as syft_open
 
                 syft_file = syft_open(file_path.parent if not file_path.exists() else file_path)
 
@@ -451,7 +447,7 @@ class FileSystemManager:
 
                 # Use syft-perm to check actual permissions on parent directory
 
-                from . import open as syft_open
+                from .. import open as syft_open
 
                 parent_dir = syft_open(dir_path.parent)
 
@@ -541,7 +537,7 @@ class FileSystemManager:
 
         if current_user:
             try:
-                from . import open as syft_open
+                from .. import open as syft_open
 
                 parent_folder = syft_open(old_item_path.parent)
 

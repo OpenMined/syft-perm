@@ -24,11 +24,12 @@ class Files:
         test_files = sp.files.search("test")
     """
 
-    def __init__(self):
+    def __init__(self, filetype: _Union[str, None] = None):
         self._cache = None
         self._initial_page = 1  # Default to first page
         self._items_per_page = 50  # Default items per page
         self._show_ascii_progress = True  # Whether to show ASCII progress in __repr__
+        self._filetype = filetype  # Filter for 'file', 'folder', or None (both)
 
     def _check_server(self) -> _Union[str, None]:
         """Check if syft-perm server is available. Returns server URL or None."""
@@ -214,7 +215,7 @@ class Files:
 
         return files
 
-    def get(self, limit: int = 50, offset: int = 0, search: _Union[str, None] = None) -> dict:
+    def get(self, limit: int = 50, offset: int = 0, search: _Union[str, None] = None, filetype: _Union[str, None] = None) -> dict:
         """
         Get a paginated list of files.
 
@@ -222,21 +223,22 @@ class Files:
             limit: Max number of files to return
             offset: Starting offset
             search: Optional search filter
+            filetype: Optional filter for 'file' or 'folder'
 
         Returns:
             Dictionary with files and total count
         """
         if self._cache is None:
-            self._cache = self._scan_files(search=search)
+            self._cache = self._scan_files(search=search, filetype=filetype or self._filetype)
 
         files_to_return = self._cache[offset : offset + limit]
 
         return {"files": files_to_return, "total": len(self._cache)}
 
-    def all(self, search: _Union[str, None] = None) -> list:
+    def all(self, search: _Union[str, None] = None, filetype: _Union[str, None] = None) -> list:
         """Get all files, bypassing pagination."""
         if self._cache is None or search:
-            self._cache = self._scan_files(search=search, show_ascii_progress=True)
+            self._cache = self._scan_files(search=search, show_ascii_progress=True, filetype=filetype or self._filetype)
         return self._cache
 
     def search(
@@ -245,9 +247,10 @@ class Files:
         admin: _Union[str, None] = None,
         limit: int = 50,
         offset: int = 0,
+        filetype: _Union[str, None] = None,
     ) -> "Files":
         if self._cache is None:
-            self._cache = self._scan_files()
+            self._cache = self._scan_files(filetype=filetype or self._filetype)
 
         filtered = self._apply_filters(self._cache, files_query=files, admin=admin)
 
@@ -255,7 +258,7 @@ class Files:
 
     def filter(self, folders: _Union[list, str, None] = None) -> "Files":
         if self._cache is None:
-            self._cache = self._scan_files()
+            self._cache = self._scan_files(filetype=self._filetype)
 
         if isinstance(folders, str):
             folders = [folders]
@@ -547,6 +550,7 @@ class FastAPIFiles(Files):
         admin: _Union[str, None] = None,
         limit: int = 50,
         offset: int = 0,
+        filetype: _Union[str, None] = None,
     ) -> "Files":
         """Set search parameters for FastAPI query."""
         # Fetch files from server with search parameters
@@ -555,6 +559,7 @@ class FastAPIFiles(Files):
             "admin_query": admin,
             "limit": limit,
             "offset": offset,
+            "filetype": filetype,
         }
         # Get filtered files from the server
         filtered = self._scan_files()
@@ -562,7 +567,7 @@ class FastAPIFiles(Files):
         return FilteredFiles(filtered, limit=limit, offset=offset)
 
     def _scan_files(
-        self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False
+        self, search: _Union[str, None] = None, progress_callback=None, show_ascii_progress=False, filetype: _Union[str, None] = None
     ) -> list:
         """Fetch files from the FastAPI server."""
         import requests
@@ -712,5 +717,7 @@ def is_dark():
         return False
 
 
-# Create a single instance of Files for easy access
-files = Files()
+# Create instances for different access patterns
+files_and_folders = Files()  # Default behavior - returns both files and folders
+files = Files(filetype="file")  # Only returns files
+folders = Files(filetype="folder")  # Only returns folders

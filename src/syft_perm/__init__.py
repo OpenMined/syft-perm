@@ -9,12 +9,14 @@ from ._impl import SyftFolder as _SyftFolder
 from ._public import Files as _Files
 from ._public import FilteredFiles as _FilteredFiles
 from ._public import files
+from ._public import folders
+from ._public import files_and_folders
 from ._public import is_dark as _is_dark
 from .fastapi_files import FastAPIFiles as _FastAPIFiles
 
 __version__ = "0.4.0"
 
-__all__ = ["open", "files"]
+__all__ = ["open", "files", "folders", "files_and_folders"]
 
 
 def open(path: _Union[str, _Path]) -> _Union[_SyftFile, _SyftFolder]:

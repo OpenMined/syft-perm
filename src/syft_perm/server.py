@@ -516,6 +516,7 @@ if _SERVER_AVAILABLE:
         limit: int = Query(50, ge=1, le=1000, description="Number of items per page"),
         offset: int = Query(0, ge=0, description="Starting index"),
         search: Optional[str] = Query(None, description="Search term for file names"),
+        filetype: Optional[str] = Query(None, description="Filter by file type: 'file' or 'folder'"),
     ) -> FilesResponse:
         """Get paginated list of files with permissions from SyftBox directory."""
         try:
@@ -554,6 +555,15 @@ if _SERVER_AVAILABLE:
                                 # Still scan subdirectories even if parent doesn't match
                                 scan_directory(item, base_path)
                             continue
+                        
+                        # Apply filetype filter if provided
+                        if filetype:
+                            if filetype == "file" and item.is_dir():
+                                # Still scan subdirectories to find files within
+                                scan_directory(item, base_path)
+                                continue
+                            elif filetype == "folder" and not item.is_dir():
+                                continue
 
                         try:
                             # Get permissions for this file/folder
@@ -636,6 +646,7 @@ if _SERVER_AVAILABLE:
         items_per_page: int = Query(50, ge=1, le=1000, description="Items per page"),
         start: Optional[int] = Query(None, ge=0, description="Start index for slicing"),
         end: Optional[int] = Query(None, ge=0, description="End index for slicing"),
+        filetype: Optional[str] = Query(None, description="Filter by file type: 'file' or 'folder'"),
     ) -> str:
         """Serve the files widget interface with filtering support."""
         # Get current user email
@@ -656,6 +667,7 @@ if _SERVER_AVAILABLE:
             start=start,
             end=end,
             current_user_email=current_user_email,
+            filetype=filetype,
         )
 
     @app.get("/api/scan-progress")  # type: ignore[misc]
@@ -670,6 +682,7 @@ if _SERVER_AVAILABLE:
         folders: Optional[str] = Query(None),
         start: Optional[int] = Query(None),
         end: Optional[int] = Query(None),
+        filetype: Optional[str] = Query(None),
     ) -> Dict[str, Any]:
         """Get files data for the widget with filtering support."""
         import asyncio
@@ -726,6 +739,13 @@ if _SERVER_AVAILABLE:
         if folders:
             folder_list = [f.strip() for f in folders.split(",") if f.strip()]
             filtered_files = sp_files._apply_folder_filter(filtered_files, folder_list)
+        
+        # Apply filetype filter
+        if filetype:
+            if filetype == "file":
+                filtered_files = [f for f in filtered_files if not f.get("is_dir", False)]
+            elif filetype == "folder":
+                filtered_files = [f for f in filtered_files if f.get("is_dir", False)]
 
         # Sort by modified date (newest first) - always sort to ensure consistent ordering
         filtered_files = sorted(filtered_files, key=lambda x: x.get("modified", 0), reverse=True)

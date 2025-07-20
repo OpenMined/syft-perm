@@ -59,9 +59,14 @@ explanation = file.explain_permissions("bob@company.com")
 print(explanation)  # Shows why bob has/doesn't have access
 
 # 6. Working with the Files API
-all_files = sp.files.all()                     # Get all permissioned files
+# Three different ways to browse your filesystem:
+all_items = sp.files_and_folders.all()         # Get all files and folders (default)
+files_only = sp.files.all()                    # Get only files
+folders_only = sp.folders.all()                # Get only folders
+
+# Each API supports the same operations:
 paginated = sp.files.get(limit=10, offset=0)   # Get first 10 files
-filtered = sp.files.search(admin="me@datasite.org")  # My admin files
+filtered = sp.files.search(admin="me@datasite.org")  # My admin files  
 sliced = sp.files[0:5]                          # First 5 files using slice
 
 # 7. Moving files while preserving permissions

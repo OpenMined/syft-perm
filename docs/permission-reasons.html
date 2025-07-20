@@ -7,10 +7,76 @@
     <link rel="icon" type="image/svg+xml" href="images/syftbox-logo.svg">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .reason-guide {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px;
+        /* API Layout Styles */
+        .api-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: var(--space-6);
+            align-items: start;
+        }
+        
+        .api-nav {
+            position: sticky;
+            top: 100px;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: var(--space-3);
+            margin-bottom: var(--space-4);
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        
+        .api-nav h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-gray);
+            margin-bottom: var(--space-2);
+            font-weight: 700;
+        }
+        
+        .api-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .api-nav a {
+            display: block;
+            padding: var(--space-1) 0;
+            color: var(--color-dark);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        
+        .api-nav a:hover {
+            color: var(--color-primary);
+        }
+        
+        .api-nav a.active {
+            color: var(--color-primary);
+            font-weight: 600;
+            border-left: 3px solid var(--color-primary);
+            padding-left: var(--space-2);
+            margin-left: calc(-1 * var(--space-2));
+        }
+        
+        @media (max-width: 1024px) {
+            .api-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .api-nav {
+                position: static;
+                margin-bottom: var(--space-6);
+                max-height: none;
+            }
+        }
+        
+        .api-main {
+            min-width: 0; /* Prevent overflow in grid */
         }
         
         .reason-section {
@@ -323,14 +389,41 @@
         </nav>
     </header>
 
-    <div class="reason-guide">
-        <h1 style="text-align: center; margin-bottom: 16px;">Understanding Permission Reasons</h1>
-        <p style="text-align: center; color: var(--color-gray); margin-bottom: 48px; font-size: 1.2rem;">
-            Every permission in syft-perm has a clear reason. This guide explains each one with visual examples.
-        </p>
+    <!-- Permission Reasons Hero -->
+    <section class="api-hero">
+        <div class="container">
+            <h1>Understanding Permission Reasons</h1>
+            <p class="hero-subtitle">Every permission in syft-perm has a clear reason. This guide explains each one with visual examples.</p>
+        </div>
+    </section>
+
+    <!-- Permission Reasons Content -->
+    <section class="api-section">
+        <div class="container">
+            <div class="api-content">
+                <!-- Navigation Sidebar -->
+                <aside class="api-nav">
+                    <h3>Quick Navigation</h3>
+                    <ul>
+                        <li><a href="#permission-hierarchy">Permission Hierarchy</a></li>
+                        <li><a href="#owner-of-path">Owner of Path</a></li>
+                        <li><a href="#explicitly-granted">Explicitly Granted</a></li>
+                        <li><a href="#pattern-matching">Pattern Matching</a></li>
+                        <li><a href="#inheritance">Permission Inheritance</a></li>
+                        <li><a href="#nearest-node">Nearest Node Algorithm</a></li>
+                        <li><a href="#public-access">Public Access</a></li>
+                        <li><a href="#manual-grant">Manual Grant</a></li>
+                        <li><a href="#permission-denied">Permission Denied</a></li>
+                        <li><a href="#special-cases">Special Cases</a></li>
+                        <li><a href="#pro-tips">Pro Tips</a></li>
+                    </ul>
+                </aside>
+
+                <!-- Main Content -->
+                <div class="api-main">
 
         <!-- Permission Hierarchy -->
-        <div class="info-box">
+        <div id="permission-hierarchy" class="info-box">
             <h3>📊 Permission Hierarchy</h3>
             <p>Higher permission levels include all lower levels:</p>
         </div>
@@ -346,7 +439,7 @@
         </div>
 
         <!-- Owner of Path -->
-        <section class="reason-section">
+        <section id="owner-of-path" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">👑</div>
                 <div class="reason-title">
@@ -379,7 +472,7 @@
         </section>
 
         <!-- Explicit Permissions -->
-        <section class="reason-section">
+        <section id="explicitly-granted" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">🎯</div>
                 <div class="reason-title">
@@ -417,7 +510,7 @@ rules:
         </section>
 
         <!-- Pattern Matching -->
-        <section class="reason-section">
+        <section id="pattern-matching" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">🔍</div>
                 <div class="reason-title">
@@ -463,7 +556,7 @@ rules:
         </section>
 
         <!-- Inheritance -->
-        <section class="reason-section">
+        <section id="inheritance" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">🔗</div>
                 <div class="reason-title">
@@ -500,7 +593,7 @@ rules:
         </section>
 
         <!-- Nearest Node Algorithm -->
-        <section class="reason-section">
+        <section id="nearest-node" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">📍</div>
                 <div class="reason-title">
@@ -534,7 +627,7 @@ rules:
         </section>
 
         <!-- Public Access -->
-        <section class="reason-section">
+        <section id="public-access" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">🌍</div>
                 <div class="reason-title">
@@ -570,7 +663,7 @@ rules:
         </section>
 
         <!-- Manual Grant -->
-        <section class="reason-section">
+        <section id="manual-grant" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">✏️</div>
                 <div class="reason-title">
@@ -592,7 +685,7 @@ rules:
         </section>
 
         <!-- Permission Denied Reasons -->
-        <section class="reason-section">
+        <section id="permission-denied" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">🚫</div>
                 <div class="reason-title">
@@ -622,7 +715,7 @@ rules:
         </section>
 
         <!-- Special Cases -->
-        <section class="reason-section">
+        <section id="special-cases" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">⚡</div>
                 <div class="reason-title">
@@ -662,7 +755,7 @@ rules:
         </section>
 
         <!-- Tips -->
-        <section class="reason-section">
+        <section id="pro-tips" class="reason-section">
             <div class="reason-header">
                 <div class="reason-icon">💡</div>
                 <div class="reason-title">
@@ -696,7 +789,10 @@ file  # Shows interactive permission viewer</code></pre>
                 </li>
             </ol>
         </section>
-    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
     <footer>
@@ -706,5 +802,50 @@ file  # Shows interactive permission viewer</code></pre>
     </footer>
 
     <script src="js/main.js"></script>
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('.api-nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    const headerHeight = document.querySelector('header').offsetHeight;
+                    const targetPosition = targetElement.offsetTop - headerHeight - 20;
+                    window.scrollTo({
+                        top: targetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Highlight active section in navigation
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.api-nav a');
+        
+        function highlightActiveSection() {
+            let currentSection = '';
+            const scrollPosition = window.scrollY + 100;
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    currentSection = section.getAttribute('id');
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + currentSection) {
+                    link.classList.add('active');
+                }
+            });
+        }
+        
+        window.addEventListener('scroll', highlightActiveSection);
+        highlightActiveSection();
+    </script>
 </body>
 </html>

@@ -408,6 +408,137 @@ class TestFilesFiltering(unittest.TestCase):
         # Should return the exact same files that were passed in
         self.assertEqual(scanned_files, test_files)
 
+    def test_filetype_filtering(self):
+        """Test filtering by filetype (file vs folder)."""
+        # Mock _scan_files to return mixed files and folders
+        test_items = [
+            {
+                "name": "file1.txt",
+                "path": "/path/file1.txt",
+                "is_dir": False,
+                "modified": 1000,
+                "datasite_owner": "alice@example.com",
+            },
+            {
+                "name": "folder1",
+                "path": "/path/folder1",
+                "is_dir": True,
+                "modified": 2000,
+                "datasite_owner": "bob@example.com",
+            },
+            {
+                "name": "file2.csv",
+                "path": "/path/file2.csv",
+                "is_dir": False,
+                "modified": 3000,
+                "datasite_owner": "charlie@example.com",
+            },
+            {
+                "name": "folder2",
+                "path": "/path/folder2",
+                "is_dir": True,
+                "modified": 4000,
+                "datasite_owner": "alice@example.com",
+            },
+        ]
+
+        with patch.object(sp.files, "_scan_files", return_value=test_items):
+            with patch.object(sp.files, "_check_server", return_value=None):
+                # Test filtering for files only
+                files_only = sp.files.search(filetype="file")
+                self.assertIsInstance(files_only, FilteredFiles)
+                self.assertEqual(len(files_only._filtered_files), 2)
+                for item in files_only._filtered_files:
+                    self.assertFalse(item["is_dir"])
+
+                # Test filtering for folders only
+                folders_only = sp.files.search(filetype="folder")
+                self.assertIsInstance(folders_only, FilteredFiles)
+                self.assertEqual(len(folders_only._filtered_files), 2)
+                for item in folders_only._filtered_files:
+                    self.assertTrue(item["is_dir"])
+
+    def test_files_singleton(self):
+        """Test that sp.files returns only files."""
+        test_items = [
+            {
+                "name": "file1.txt",
+                "path": "/path/file1.txt",
+                "is_dir": False,
+                "modified": 1000,
+                "datasite_owner": "alice@example.com",
+            },
+            {
+                "name": "folder1",
+                "path": "/path/folder1",
+                "is_dir": True,
+                "modified": 2000,
+                "datasite_owner": "bob@example.com",
+            },
+        ]
+
+        with patch.object(sp.files, "_scan_files", return_value=test_items):
+            # sp.files should only return files
+            all_files = sp.files.all()
+            # This will return filtered files only if the singleton was properly configured
+            for item in all_files:
+                self.assertFalse(item.get("is_dir", False))
+
+    def test_folders_singleton(self):
+        """Test that sp.folders returns only folders."""
+        test_items = [
+            {
+                "name": "file1.txt",
+                "path": "/path/file1.txt",
+                "is_dir": False,
+                "modified": 1000,
+                "datasite_owner": "alice@example.com",
+            },
+            {
+                "name": "folder1",
+                "path": "/path/folder1",
+                "is_dir": True,
+                "modified": 2000,
+                "datasite_owner": "bob@example.com",
+            },
+        ]
+
+        with patch.object(sp.folders, "_scan_files", return_value=test_items):
+            # sp.folders should only return folders
+            all_folders = sp.folders.all()
+            # This will return filtered folders only if the singleton was properly configured
+            for item in all_folders:
+                self.assertTrue(item.get("is_dir", False))
+
+    def test_files_and_folders_singleton(self):
+        """Test that sp.files_and_folders returns both files and folders."""
+        test_items = [
+            {
+                "name": "file1.txt",
+                "path": "/path/file1.txt",
+                "is_dir": False,
+                "modified": 1000,
+                "datasite_owner": "alice@example.com",
+            },
+            {
+                "name": "folder1",
+                "path": "/path/folder1",
+                "is_dir": True,
+                "modified": 2000,
+                "datasite_owner": "bob@example.com",
+            },
+        ]
+
+        with patch.object(sp.files_and_folders, "_scan_files", return_value=test_items):
+            # sp.files_and_folders should return both
+            all_items = sp.files_and_folders.all()
+            self.assertEqual(len(all_items), 2)
+            # Verify we have both types
+            has_file = any(not item.get("is_dir", False) for item in all_items)
+            has_folder = any(item.get("is_dir", False) for item in all_items)
+            self.assertTrue(has_file)
+            self.assertTrue(has_folder)
+
 
 if __name__ == "__main__":
     unittest.main()

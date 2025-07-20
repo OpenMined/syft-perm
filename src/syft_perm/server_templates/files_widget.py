@@ -12,6 +12,7 @@ def get_files_widget_html(
     start: Optional[int] = None,
     end: Optional[int] = None,
     current_user_email: str = "",
+    filetype: Optional[str] = None,
 ) -> str:
     """Generate the files widget HTML for web serving."""
     import json
@@ -864,6 +865,7 @@ def get_files_widget_html(
                 if (urlParams.has('folders')) apiParams.set('folders', urlParams.get('folders'));
                 if (urlParams.has('start')) apiParams.set('start', urlParams.get('start'));
                 if (urlParams.has('end')) apiParams.set('end', urlParams.get('end'));
+                if (urlParams.has('filetype')) apiParams.set('filetype', urlParams.get('filetype'));
 
                 // Start fetching files data (this will trigger the scan)
                 const filesPromise = fetch('/api/files-data' + (apiParams.toString() ? '?' + apiParams.toString() : ''));

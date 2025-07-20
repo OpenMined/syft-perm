@@ -172,6 +172,7 @@
                 </div>
                 <div class="nav-links">
                     <a href="../quickstart.html">Quick Start</a>
+                    <a href="../permission-reasons.html">Permission Reasons</a>
                     <a href="index.html" class="active">API</a>
                     <a href="https://github.com/OpenMined/syft-perm" class="github-link">GitHub</a>
                 </div>
@@ -936,21 +937,50 @@ file.share  # Note: property, not method call</code></pre>
                         <div class="api-method">
                             <div class="method-signature">syft_perm.files</div>
                             <p class="method-description">
-                                Global instance providing access to file browsing and search functionality.
-                                In Jupyter notebooks, displays an interactive file browser widget.
+                                Global instance providing access to file browsing functionality (files only).
+                                In Jupyter notebooks, displays an interactive file browser widget showing only files.
                             </p>
                             
                             <div class="example-section">
                                 <div class="section-title">Example</div>
-                                <pre><code class="language-python"># Display interactive file browser
+                                <pre><code class="language-python"># Display interactive file browser (files only)
 syft_perm.files</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.folders</div>
+                            <p class="method-description">
+                                Global instance providing access to folder browsing functionality (folders only).
+                                In Jupyter notebooks, displays an interactive file browser widget showing only folders.
+                            </p>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Display interactive file browser (folders only)
+syft_perm.folders</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="api-method">
+                            <div class="method-signature">syft_perm.files_and_folders</div>
+                            <p class="method-description">
+                                Global instance providing access to file and folder browsing functionality.
+                                In Jupyter notebooks, displays an interactive file browser widget showing both files and folders.
+                                This is the original behavior of the old .files API.
+                            </p>
+                            
+                            <div class="example-section">
+                                <div class="section-title">Example</div>
+                                <pre><code class="language-python"># Display interactive file browser (both files and folders)
+syft_perm.files_and_folders</code></pre>
                             </div>
                         </div>
 
                         <div class="api-method">
                             <div class="method-signature">syft_perm.files.all()</div>
                             <p class="method-description">
-                                Returns all files with permissions in your SyftBox datasites directory.
+                                Returns all files (not folders) with permissions in your SyftBox datasites directory.
                             </p>
                             
                             <div class="params-section">
@@ -1022,9 +1052,9 @@ syft_perm.files</code></pre>
                         </div>
 
                         <div class="api-method">
-                            <div class="method-signature">syft_perm.files.search(query=None, admin=None)</div>
+                            <div class="method-signature">syft_perm.files.search(query=None, admin=None, filetype=None)</div>
                             <p class="method-description">
-                                Search files by query string and/or filter by admin user.
+                                Search files by query string and/or filter by admin user and file type.
                             </p>
                             
                             <div class="params-section">
@@ -1047,6 +1077,11 @@ syft_perm.files</code></pre>
                                             <td><span class="param-name">admin</span></td>
                                             <td><span class="param-type">str | None</span></td>
                                             <td><span class="param-desc">Filter by admin email address</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">filetype</span></td>
+                                            <td><span class="param-type">str | None</span></td>
+                                            <td><span class="param-desc">Filter by type: 'file' or 'folder'</span></td>
                                         </tr>
                                     </tbody>
                                 </table>
